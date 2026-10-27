@@ -10,7 +10,8 @@ import { ClothingCatalogSection } from './ClothingCatalogSection';
 import { PickupOptionsSection } from './PickupOptionsSection';
 import { PromoBanner } from './PromoBanner';
 import { OrderCartTicket } from './OrderCartTicket';
-import { RotateCcw, Eye, ArrowLeft, LayoutGrid, Layers, Shirt, Waves } from 'lucide-react';
+import { Tabs } from '../common/Tabs';
+import { RotateCcw, Eye, ArrowLeft, LayoutGrid, Layers, Shirt, Waves, User, Clock } from 'lucide-react';
 
 export const PosPage: React.FC = () => {
   const {
@@ -27,6 +28,8 @@ export const PosPage: React.FC = () => {
 
   // Mode: 'stepper' (new multi-step flow) or 'classic' (single-view all-in-one POS)
   const [viewMode, setViewMode] = useState<'stepper' | 'classic'>('stepper');
+  // Vue directe : saisie découpée en onglets, dans l'ordre du workflow comptoir
+  const [classicTab, setClassicTab] = useState<'client' | 'articles' | 'retrait'>('client');
 
   const handlePreviewCurrent = () => {
     if (orders.length > 0) {
@@ -141,12 +144,35 @@ export const PosPage: React.FC = () => {
         /* Classic Single-View POS */
         <div>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-            {/* Left Col (Client, Articles, Retrait, Promo) */}
+            {/* Colonne de saisie en onglets : Client -> Articles -> Retrait.
+                Les sections restent montées (masquées en CSS) pour conserver leur état de saisie
+                pendant la navigation entre onglets ; le panier à droite reste toujours visible. */}
             <div className="lg:col-span-3 space-y-3">
-              <CustomerSection />
-              <ClothingCatalogSection />
-              <PickupOptionsSection />
-              <PromoBanner />
+              <Tabs
+                ariaLabel="Sections de la réception comptoir"
+                activeId={classicTab}
+                onChange={setClassicTab}
+                tabs={[
+                  { id: 'client', label: 'Client', icon: <User className="w-4 h-4" aria-hidden="true" /> },
+                  {
+                    id: 'articles',
+                    label: 'Articles',
+                    icon: <Shirt className="w-4 h-4" aria-hidden="true" />,
+                    badge: cartLines.length > 0 ? cartLines.length : undefined,
+                  },
+                  { id: 'retrait', label: 'Retrait', icon: <Clock className="w-4 h-4" aria-hidden="true" /> },
+                ]}
+              />
+              <div className={classicTab === 'client' ? '' : 'hidden'}>
+                <CustomerSection />
+              </div>
+              <div className={classicTab === 'articles' ? 'space-y-3' : 'hidden'}>
+                <ClothingCatalogSection />
+                <PromoBanner />
+              </div>
+              <div className={classicTab === 'retrait' ? '' : 'hidden'}>
+                <PickupOptionsSection />
+              </div>
             </div>
 
             {/* Right Col (Ticket / Cart) */}
