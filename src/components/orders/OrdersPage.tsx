@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2, Inbox, Shirt } from 'lucide-react';
 import { Tabs } from '../common/Tabs';
 import { isOrderLate } from '../../lib/reports';
 import { LaundryOrder } from '../../types';
@@ -9,7 +9,7 @@ import { LaundryOrder } from '../../types';
 export const OrdersPage: React.FC = () => {
   const { orders, setPreviewTicket, setActiveScreen } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
-  const [tab, setTab] = useState<'all' | 'production' | 'ready' | 'late' | 'delivered'>('all');
+  const [tab, setTab] = useState<'all' | 'received' | 'washing' | 'ironing' | 'ready' | 'late' | 'delivered'>('all');
 
   const searchedOrders = orders.filter(
     (order) =>
@@ -18,20 +18,11 @@ export const OrdersPage: React.FC = () => {
       order.lines.some((l) => l.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Regroupement par moment du workflow : en atelier, prêtes, en retard (à relancer), terminées
+  // Onglets par statut exact du workflow, plus la file transversale des retards à relancer
   const inTab = (order: LaundryOrder, t: typeof tab): boolean => {
-    switch (t) {
-      case 'production':
-        return order.status === 'received' || order.status === 'washing' || order.status === 'ironing';
-      case 'ready':
-        return order.status === 'ready';
-      case 'late':
-        return isOrderLate(order);
-      case 'delivered':
-        return order.status === 'delivered';
-      default:
-        return true;
-    }
+    if (t === 'all') return true;
+    if (t === 'late') return isOrderLate(order);
+    return order.status === t;
   };
   const countFor = (t: typeof tab) => searchedOrders.filter((o) => inTab(o, t)).length;
   const filteredOrders = searchedOrders.filter((o) => inTab(o, tab));
@@ -72,7 +63,9 @@ export const OrdersPage: React.FC = () => {
         onChange={setTab}
         tabs={[
           { id: 'all', label: 'Toutes', icon: <List className="w-4 h-4" aria-hidden="true" />, badge: searchedOrders.length },
-          { id: 'production', label: 'En production', icon: <WashingMachine className="w-4 h-4" aria-hidden="true" />, badge: countFor('production') },
+          { id: 'received', label: 'Réceptionnées', icon: <Inbox className="w-4 h-4" aria-hidden="true" />, badge: countFor('received') },
+          { id: 'washing', label: 'Lavage', icon: <WashingMachine className="w-4 h-4" aria-hidden="true" />, badge: countFor('washing') },
+          { id: 'ironing', label: 'Repassage', icon: <Shirt className="w-4 h-4" aria-hidden="true" />, badge: countFor('ironing') },
           { id: 'ready', label: 'Prêtes', icon: <PackageCheck className="w-4 h-4" aria-hidden="true" />, badge: countFor('ready') },
           { id: 'late', label: 'En retard', icon: <Clock className="w-4 h-4" aria-hidden="true" />, badge: countFor('late') },
           { id: 'delivered', label: 'Livrées', icon: <CheckCircle2 className="w-4 h-4" aria-hidden="true" />, badge: countFor('delivered') },
