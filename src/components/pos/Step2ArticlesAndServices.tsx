@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
+import { calculateSubtotal } from '../../lib/pricing';
 import { ClothingItem, OrderLine } from '../../types';
 import {
   ArrowLeft,
@@ -62,7 +63,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
     return matchesCategory && matchesTab;
   });
 
-  const subtotal = cartLines.reduce((acc, curr) => acc + curr.subtotal, 0);
+  const subtotal = calculateSubtotal(cartLines);
 
   const getItemCount = (itemId: string) => {
     return cartLines

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
+import { formatDate } from '../../lib/dates';
 import { Printer, Lock, CheckCircle2 } from 'lucide-react';
 
 export const DailyClosingCard: React.FC = () => {
@@ -18,7 +19,7 @@ export const DailyClosingCard: React.FC = () => {
           </span>
         </div>
         <p className="text-[12px] text-zinc-400 mt-0.5">
-          Poste 01 • Awa Koné • 27/10/2026
+          Poste 01 • Awa Koné • {formatDate(new Date())}
         </p>
 
         {/* 3 Payment modes breakdown */}

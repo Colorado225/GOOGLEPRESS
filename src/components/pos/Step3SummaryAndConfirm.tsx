@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
+import { calculateOrderTotals } from '../../lib/pricing';
+import { formatLongDateTime, formatPromisedLong, getPickupLabel, getPromisedDate } from '../../lib/dates';
 import { ConfettiButton } from '../../registry/magicui/confetti';
 import {
   ArrowLeft,
@@ -41,19 +43,19 @@ export const Step3SummaryAndConfirm: React.FC = () => {
   const isPressing = selectedServiceCategory === 'pressing';
   const isBlanchisserie = selectedServiceCategory === 'blanchisserie';
 
-  const subtotal = cartLines.reduce((acc, curr) => acc + curr.subtotal, 0);
-  const expressFee = pickupOption === 'express' ? Math.round(subtotal * 0.5) : 0;
-  const discountPercent = selectedCustomer?.loyaltyDiscountPercent || 0;
-  const discountAmount = Math.round(subtotal * (discountPercent / 100));
-  const finalTotal = subtotal + expressFee - discountAmount;
-  const remaining = Math.max(0, finalTotal - depositAmount);
+  const { subtotal, expressFee, discountPercent, discountAmount, total: finalTotal, remaining } =
+    calculateOrderTotals(cartLines, {
+      pickupOption,
+      loyaltyDiscountPercent: selectedCustomer?.loyaltyDiscountPercent,
+      depositAmount,
+    });
 
   const promisedDateStr =
     pickupOption === 'express'
-      ? 'Demain • 12h00 (Express 24h)'
-      : pickupOption === 'delayed'
-      ? 'Samedi 31 oct. • 10h00 (Différé)'
-      : 'Mercredi 28 oct. • 17h00 (Standard 48h)';
+      ? `Demain • 12h00 (${getPickupLabel(pickupOption)})`
+      : `${formatPromisedLong(getPromisedDate(pickupOption))} (${getPickupLabel(pickupOption)})`;
+
+  const depositDateStr = `Aujourd'hui, ${formatLongDateTime(new Date())}`;
 
   const handleConfirmOrder = () => {
     if (isSubmitting) return; // Prevent double clicks
@@ -147,7 +149,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
             </div>
             <div className="space-y-1">
               <p className="text-zinc-500 text-[11.5px]">Date de dépôt :</p>
-              <p className="font-bold text-zinc-800">Aujourd'hui, 27 oct. 2026 à 10h15</p>
+              <p className="font-bold text-zinc-800">{depositDateStr}</p>
               <p className="text-zinc-500 text-[11.5px] pt-1">Retrait promis au client :</p>
               <p className="font-extrabold text-zinc-950 text-[13.5px]">{promisedDateStr}</p>
             </div>

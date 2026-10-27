@@ -6,6 +6,9 @@ export type ServiceType = 'wash_iron' | 'dry_clean' | 'iron_only' | 'dye' | 'exp
 
 export type PricingType = 'unit' | 'kilo';
 
+/** Délai de retrait choisi au comptoir (règles dans src/lib/dates.ts). */
+export type PickupOption = 'standard' | 'express' | 'delayed';
+
 export interface ClothingItem {
   id: string;
   name: string;

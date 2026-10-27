@@ -16,6 +16,7 @@ import {
   Users,
   Settings,
 } from 'lucide-react';
+import { formatTime } from '../../lib/dates';
 
 export const AppSidebar: React.FC = () => {
   const {
@@ -26,6 +27,7 @@ export const AppSidebar: React.FC = () => {
     isSidebarCollapsed,
     toggleSidebar,
     setShortcutHelpOpen,
+    nextTicketNumber,
   } = useApp();
 
   const receivedCount = orders.filter((o) => o.status === 'received').length;
@@ -212,7 +214,7 @@ export const AppSidebar: React.FC = () => {
         {activeScreen === 'pos' && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white">
             <p className="text-[11px] text-zinc-400 font-semibold tracking-wider">TICKET EN COURS</p>
-            <p className="font-bold text-[14px] text-blue-400">#TK-2855 • 09:42</p>
+            <p className="font-bold text-[14px] text-blue-400">#TK-{nextTicketNumber} • {formatTime(new Date())}</p>
             <p className="text-[11.5px] text-zinc-400 mt-0.5">Opératrice : Awa Koné</p>
           </div>
         )}

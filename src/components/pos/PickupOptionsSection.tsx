@@ -1,8 +1,14 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { formatPromised, getPromisedDate } from '../../lib/dates';
 
 export const PickupOptionsSection: React.FC = () => {
   const { pickupOption, setPickupOption, orderNotes, setOrderNotes } = useApp();
+
+  // Dates de retrait réelles, calculées depuis aujourd'hui (règles dans lib/dates.ts).
+  const standardLabel = formatPromised(getPromisedDate('standard'));
+  const expressLabel = formatPromised(getPromisedDate('express'));
+  const delayedLabel = formatPromised(getPromisedDate('delayed'));
 
   return (
     <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
@@ -26,7 +32,7 @@ export const PickupOptionsSection: React.FC = () => {
               onChange={() => setPickupOption('standard')}
               className="accent-black w-4 h-4 cursor-pointer"
             />
-            <span className="font-bold text-zinc-900">Mer 28 oct • 17h</span>
+            <span className="font-bold text-zinc-900">{standardLabel}</span>
           </div>
           <p className="text-[11.5px] text-zinc-500 mt-1 pl-6">Standard 48h — inclus</p>
         </label>
@@ -47,7 +53,7 @@ export const PickupOptionsSection: React.FC = () => {
               onChange={() => setPickupOption('express')}
               className="accent-black w-4 h-4 cursor-pointer"
             />
-            <span className="font-bold text-zinc-900">Demain • 12h</span>
+            <span className="font-bold text-zinc-900">{expressLabel}</span>
           </div>
           <p className="text-[11.5px] text-amber-700 font-semibold mt-1 pl-6">
             Express +50 %
@@ -70,7 +76,7 @@ export const PickupOptionsSection: React.FC = () => {
               onChange={() => setPickupOption('delayed')}
               className="accent-black w-4 h-4 cursor-pointer"
             />
-            <span className="font-bold text-zinc-900">Sam 31 oct • 10h</span>
+            <span className="font-bold text-zinc-900">{delayedLabel}</span>
           </div>
           <p className="text-[11.5px] text-zinc-500 mt-1 pl-6">Différé samedi</p>
         </label>

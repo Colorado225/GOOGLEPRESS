@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
+import { calculateOrderTotals } from '../../lib/pricing';
+import { formatPromised, getPromisedDate, nowDateTime } from '../../lib/dates';
 import { Trash2, Plus, Minus, Printer, MessageSquare, Check, ShieldAlert, Sparkles } from 'lucide-react';
 import { ConfettiButton } from '../../registry/magicui/confetti';
 
@@ -16,14 +18,18 @@ export const OrderCartTicket: React.FC = () => {
     paymentMethod,
     setPaymentMethod,
     submitNewOrder,
+    nextTicketNumber,
   } = useApp();
 
-  const subtotal = cartLines.reduce((acc, curr) => acc + curr.subtotal, 0);
-  const expressFee = pickupOption === 'express' ? Math.round(subtotal * 0.5) : 0;
-  const discountPercent = selectedCustomer.loyaltyDiscountPercent || 0;
-  const discountAmount = Math.round(subtotal * (discountPercent / 100));
-  const finalTotal = subtotal + expressFee - discountAmount;
-  const remaining = Math.max(0, finalTotal - depositAmount);
+  const { subtotal, expressFee, discountPercent, discountAmount, total: finalTotal, remaining } =
+    calculateOrderTotals(cartLines, {
+      pickupOption,
+      loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
+      depositAmount,
+    });
+
+  // Date/heure figées à l'ouverture du ticket (évite un affichage qui bouge à chaque rendu).
+  const [ticketDateTime] = useState(() => nowDateTime());
 
   const [customDeposit, setCustomDeposit] = useState<string>(depositAmount.toString());
 
@@ -49,9 +55,9 @@ export const OrderCartTicket: React.FC = () => {
       {/* Dark Ticket Header */}
       <div className="bg-[#09090b] text-white px-5 py-4 flex justify-between items-center border-b border-zinc-800">
         <div>
-          <p className="font-bold text-[15px] tracking-tight">Ticket #TK-2855</p>
+          <p className="font-bold text-[15px] tracking-tight">Ticket #TK-{nextTicketNumber}</p>
           <p className="text-[12px] text-zinc-400 mt-0.5">
-            {selectedCustomer.name} • 27/10/2026 09:42
+            {selectedCustomer.name} • {ticketDateTime}
           </p>
         </div>
         <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-400 text-black tracking-wide">
@@ -269,7 +275,7 @@ export const OrderCartTicket: React.FC = () => {
 
         {/* SMS Preview footnote */}
         <p className="text-center text-[11.5px] text-zinc-500 leading-relaxed bg-zinc-50 p-2 rounded-md border border-zinc-200">
-          Reçu SMS : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-2855 : {formatFCFA(finalTotal)}. Retrait {pickupOption === 'express' ? 'demain 12h' : 'mer. 28 oct 17h'}. Pressing Pro Cocody »
+          Reçu SMS : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}. Retrait {formatPromised(getPromisedDate(pickupOption)).toLowerCase()}. Pressing Pro Cocody »
         </p>
       </div>
     </div>

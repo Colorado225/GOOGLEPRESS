@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Search, Bell, Calendar, ChevronDown, Plus, Sparkles, Keyboard, PanelLeft } from 'lucide-react';
+import { formatShortDate } from '../../lib/dates';
 
 interface AppHeaderProps {
   title: string;
@@ -77,7 +78,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {/* Date pill */}
           <div className="hidden sm:flex items-center gap-1.5 bg-white border border-zinc-200 px-3 py-1.5 text-[12.5px] font-medium text-zinc-700 rounded-lg shadow-2xs">
             <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-            <span className="tabular-nums">27 oct. 2026</span>
+            <span className="tabular-nums">{formatShortDate(new Date())}</span>
           </div>
 
           {/* Keyboard shortcut guide button */}

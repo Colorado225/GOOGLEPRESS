@@ -1,4 +1,5 @@
 import { ClothingItem, Customer, LaundryOrder, CashRegisterData } from '../types';
+import { daysFromToday, formatDate, formatDateTime, formatPromised } from '../lib/dates';
 
 export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   // --- PRESSING (Bleu) ---
@@ -121,6 +122,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
 ];
 
+// Dates de démonstration RELATIVES au jour d'ouverture de l'application :
+// le tableau de bord reste cohérent quel que soit le jour de la démo
+// (commandes "du jour", une en retard depuis hier, retraits à venir…).
 export const INITIAL_ORDERS: LaundryOrder[] = [
   {
     id: 'ord-2854',
@@ -131,7 +135,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerAddress: 'Cocody, Angré 8e Tranche',
     lines: [
       { id: 'l1', clothingItemId: 'c1', name: 'Chemise', quantity: 3, unitPrice: 1500, subtotal: 4500, serviceType: 'Lavage + Repassage' },
-      { id: 'l2', clothingItemId: 'c2', name: 'Robe', quantity: 1, unitPrice: 2000, subtotal: 2000, serviceType: 'Lavage + Repassage' },
+      { id: 'l2', clothingItemId: 'c3', name: 'Robe', quantity: 1, unitPrice: 2000, subtotal: 2000, serviceType: 'Lavage + Repassage' },
     ],
     subtotal: 6500,
     serviceFees: 0,
@@ -141,8 +145,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 0,
     paymentMethod: 'wave',
     status: 'washing',
-    receivedAt: '27/10/2026 08:30',
-    promisedAt: 'Mer 28 • 12h',
+    receivedAt: formatDateTime(daysFromToday(0, 8, 30)),
+    promisedAt: formatPromised(daysFromToday(1, 12)),
     machineAssigned: 'L1 • 40 min',
     progressPercent: 65,
     notes: 'Lavage classique, amidonnage léger sur cols chemises',
@@ -166,8 +170,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 2500,
     paymentMethod: 'especes',
     status: 'received',
-    receivedAt: '27/10/2026 09:15',
-    promisedAt: 'Jeu 29 • 17h',
+    receivedAt: formatDateTime(daysFromToday(0, 9, 15)),
+    promisedAt: formatPromised(daysFromToday(2, 17)),
     isUrgent: true,
     notes: 'Costume bleu marine en laine froide, bouton de manche gauche à resserrer si possible',
     smsSent: true,
@@ -180,8 +184,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 47 88 03 55',
     customerAddress: 'Yopougon',
     lines: [
-      { id: 'l4', clothingItemId: 'c3', name: 'Boubou wax brodé', quantity: 2, unitPrice: 3700, subtotal: 7400, serviceType: 'Lavage délicat' },
-      { id: 'l5', clothingItemId: 'c6', name: 'Foulard soie', quantity: 4, unitPrice: 400, subtotal: 1600, serviceType: 'Lavage délicat' },
+      { id: 'l4', clothingItemId: 'c5', name: 'Boubou wax brodé', quantity: 2, unitPrice: 3700, subtotal: 7400, serviceType: 'Lavage délicat' },
+      { id: 'l5', clothingItemId: 'c7', name: 'Foulard soie', quantity: 4, unitPrice: 400, subtotal: 1600, serviceType: 'Lavage délicat' },
     ],
     subtotal: 9000,
     serviceFees: 0,
@@ -191,9 +195,9 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 4000,
     paymentMethod: 'wave',
     status: 'ready',
-    receivedAt: '26/10/2026 11:00',
-    promisedAt: 'Mer 28 • 18h',
-    readyAt: '27/10/2026 08:00',
+    receivedAt: formatDateTime(daysFromToday(-1, 11, 0)),
+    promisedAt: formatPromised(daysFromToday(1, 18)),
+    readyAt: formatDateTime(daysFromToday(0, 8, 0)),
     rackLocation: 'Étagère B-04',
     notes: 'Boubous wax très colorés, cintre + housse plastique',
     smsSent: true,
@@ -206,7 +210,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '01 02 03 04 05',
     customerAddress: 'Plateau',
     lines: [
-      { id: 'l6', clothingItemId: 'c7', name: 'Linge pro B2B (Serviettes + draps 85kg)', quantity: 85, unitPrice: 1000, subtotal: 85000, serviceType: 'Blanchisserie industrielle' },
+      { id: 'l6', clothingItemId: 'b6', name: 'Linge pro B2B (Serviettes + draps 85kg)', quantity: 85, unitPrice: 1000, subtotal: 85000, serviceType: 'Blanchisserie industrielle' },
     ],
     subtotal: 85000,
     serviceFees: 0,
@@ -216,8 +220,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 0,
     paymentMethod: 'om',
     status: 'washing',
-    receivedAt: '27/10/2026 07:00',
-    promisedAt: 'Ven 30 • 08h',
+    receivedAt: formatDateTime(daysFromToday(0, 7, 0)),
+    promisedAt: formatPromised(daysFromToday(3, 8)),
     machineAssigned: 'L2 • Grand tambour',
     progressPercent: 40,
     notes: 'Contrat B2B • 120 pièces/semaine',
@@ -241,8 +245,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 5000,
     paymentMethod: 'especes',
     status: 'ironing',
-    receivedAt: '25/10/2026 14:00',
-    promisedAt: 'Lun 26 • 17h',
+    receivedAt: formatDateTime(daysFromToday(-2, 14, 0)),
+    promisedAt: formatPromised(daysFromToday(-1, 17)),
     isLate: true,
     assignee: 'Grâce',
     notes: 'Promis hier 17h — retard à rattraper d’urgence',
@@ -256,7 +260,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 12 99 88 77',
     customerAddress: 'Riviera Palmeraie',
     lines: [
-      { id: 'l8', clothingItemId: 'c5', name: 'Pantalon', quantity: 4, unitPrice: 1500, subtotal: 6000, serviceType: 'Lavage + Repassage' },
+      { id: 'l8', clothingItemId: 'c2', name: 'Pantalon', quantity: 4, unitPrice: 1500, subtotal: 6000, serviceType: 'Lavage + Repassage' },
       { id: 'l9', clothingItemId: 'c1', name: 'Chemise', quantity: 2, unitPrice: 1500, subtotal: 3000, serviceType: 'Lavage + Repassage' },
     ],
     subtotal: 9000,
@@ -267,8 +271,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 0,
     paymentMethod: 'wave',
     status: 'ironing',
-    receivedAt: '26/10/2026 15:30',
-    promisedAt: 'Mer 28 • 16h',
+    receivedAt: formatDateTime(daysFromToday(-1, 15, 30)),
+    promisedAt: formatPromised(daysFromToday(1, 16)),
     assignee: 'Divine',
     notes: 'Plis bien droits',
     smsSent: true,
@@ -291,9 +295,9 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 0,
     paymentMethod: 'momo',
     status: 'ready',
-    receivedAt: '25/10/2026 10:00',
-    promisedAt: 'Mar 27 • 14h',
-    readyAt: '27/10/2026 09:00',
+    receivedAt: formatDateTime(daysFromToday(-2, 10, 0)),
+    promisedAt: formatPromised(daysFromToday(0, 14)),
+    readyAt: formatDateTime(daysFromToday(0, 9, 0)),
     rackLocation: 'Étagère A-12',
     notes: 'Soldé par MTN MoMo',
     smsSent: true,
@@ -301,10 +305,10 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
   {
     id: 'ord-2856',
     ticketNumber: '#TK-2856',
-    customerId: 'cust-1',
-    customerName: 'Koffi Mensah',
-    customerPhone: '07 10 20 30 40',
-    customerAddress: 'Abidjan',
+    customerId: 'cust-6',
+    customerName: 'Yao Kouassi',
+    customerPhone: '07 77 12 34 56',
+    customerAddress: 'Cocody, Deux Plateaux',
     lines: [
       { id: 'l11', clothingItemId: 'c1', name: 'Chemise', quantity: 5, unitPrice: 1500, subtotal: 7500, serviceType: 'Lavage + Repassage' },
     ],
@@ -316,8 +320,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 0,
     paymentMethod: 'wave',
     status: 'received',
-    receivedAt: '27/10/2026 09:30',
-    promisedAt: 'Mer 28 • 12h',
+    receivedAt: formatDateTime(daysFromToday(0, 9, 30)),
+    promisedAt: formatPromised(daysFromToday(1, 12)),
     notes: '3 blanches, 2 bleues ciel',
     smsSent: true,
   },
@@ -329,7 +333,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 88 44 11 22',
     customerAddress: 'Marcory, Zone 4',
     lines: [
-      { id: 'l12', clothingItemId: 'c2', name: 'Robe de mariée avec traîne', quantity: 1, unitPrice: 15000, subtotal: 15000, serviceType: 'Pressing délicat haute couture' },
+      { id: 'l12', clothingItemId: 'c3', name: 'Robe de mariée avec traîne', quantity: 1, unitPrice: 15000, subtotal: 15000, serviceType: 'Pressing délicat haute couture' },
     ],
     subtotal: 15000,
     serviceFees: 0,
@@ -339,8 +343,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 5000,
     paymentMethod: 'especes',
     status: 'received',
-    receivedAt: '27/10/2026 09:40',
-    promisedAt: 'Ven 30 • 16h',
+    receivedAt: formatDateTime(daysFromToday(0, 9, 40)),
+    promisedAt: formatPromised(daysFromToday(3, 16)),
     notes: '⚠ Délicat — contrôle direct par Awa',
     smsSent: true,
   },
@@ -352,7 +356,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 08 55 23 41',
     customerAddress: 'Attoban, Cocody',
     lines: [
-      { id: 'l13', clothingItemId: 'c3', name: 'Boubou bazin', quantity: 1, unitPrice: 4500, subtotal: 4500, serviceType: 'Lavage délicat' },
+      { id: 'l13', clothingItemId: 'c5', name: 'Boubou bazin', quantity: 1, unitPrice: 4500, subtotal: 4500, serviceType: 'Lavage délicat' },
     ],
     subtotal: 4500,
     serviceFees: 0,
@@ -362,8 +366,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 2500,
     paymentMethod: 'wave',
     status: 'ironing',
-    receivedAt: '24/10/2026 16:00',
-    promisedAt: 'Aujourd’hui • 15h',
+    receivedAt: formatDateTime(daysFromToday(-3, 16, 0)),
+    promisedAt: formatPromised(daysFromToday(0, 15)),
     notes: 'Jour J — à terminer pour 15h',
     smsSent: false,
   },
@@ -375,7 +379,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '05 55 88 99 00',
     customerAddress: 'Riviera Golf',
     lines: [
-      { id: 'l14', clothingItemId: 'c7', name: 'Hôtel — 35 draps / housses', quantity: 35, unitPrice: 1000, subtotal: 35000, serviceType: 'Blanchisserie' },
+      { id: 'l14', clothingItemId: 'b1', name: 'Hôtel — 35 draps / housses', quantity: 35, unitPrice: 1000, subtotal: 35000, serviceType: 'Blanchisserie' },
     ],
     subtotal: 35000,
     serviceFees: 0,
@@ -385,15 +389,15 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     remainingBalance: 0,
     paymentMethod: 'wave',
     status: 'ironing',
-    receivedAt: '24/10/2026 11:00',
-    promisedAt: 'Aujourd’hui • 17h',
+    receivedAt: formatDateTime(daysFromToday(-3, 11, 0)),
+    promisedAt: formatPromised(daysFromToday(0, 17)),
     notes: 'Jour J — commande volumineuse',
     smsSent: true,
   },
 ];
 
 export const INITIAL_CASH_REGISTER: CashRegisterData = {
-  date: '27/10/2026',
+  date: formatDate(new Date()),
   cashAmount: 78500,
   waveAmount: 64000,
   momoAmount: 44000,
@@ -403,15 +407,29 @@ export const INITIAL_CASH_REGISTER: CashRegisterData = {
   monthAchieved: 2772000,
 };
 
-export const REVENUE_7_DAYS = [
-  { day: 'Mer 21', date: '21 oct.', value: 98000, label: '98k', heightPercent: 47, note: '' },
-  { day: 'Jeu 22', date: '22 oct.', value: 124000, label: '124k', heightPercent: 60, note: '' },
-  { day: 'Ven 23', date: '23 oct.', value: 142000, label: '142k', heightPercent: 68, note: '' },
-  { day: 'Sam 24', date: '24 oct.', value: 210000, label: '210k', heightPercent: 100, isPeak: true, note: 'Samedi pic (mariages)' },
-  { day: 'Dim 25', date: '25 oct.', value: 87000, label: '87k', heightPercent: 41, note: '' },
-  { day: 'Lun 26', date: '26 oct.', value: 163000, label: '163k', heightPercent: 78, note: '' },
-  { day: 'Auj.', date: '27 oct.', value: 186500, label: '186k', heightPercent: 89, isToday: true, note: 'En cours' },
-];
+// Montants de démonstration ; les libellés de jours sont générés à partir
+// des 7 derniers jours réels pour rester cohérents avec le calendrier.
+const REVENUE_VALUES = [98000, 124000, 142000, 210000, 87000, 163000, 186500];
+
+export const REVENUE_7_DAYS = REVENUE_VALUES.map((value, i) => {
+  const offset = i - (REVENUE_VALUES.length - 1); // de J-6 à aujourd'hui
+  const date = daysFromToday(offset, 12);
+  const weekdayShort = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' })
+    .format(date)
+    .replace(/\.$/, '');
+  const isToday = offset === 0;
+  const isPeak = value === Math.max(...REVENUE_VALUES);
+  return {
+    day: isToday ? 'Auj.' : `${weekdayShort.charAt(0).toUpperCase() + weekdayShort.slice(1)} ${date.getDate()}`,
+    date: new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(date),
+    value,
+    label: `${Math.round(value / 1000)}k`,
+    heightPercent: Math.round((value / Math.max(...REVENUE_VALUES)) * 100),
+    ...(isPeak ? { isPeak: true } : {}),
+    ...(isToday ? { isToday: true } : {}),
+    note: isToday ? 'En cours' : isPeak ? 'Pic de la semaine' : '',
+  };
+});
 
 export function formatFCFA(amount: number): string {
   return new Intl.NumberFormat('fr-FR').format(Math.round(amount)) + ' FCFA';

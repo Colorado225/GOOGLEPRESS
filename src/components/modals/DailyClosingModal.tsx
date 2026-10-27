@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
+import { formatDate } from '../../lib/dates';
 import { X, Lock, CheckCircle2, Printer, ShieldAlert } from 'lucide-react';
 
 export const DailyClosingModal: React.FC = () => {
@@ -69,7 +70,7 @@ export const DailyClosingModal: React.FC = () => {
           {/* Physical Cash Count */}
           <div className="space-y-2">
             <label className="block text-[11.5px] font-bold text-zinc-600 uppercase tracking-wide">
-              Comptage physique espèces (avec fond de caisse 20 000 FCFA) :
+              Comptage physique espèces (avec fond de caisse {formatFCFA(cashRegister.floatAmount)}) :
             </label>
             <div className="relative">
               <input
@@ -102,7 +103,7 @@ export const DailyClosingModal: React.FC = () => {
 
           {/* Footer note */}
           <p className="text-[11px] text-zinc-500 bg-blue-50/70 p-2.5 rounded-lg border border-blue-100">
-            ℹ La clôture Z verrouille la journée comptable du 27/10/2026 et prépare le fond de roulement pour le lendemain.
+            ℹ La clôture Z verrouille la journée comptable du {formatDate(new Date())} et prépare le fond de roulement pour le lendemain.
           </p>
 
           <div className="pt-2 flex gap-2">

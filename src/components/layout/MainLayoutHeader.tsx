@@ -17,6 +17,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { formatFCFA } from '../../data/demoData';
+import { formatShortDate } from '../../lib/dates';
 
 export const MainLayoutHeader: React.FC = () => {
   const {
@@ -352,7 +353,7 @@ export const MainLayoutHeader: React.FC = () => {
           {/* Date Indicator */}
           <div className="hidden xl:flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 px-2.5 py-1.5 rounded-lg text-[12px] font-medium text-zinc-600">
             <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-            <span className="tabular-nums">27 oct. 2026</span>
+            <span className="tabular-nums">{formatShortDate(new Date())}</span>
           </div>
 
           {/* Notifications Dropdown */}

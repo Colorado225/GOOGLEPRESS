@@ -1,7 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Customer, LaundryOrder, OrderLine, ClothingItem, CashRegisterData, OrderStatus, ServiceCategory } from '../types';
+import { Customer, LaundryOrder, OrderLine, ClothingItem, CashRegisterData, OrderStatus, ServiceCategory, PickupOption } from '../types';
 import { INITIAL_CUSTOMERS, INITIAL_ORDERS, INITIAL_CASH_REGISTER } from '../data/demoData';
 import { fireOrderCelebration } from '../registry/magicui/confetti';
+import { calculateOrderTotals, calculateLineSubtotal } from '../lib/pricing';
+import { formatPromised, getPromisedDate, nowDateTime } from '../lib/dates';
+
+/** Clé localStorage du compteur séquentiel de tickets (voir plus bas). */
+const TICKET_COUNTER_KEY = 'pressingpro_next_ticket_number';
+
+/** Extrait le numéro d'un libellé de ticket ("#TK-2854" → 2854), 0 si illisible. */
+const parseTicketNumber = (ticketNumber: string): number => {
+  const match = ticketNumber.match(/(\d+)\s*$/);
+  return match ? parseInt(match[1], 10) : 0;
+};
 
 export type ScreenId = 'dashboard' | 'pos' | 'workshop' | 'orders' | 'clients' | 'settings';
 
@@ -20,8 +31,10 @@ interface AppContextType {
   removeCartItem: (lineId: string) => void;
   updateCartItemQty: (lineId: string, delta: number) => void;
   clearCart: () => void;
-  pickupOption: 'standard' | 'express' | 'delayed';
-  setPickupOption: (opt: 'standard' | 'express' | 'delayed') => void;
+  pickupOption: PickupOption;
+  setPickupOption: (opt: PickupOption) => void;
+  /** Prochain numéro de ticket qui sera attribué (compteur séquentiel persisté). */
+  nextTicketNumber: number;
   orderNotes: string;
   setOrderNotes: (notes: string) => void;
   depositAmount: number;
@@ -123,8 +136,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [cashRegister]);
 
+  // Compteur séquentiel de tickets, persisté dans localStorage.
+  // Remplace l'ancienne formule fragile basée sur orders.length (qui
+  // réattribuait des numéros dès qu'une commande disparaissait de la liste).
+  // Initialisation : valeur sauvegardée si elle existe, sinon max des
+  // tickets existants + 1 (migration transparente des anciennes données).
+  const [nextTicketNumber, setNextTicketNumber] = useState<number>(() => {
+    const fallback =
+      orders.reduce((max, o) => Math.max(max, parseTicketNumber(o.ticketNumber)), 0) + 1;
+    try {
+      const saved = parseInt(localStorage.getItem(TICKET_COUNTER_KEY) || '', 10);
+      if (!isNaN(saved)) return Math.max(saved, fallback);
+    } catch (e) {
+      console.warn('LocalStorage load error', e);
+    }
+    return fallback;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TICKET_COUNTER_KEY, String(nextTicketNumber));
+    } catch (e) {
+      console.warn('LocalStorage save error', e);
+    }
+  }, [nextTicketNumber]);
+
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(customers[0] || INITIAL_CUSTOMERS[0]);
-  const [pickupOption, setPickupOption] = useState<'standard' | 'express' | 'delayed'>('standard');
+  const [pickupOption, setPickupOption] = useState<PickupOption>('standard');
   const [orderNotes, setOrderNotes] = useState<string>(
     'Consigne : tache de sauce graine sur boubou — détachage doux. Cliente prévient sur WhatsApp.'
   );
@@ -144,7 +182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_ORDERS.find((o) => o.id === 'ord-2852') || null;
   });
 
-  // Default pre-populated cart to replicate Mockup 2 (#TK-2855):
+  // Default pre-populated cart to replicate Mockup 2:
   // 3x Chemise (4 500 FCFA), 1x Boubou bazin (4 500 FCFA), Remise fidélité -10% (-900 FCFA) -> Total 8 100 FCFA. Acompte: 5 000 FCFA. Reste: 3 100 FCFA.
   const [cartLines, setCartLines] = useState<OrderLine[]>([
     {
@@ -197,15 +235,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const existing = prev.find((line) => line.clothingItemId === item.id && line.serviceType === serviceType);
       const isKilo = item.pricingType === 'kilo';
       const actualQty = isKilo ? (weightKg || 1) : quantity;
-      const calcSubtotal = isKilo
-        ? Math.round(item.unitPrice * actualQty)
-        : actualQty * item.unitPrice;
+      const calcSubtotal = calculateLineSubtotal(item.unitPrice, actualQty);
 
       if (existing) {
         const newQty = existing.quantity + actualQty;
-        const newSubtotal = isKilo
-          ? Math.round(item.unitPrice * newQty)
-          : newQty * item.unitPrice;
+        const newSubtotal = calculateLineSubtotal(item.unitPrice, newQty);
 
         return prev.map((line) =>
           line.id === existing.id
@@ -254,7 +288,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   ...line,
                   quantity: newQty,
                   weightKg: isKilo ? newQty : undefined,
-                  subtotal: Math.round(newQty * line.unitPrice),
+                  subtotal: calculateLineSubtotal(line.unitPrice, newQty),
                 }
               : null;
           }
@@ -276,21 +310,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     }
 
-    const subtotal = cartLines.reduce((acc, curr) => acc + curr.subtotal, 0);
-    const expressFee = pickupOption === 'express' ? Math.round(subtotal * 0.5) : 0;
-    const discountRate = (selectedCustomer.loyaltyDiscountPercent || 0) / 100;
-    const discount = Math.round(subtotal * discountRate);
-    const total = subtotal + expressFee - discount;
-    const deposit = Math.min(depositAmount, total);
-    const remaining = total - deposit;
+    const { subtotal, expressFee, discountAmount: discount, total, deposit, remaining } =
+      calculateOrderTotals(cartLines, {
+        pickupOption,
+        loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
+        depositAmount,
+      });
 
-    const nextTicketNum = `#TK-${2855 + orders.length - 10}`;
-    const promised =
-      pickupOption === 'express'
-        ? 'Demain • 12h'
-        : pickupOption === 'delayed'
-        ? 'Sam 31 oct • 10h'
-        : 'Mer 28 oct • 17h';
+    const nextTicketNum = `#TK-${nextTicketNumber}`;
+    const promised = formatPromised(getPromisedDate(pickupOption));
 
     const newOrder: LaundryOrder = {
       id: `ord-${Date.now()}`,
@@ -309,13 +337,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       remainingBalance: remaining,
       paymentMethod,
       status: 'received',
-      receivedAt: '27/10/2026 10:15',
+      receivedAt: nowDateTime(),
       promisedAt: promised,
       notes: orderNotes,
       smsSent: true,
     };
 
     setOrders((prev) => [newOrder, ...prev]);
+    setNextTicketNumber((n) => n + 1);
 
     // Update cash register if deposit received
     if (deposit > 0) {
@@ -357,14 +386,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const moveOrderStatus = (orderId: string, newStatus: OrderStatus) => {
+    const now = nowDateTime();
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
           return {
             ...ord,
             status: newStatus,
-            readyAt: newStatus === 'ready' ? '27/10/2026 11:30' : ord.readyAt,
-            deliveredAt: newStatus === 'delivered' ? '27/10/2026 12:00' : ord.deliveredAt,
+            readyAt: newStatus === 'ready' ? now : ord.readyAt,
+            deliveredAt: newStatus === 'delivered' ? now : ord.deliveredAt,
           };
         }
         return ord;
@@ -374,30 +404,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const settleAndDeliverOrder = (orderId: string, method: 'especes' | 'wave' | 'momo' | 'om') => {
+    // Lecture de la commande AVANT toute mise à jour d'état : les updaters
+    // React doivent rester des fonctions pures. L'ancienne version appelait
+    // setCashRegister à l'intérieur de l'updater de setOrders, ce qui pouvait
+    // créditer la caisse deux fois (ex. double invocation en mode Strict).
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+    const balance = order.remainingBalance;
+    const deliveredAt = nowDateTime();
+
     setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === orderId) {
-          const balance = ord.remainingBalance;
-          if (balance > 0) {
-            setCashRegister((reg) => ({
-              ...reg,
-              cashAmount: reg.cashAmount + (method === 'especes' ? balance : 0),
-              waveAmount: reg.waveAmount + (method === 'wave' ? balance : 0),
-              momoAmount: reg.momoAmount + (method === 'momo' || method === 'om' ? balance : 0),
-              totalAmount: reg.totalAmount + balance,
-            }));
-          }
-          return {
-            ...ord,
-            depositPaid: ord.total,
-            remainingBalance: 0,
-            status: 'delivered',
-            deliveredAt: '27/10/2026 11:45',
-          };
-        }
-        return ord;
-      })
+      prev.map((ord) =>
+        ord.id === orderId
+          ? { ...ord, depositPaid: ord.total, remainingBalance: 0, status: 'delivered', deliveredAt }
+          : ord
+      )
     );
+
+    if (balance > 0) {
+      setCashRegister((reg) => ({
+        ...reg,
+        cashAmount: reg.cashAmount + (method === 'especes' ? balance : 0),
+        waveAmount: reg.waveAmount + (method === 'wave' ? balance : 0),
+        momoAmount: reg.momoAmount + (method === 'momo' || method === 'om' ? balance : 0),
+        totalAmount: reg.totalAmount + balance,
+      }));
+      // Le reste à payer avait été ajouté au solde dû du client à la création
+      // de la commande : on le déduit maintenant qu'il est encaissé.
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.id === order.customerId ? { ...c, balance: Math.max(0, c.balance - balance) } : c
+        )
+      );
+    }
+
     showToast(`✓ Commande remise au client et solde encaissé via ${method.toUpperCase()}!`);
   };
 
@@ -416,10 +456,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const notifyAllSms = () => {
+    const readyCount = orders.filter((o) => o.status === 'ready').length;
     setOrders((prev) =>
       prev.map((o) => (o.status === 'ready' ? { ...o, smsSent: true } : o))
     );
-    showToast('📲 11 SMS de notification envoyés aux clients de commandes prêtes !');
+    showToast(
+      readyCount > 0
+        ? `📲 ${readyCount} SMS de notification envoyés aux clients de commandes prêtes !`
+        : 'Aucune commande prête à notifier pour le moment.'
+    );
   };
 
   const toggleSidebar = () => {
@@ -538,6 +583,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearCart,
         pickupOption,
         setPickupOption,
+        nextTicketNumber,
         orderNotes,
         setOrderNotes,
         depositAmount,
