@@ -1,23 +1,40 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { Search, Eye, Filter, ArrowLeft, ArrowUpDown } from 'lucide-react';
+import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2 } from 'lucide-react';
+import { Tabs } from '../common/Tabs';
+import { isOrderLate } from '../../lib/reports';
 import { LaundryOrder } from '../../types';
 
 export const OrdersPage: React.FC = () => {
   const { orders, setPreviewTicket, setActiveScreen } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [tab, setTab] = useState<'all' | 'production' | 'ready' | 'late' | 'delivered'>('all');
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
+  const searchedOrders = orders.filter(
+    (order) =>
       order.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.lines.some((l) => l.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      order.lines.some((l) => l.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Regroupement par moment du workflow : en atelier, prêtes, en retard (à relancer), terminées
+  const inTab = (order: LaundryOrder, t: typeof tab): boolean => {
+    switch (t) {
+      case 'production':
+        return order.status === 'received' || order.status === 'washing' || order.status === 'ironing';
+      case 'ready':
+        return order.status === 'ready';
+      case 'late':
+        return isOrderLate(order);
+      case 'delivered':
+        return order.status === 'delivered';
+      default:
+        return true;
+    }
+  };
+  const countFor = (t: typeof tab) => searchedOrders.filter((o) => inTab(o, t)).length;
+  const filteredOrders = searchedOrders.filter((o) => inTab(o, tab));
 
   return (
     <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
@@ -47,6 +64,21 @@ export const OrdersPage: React.FC = () => {
         </button>
       </div>
 
+      {/* Onglets par moment du workflow, avec la taille de chaque file */}
+      <Tabs
+        ariaLabel="Commandes par étape du workflow"
+        className="mb-3"
+        activeId={tab}
+        onChange={setTab}
+        tabs={[
+          { id: 'all', label: 'Toutes', icon: <List className="w-4 h-4" aria-hidden="true" />, badge: searchedOrders.length },
+          { id: 'production', label: 'En production', icon: <WashingMachine className="w-4 h-4" aria-hidden="true" />, badge: countFor('production') },
+          { id: 'ready', label: 'Prêtes', icon: <PackageCheck className="w-4 h-4" aria-hidden="true" />, badge: countFor('ready') },
+          { id: 'late', label: 'En retard', icon: <Clock className="w-4 h-4" aria-hidden="true" />, badge: countFor('late') },
+          { id: 'delivered', label: 'Livrées', icon: <CheckCircle2 className="w-4 h-4" aria-hidden="true" />, badge: countFor('delivered') },
+        ]}
+      />
+
       <div className="bg-white border border-zinc-200/90 rounded-xl overflow-hidden shadow-2xs">
         <div className="p-3 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -60,18 +92,6 @@ export const OrdersPage: React.FC = () => {
                 className="border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-64 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-zinc-200 rounded-lg px-3 py-1.5 text-[12.5px] bg-white text-zinc-700 font-semibold cursor-pointer"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="received">Réceptionné</option>
-              <option value="washing">En lavage</option>
-              <option value="ironing">Repassage / Finition</option>
-              <option value="ready">Prêt à remettre</option>
-              <option value="delivered">Remis au client</option>
-            </select>
           </div>
 
           <span className="text-[12px] text-zinc-500 font-medium">
