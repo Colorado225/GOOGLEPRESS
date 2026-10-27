@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { KanbanColumn } from './KanbanColumn';
+import { Tabs } from '../common/Tabs';
+import { formatFCFA } from '../../data/demoData';
 import { HandoverSection } from './HandoverSection';
 import { DailyClosingCard } from './DailyClosingCard';
 import { OrderStatus } from '../../types';
-import { Search, Settings, Smartphone, ArrowLeft } from 'lucide-react';
+import { Search, Settings, Smartphone, ArrowLeft, WashingMachine, PackageCheck, Wallet } from 'lucide-react';
 
 export const WorkshopPage: React.FC = () => {
   const {
     orders,
     moveOrderStatus,
+    activeHandoverOrder,
     setActiveHandoverOrder,
     notifyAllSms,
     setActiveScreen,
@@ -18,6 +21,7 @@ export const WorkshopPage: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [machineStatusModal, setMachineStatusModal] = useState(false);
+  const [tab, setTab] = useState<'production' | 'handover' | 'cash'>('production');
 
   const filteredOrders = orders.filter(
     (o) =>
@@ -92,7 +96,34 @@ export const WorkshopPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4-Column Kanban */}
+      {/* Onglets par moment du workflow : produire · remettre · encaisser/clôturer */}
+      <Tabs
+        ariaLabel="Sections de l'atelier"
+        className="mb-4"
+        activeId={tab}
+        onChange={setTab}
+        tabs={[
+          {
+            id: 'production',
+            label: 'Production',
+            icon: <WashingMachine className="w-4 h-4" aria-hidden="true" />,
+            badge: receivedOrders.length + washingOrders.length + ironingOrders.length,
+          },
+          {
+            id: 'handover',
+            label: 'Remises',
+            icon: <PackageCheck className="w-4 h-4" aria-hidden="true" />,
+            badge: readyOrders.length > 0 ? `${readyOrders.length} prête(s)` : undefined,
+          },
+          {
+            id: 'cash',
+            label: 'Caisse & clôture',
+            icon: <Wallet className="w-4 h-4" aria-hidden="true" />,
+          },
+        ]}
+      />
+
+      {tab === 'production' && (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4 overflow-x-auto pb-1">
         {/* Column 1 */}
         <KanbanColumn
@@ -144,20 +175,60 @@ export const WorkshopPage: React.FC = () => {
           onMoveOrder={handleMoveOrder}
           onSelectForHandover={(order) => {
             setActiveHandoverOrder(order);
-            showToast(`Commande ${order.ticketNumber} ouverte pour remise au client`);
+            setTab('handover');
+            showToast(`Commande ${order.ticketNumber} ouverte dans l'onglet Remises`);
           }}
         />
       </div>
 
-      {/* Lower section: Remise ouverte + Caisse clôture */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-        <div className="lg:col-span-3">
+      )}
+
+      {tab === 'handover' && (
+        <div className="space-y-3">
+          {/* Sélection rapide parmi les commandes prêtes */}
+          <div className="bg-white border border-zinc-200/90 rounded-xl p-3.5 shadow-2xs">
+            <h2 className="font-bold text-[13.5px] text-zinc-900">
+              Commandes prêtes à remettre
+              <span className="text-zinc-500 font-semibold"> · {readyOrders.length} en attente de retrait</span>
+            </h2>
+            {readyOrders.length === 0 ? (
+              <p className="text-[12.5px] text-zinc-500 mt-1.5">
+                Aucune commande n'est prête pour le moment. Les commandes terminées apparaîtront ici
+                depuis l'onglet Production (colonne « Prêts à remettre »).
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mt-2.5">
+                {readyOrders.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setActiveHandoverOrder(o)}
+                    aria-pressed={activeHandoverOrder?.id === o.id}
+                    className={`text-left border rounded-xl px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
+                      activeHandoverOrder?.id === o.id
+                        ? 'bg-[#09090b] text-white border-zinc-900'
+                        : 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-zinc-800'
+                    }`}
+                  >
+                    <span className="block font-bold text-[12.5px]">{o.ticketNumber} • {o.customerName}</span>
+                    <span className={`block text-[11.5px] tabular-nums ${activeHandoverOrder?.id === o.id ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                      {o.remainingBalance > 0 ? `Reste à payer : ${formatFCFA(o.remainingBalance)}` : 'Déjà soldée'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <HandoverSection />
         </div>
-        <div className="lg:col-span-2">
+      )}
+
+      {tab === 'cash' && (
+        <div className="max-w-xl">
           <DailyClosingCard />
         </div>
-      </div>
+      )}
 
       <p className="bg-white border border-zinc-200/90 rounded-xl mt-3 px-4 py-2 text-[11.5px] text-zinc-500 shadow-2xs">
         Maquette 3/3 • Kanban atelier + remise comptoir + caisse Mobile Money (Wave, MTN, Orange) • Données fictives • FCFA

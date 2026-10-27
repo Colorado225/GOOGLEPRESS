@@ -25,7 +25,7 @@ export const HandoverSection: React.FC = () => {
       <div className="bg-white border border-zinc-200/90 rounded-xl p-6 text-center text-zinc-500 shadow-2xs">
         <p className="font-semibold text-[14px]">Aucune commande sélectionnée pour la remise</p>
         <p className="text-[12px] mt-1 text-zinc-400">
-          Sélectionnez une commande dans la colonne « Prêts à remettre » ci-dessus.
+          Choisissez une commande prête dans la liste ci-dessus, ou depuis l'onglet Production (colonne « Prêts à remettre »).
         </p>
       </div>
     );
