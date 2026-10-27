@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard } from '../common/ModuleCommon';
+import { Tabs } from '../common/Tabs';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeeDetailPanel } from './EmployeeDetailPanel';
 import { AttendanceSection } from './AttendanceSection';
@@ -196,31 +197,27 @@ export const EmployeesPage: React.FC = () => {
         />
       </div>
 
-      {/* Onglets Employés / Présences */}
-      <div className="flex gap-1.5 mb-3" role="tablist" aria-label="Personnel et présences">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'list'}
-          onClick={() => setTab('list')}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
-            tab === 'list' ? 'bg-[#09090b] text-white shadow-2xs' : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-          }`}
-        >
-          <Users className="w-4 h-4" /> Employés
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'attendance'}
-          onClick={() => setTab('attendance')}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
-            tab === 'attendance' ? 'bg-[#09090b] text-white shadow-2xs' : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-          }`}
-        >
-          <ClipboardList className="w-4 h-4" /> Présences
-        </button>
-      </div>
+      {/* Onglets par contexte : l'équipe (fiches) · le pointage (présences) */}
+      <Tabs
+        ariaLabel="Sections du module Personnel"
+        className="mb-3"
+        activeId={tab}
+        onChange={setTab}
+        tabs={[
+          {
+            id: 'list',
+            label: 'Équipe',
+            icon: <Users className="w-4 h-4" aria-hidden="true" />,
+            badge: filteredEmployees.length,
+          },
+          {
+            id: 'attendance',
+            label: 'Présences',
+            icon: <ClipboardList className="w-4 h-4" aria-hidden="true" />,
+            badge: todaySummary.unrecorded > 0 ? `${todaySummary.unrecorded} à saisir` : undefined,
+          },
+        ]}
+      />
 
       {tab === 'attendance' ? (
         <AttendanceSection
