@@ -15,6 +15,8 @@ import {
   ShoppingBag,
   Info,
 } from 'lucide-react';
+import { Badge } from '../common/DataTable';
+import { SegmentedControl } from '../common/SegmentedControl';
 
 export const Step2ArticlesAndServices: React.FC = () => {
   const {
@@ -84,40 +86,23 @@ export const Step2ArticlesAndServices: React.FC = () => {
         <div>
           <h2 className="text-lg font-extrabold text-zinc-950 flex items-center gap-2">
             <span>Étape 2 • Articles & Prestations</span>
-            <span
-              className={`text-[11.5px] font-bold px-2.5 py-0.5 rounded-full border ${
-                isPressing
-                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                  : 'bg-teal-50 text-teal-700 border-teal-200'
-              }`}
-            >
+            <Badge variant={isPressing ? 'info' : 'teal'} className={isPressing ? 'bg-blue-50' : 'bg-teal-50'}>
               {isPressing ? 'Catalogue Pressing' : 'Catalogue Blanchisserie'}
-            </span>
+            </Badge>
           </h2>
           <p className="text-[13px] text-zinc-500 mt-0.5">
             Sélectionnez les vêtements ou le linge apporté par {selectedCustomer?.name || 'le client'}.
           </p>
         </div>
 
-        {/* Treatment service filter chips */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {currentServicesList.map((srv) => (
-            <button
-              key={srv}
-              type="button"
-              onClick={() => setSelectedServiceFilter(srv)}
-              className={`text-[11.5px] font-semibold border rounded-full px-3 py-1 transition-all ${
-                selectedServiceFilter === srv
-                  ? isPressing
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                    : 'bg-teal-600 text-white border-teal-600 shadow-2xs'
-                  : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
-              }`}
-            >
-              {srv}
-            </button>
-          ))}
-        </div>
+        {/* Filtre du traitement appliqué aux articles ajoutés (code couleur pressing/blanchisserie) */}
+        <SegmentedControl
+          ariaLabel="Choisir le traitement appliqué aux articles ajoutés"
+          tone={isPressing ? 'blue' : 'teal'}
+          options={currentServicesList.map((srv) => ({ id: srv, label: srv }))}
+          value={selectedServiceFilter}
+          onChange={setSelectedServiceFilter}
+        />
       </div>
 
       {/* Main Grid: Left Catalog, Right Cart summary */}
@@ -127,28 +112,18 @@ export const Step2ArticlesAndServices: React.FC = () => {
           {/* Sub-category tabs */}
           <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs flex items-center justify-between gap-2">
             <span className="text-[12px] font-bold text-zinc-600">Catégories :</span>
-            <div className="flex flex-wrap gap-1.5">
-              {[
+            <SegmentedControl
+              ariaLabel="Filtrer le catalogue par catégorie"
+              options={[
                 { id: 'all', label: 'Tous' },
                 { id: 'men', label: 'Hommes' },
                 { id: 'women', label: 'Femmes' },
                 { id: 'home', label: 'Linge maison' },
                 { id: 'pro', label: 'B2B / Pro' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveCategoryFilter(tab.id)}
-                  className={`text-[11.5px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                    activeCategoryFilter === tab.id
-                      ? 'bg-[#09090b] text-white'
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+              ]}
+              value={activeCategoryFilter}
+              onChange={setActiveCategoryFilter}
+            />
           </div>
 
           <div className="card-3d rounded-xl p-3">

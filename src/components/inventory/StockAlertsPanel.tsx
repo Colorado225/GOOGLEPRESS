@@ -3,6 +3,7 @@ import { InventoryProduct, StockStatus } from '../../types';
 import { formatQuantity, getStockStatus, STOCK_STATUS_LABELS } from '../../lib/inventory';
 import { STOCK_STATUS_BADGE } from './inventoryLabels';
 import { EmptyState } from '../common/ModuleCommon';
+import { Badge } from '../common/DataTable';
 import { AlertTriangle, OctagonAlert, ArrowDownUp, Eye } from 'lucide-react';
 
 interface StockAlertsPanelProps {
@@ -89,9 +90,9 @@ export const StockAlertsPanel: React.FC<StockAlertsPanelProps> = ({ alerts, onRe
                     {product.supplier ? ` · ${product.supplier}` : ''}
                   </p>
                 </div>
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STOCK_STATUS_BADGE[status]}`}>
+                <Badge size="sm" className={STOCK_STATUS_BADGE[status]}>
                   {STOCK_STATUS_LABELS[status]}
-                </span>
+                </Badge>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"

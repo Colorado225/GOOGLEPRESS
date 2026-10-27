@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ConfirmModal, ModalShell } from '../common/ModalShell';
 import { EmptyState, ResetFiltersButton } from '../common/ModuleCommon';
+import { Avatar, AvatarFallback, Badge } from '../common/DataTable';
 import { AttendanceRecord, AttendanceStatus, EMPLOYEE_POSITIONS, Employee } from '../../types';
 import { addDaysToISO, capitalize, formatISODateLongFr, todayISO } from '../../lib/dates';
 import { getInitials, normalizeText } from '../../lib/utils';
@@ -149,9 +150,9 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
             ['leave', summary.leave],
             ['unrecorded', summary.unrecorded],
           ] as const).map(([status, value]) => (
-            <span key={status} className={`text-[11px] font-bold px-2 py-1 rounded-full border tabular-nums ${ATTENDANCE_STATUS_BADGE[status]}`}>
+            <Badge key={status} size="sm" className={`py-1 ${ATTENDANCE_STATUS_BADGE[status]}`}>
               {ATTENDANCE_STATUS_LABELS[status]} : {value}
-            </span>
+            </Badge>
           ))}
         </div>
       </div>
@@ -228,19 +229,19 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                     className="flex items-center gap-2.5 min-w-0 text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 px-1 py-0.5"
                     aria-label={`Ouvrir la fiche de ${employee.fullName}`}
                   >
-                    <span className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-[11px] shrink-0" aria-hidden="true">
-                      {getInitials(employee.fullName)}
-                    </span>
+                    <Avatar size="sm" aria-hidden="true">
+                      <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
+                    </Avatar>
                     <span className="min-w-0">
                       <span className="block font-bold text-[13px] text-zinc-900 truncate">{employee.fullName}</span>
                       <span className="block text-[11.5px] text-zinc-500">{employee.position}</span>
                     </span>
                   </button>
 
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${ATTENDANCE_STATUS_BADGE[status]}`}>
+                  <Badge size="sm" className={ATTENDANCE_STATUS_BADGE[status]}>
                     {ATTENDANCE_STATUS_LABELS[status]}
                     {record?.arrivalTime ? ` · ${record.arrivalTime}` : ''}
-                  </span>
+                  </Badge>
                   {record?.reason && (
                     <span className="text-[11.5px] text-zinc-500 italic truncate max-w-[220px]" title={record.reason}>
                       {record.reason}

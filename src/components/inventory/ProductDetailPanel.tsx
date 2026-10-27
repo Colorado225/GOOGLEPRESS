@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { SlidePanel } from '../common/ModalShell';
+import { Badge } from '../common/DataTable';
 import { InventoryProduct } from '../../types';
 import { formatQuantity, getStockStatus, STOCK_STATUS_LABELS } from '../../lib/inventory';
 import { formatISODateFr } from '../../lib/dates';
@@ -43,13 +44,13 @@ export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({
     <SlidePanel title={product.name} subtitle={`Réf. ${product.reference} · ${product.category}`} onClose={onClose}>
       <section aria-label="Résumé du produit">
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STOCK_STATUS_BADGE[status]}`}>
+          <Badge size="sm" className={STOCK_STATUS_BADGE[status]}>
             {STOCK_STATUS_LABELS[status]}
-          </span>
+          </Badge>
           {!product.isActive && (
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full border bg-zinc-100 text-zinc-500 border-zinc-200">
+            <Badge size="sm" className="border-zinc-200 bg-zinc-100 text-zinc-500">
               Produit désactivé
-            </span>
+            </Badge>
           )}
         </div>
 
@@ -127,9 +128,9 @@ export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({
                 <li key={m.id} className="border border-zinc-100 rounded-lg px-2.5 py-2 bg-zinc-50/50 text-[12.5px]">
                   <div className="flex items-center justify-between gap-2">
                     <span className="tabular-nums text-zinc-600">{formatISODateFr(m.date)}</span>
-                    <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full border ${MOVEMENT_TYPE_BADGE[m.type]}`}>
+                    <Badge size="sm" className={`text-[10.5px] ${MOVEMENT_TYPE_BADGE[m.type]}`}>
                       {MOVEMENT_TYPE_LABELS[m.type]}
-                    </span>
+                    </Badge>
                     <span className={`font-bold tabular-nums ${variation < 0 ? 'text-orange-700' : variation > 0 ? 'text-emerald-700' : 'text-zinc-500'}`}>
                       {variation > 0 ? '+' : ''}{formatQuantity(variation, product.unit)}
                     </span>

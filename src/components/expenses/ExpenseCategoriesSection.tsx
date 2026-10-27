@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { Pencil, Check, X, Plus, Ban, UserCheck } from 'lucide-react';
+import { Badge } from '../common/DataTable';
 
 /** Gestion des catégories de dépenses : ajout, renommage, activation/désactivation. */
 export const ExpenseCategoriesSection: React.FC = () => {
@@ -137,15 +138,13 @@ export const ExpenseCategoriesSection: React.FC = () => {
                 </span>
               )}
 
-              <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-                  category.isActive
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-zinc-100 text-zinc-500 border-zinc-200'
-                }`}
+              <Badge
+                size="sm"
+                variant={category.isActive ? 'success' : 'secondary'}
+                className={category.isActive ? 'bg-emerald-50' : 'bg-zinc-100 text-zinc-500'}
               >
                 {category.isActive ? 'Active' : 'Désactivée'}
-              </span>
+              </Badge>
 
               {!isRenaming && (
                 <span className="flex items-center gap-1">

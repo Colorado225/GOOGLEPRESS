@@ -20,7 +20,17 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react';
-import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../common/DataTable';
+import {
+  Badge,
+  Frame,
+  FramePanel,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '../common/DataTable';
 
 export const Step3SummaryAndConfirm: React.FC = () => {
   const {
@@ -94,16 +104,13 @@ export const Step3SummaryAndConfirm: React.FC = () => {
           </p>
         </div>
 
-        <span
-          className={`px-3 py-1 rounded-full text-[12px] font-bold border flex items-center gap-1.5 self-start sm:self-center ${
-            isPressing
-              ? 'bg-blue-50 text-blue-700 border-blue-200'
-              : 'bg-teal-50 text-teal-700 border-teal-200'
-          }`}
+        <Badge
+          variant={isPressing ? 'info' : 'teal'}
+          className={`self-start px-3 py-1 text-[12px] sm:self-center ${isPressing ? 'bg-blue-50' : 'bg-teal-50'}`}
         >
           {isPressing ? <Shirt className="w-3.5 h-3.5" /> : <Waves className="w-3.5 h-3.5" />}
           <span>{isPressing ? 'Commande Pressing' : 'Commande Blanchisserie'}</span>
-        </span>
+        </Badge>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

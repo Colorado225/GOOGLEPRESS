@@ -4,6 +4,7 @@ import { CustomerSection } from './CustomerSection';
 import { PickupOptionsSection } from './PickupOptionsSection';
 import { ArrowRight, UserCheck, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { formatFCFA } from '../../data/demoData';
+import { Badge } from '../common/DataTable';
 
 export const Step1ClientAndDates: React.FC = () => {
   const {
@@ -39,15 +40,12 @@ export const Step1ClientAndDates: React.FC = () => {
             Renseignez l'identité du déposant, la date de livraison souhaitée et les instructions particulières.
           </p>
         </div>
-        <span
-          className={`text-[12px] font-bold px-3 py-1 rounded-full border self-start sm:self-center ${
-            isPressing
-              ? 'bg-blue-50 text-blue-700 border-blue-200'
-              : 'bg-teal-50 text-teal-700 border-teal-200'
-          }`}
+        <Badge
+          variant={isPressing ? 'info' : 'teal'}
+          className={`self-start px-3 py-1 text-[12px] sm:self-center ${isPressing ? 'bg-blue-50' : 'bg-teal-50'}`}
         >
           {isPressing ? '👔 Pressing' : '🛏️ Blanchisserie'}
-        </span>
+        </Badge>
       </div>
 
       {/* Customer Selector Card */}

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { SlidePanel } from '../common/ModalShell';
+import { Avatar, AvatarFallback, Badge } from '../common/DataTable';
 import { Employee } from '../../types';
 import { formatISODateFr, isoDaysFromToday } from '../../lib/dates';
 import { getInitials } from '../../lib/utils';
@@ -58,15 +59,15 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
       {/* Résumé */}
       <section aria-label="Résumé de l'employé">
         <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-full bg-zinc-900 text-white flex items-center justify-center font-black text-[18px] shrink-0" aria-hidden="true">
-            {getInitials(employee.fullName)}
-          </div>
+          <Avatar aria-hidden="true" className="h-14 w-14 text-[18px] font-black shadow-none ring-0">
+            <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
+          </Avatar>
           <div className="min-w-0">
             <p className="font-bold text-[16px] text-zinc-900 truncate">{employee.fullName}</p>
             <p className="text-[12.5px] text-zinc-500">{employee.position}</p>
-            <span className={`inline-block mt-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${EMPLOYEE_STATUS_BADGE[employee.status]}`}>
+            <Badge size="sm" className={`mt-1 ${EMPLOYEE_STATUS_BADGE[employee.status]}`}>
               {EMPLOYEE_STATUS_LABELS[employee.status]}
-            </span>
+            </Badge>
           </div>
         </div>
 
@@ -151,9 +152,9 @@ export const EmployeeDetailPanel: React.FC<EmployeeDetailPanelProps> = ({
                   <span className="tabular-nums text-zinc-700">{formatISODateFr(r.date)}</span>
                   {r.arrivalTime && <span className="text-zinc-500 tabular-nums">{r.arrivalTime}</span>}
                   {r.reason && <span className="text-zinc-500 truncate flex-1">{r.reason}</span>}
-                  <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${ATTENDANCE_STATUS_BADGE[r.status]}`}>
+                  <Badge size="sm" className={`shrink-0 text-[10.5px] ${ATTENDANCE_STATUS_BADGE[r.status]}`}>
                     {ATTENDANCE_STATUS_LABELS[r.status]}
-                  </span>
+                  </Badge>
                 </li>
               ))}
             </ul>

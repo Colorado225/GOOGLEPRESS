@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { SlidePanel } from '../common/ModalShell';
+import { Badge } from '../common/DataTable';
 import { Expense, EXPENSE_PAYMENT_LABELS } from '../../types';
 import { formatISODateFr } from '../../lib/dates';
 import { formatFCFA } from '../../data/demoData';
@@ -29,15 +30,13 @@ export const ExpenseDetailPanel: React.FC<ExpenseDetailPanelProps> = ({
         <p className={`text-[26px] font-black tabular-nums tracking-tight ${isCancelled ? 'text-zinc-400 line-through' : 'text-zinc-950'}`}>
           {formatFCFA(expense.amountXof)}
         </p>
-        <span
-          className={`inline-block mt-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-            isCancelled
-              ? 'bg-red-50 text-red-700 border-red-200'
-              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-          }`}
+        <Badge
+          size="sm"
+          variant={isCancelled ? 'destructive' : 'success'}
+          className={`mt-1 ${isCancelled ? 'bg-red-50' : 'bg-emerald-50'}`}
         >
           {isCancelled ? 'Annulée — exclue des totaux' : 'Enregistrée'}
-        </span>
+        </Badge>
 
         <dl className="mt-4 space-y-1.5 text-[13px]">
           {([

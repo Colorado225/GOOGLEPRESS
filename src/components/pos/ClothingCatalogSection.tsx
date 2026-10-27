@@ -4,6 +4,7 @@ import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
 import { ClothingItem } from '../../types';
 import { CurrentColorSelector } from './ColorPicker';
 import { Reveal } from '../common/Reveal';
+import { SegmentedControl } from '../common/SegmentedControl';
 
 export const ClothingCatalogSection: React.FC = () => {
   const { addCartItem, cartLines, selectedServiceFilter, setSelectedServiceFilter } = useApp();
@@ -35,28 +36,17 @@ export const ClothingCatalogSection: React.FC = () => {
       {/* Category selector header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
         <h2 className="font-bold text-[14.5px] text-zinc-900">2 • Articles & services</h2>
-        <div className="flex flex-wrap gap-1.5">
-          {(['all', 'men', 'women', 'home'] as const).map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setSelectedCategory(cat)}
-              className={`text-[11.5px] font-semibold border rounded-full px-3 py-1 transition-all ${
-                selectedCategory === cat
-                  ? 'bg-[#09090b] text-white border-[#09090b] shadow-2xs'
-                  : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
-              }`}
-            >
-              {cat === 'all'
-                ? 'Tous'
-                : cat === 'men'
-                ? 'Hommes'
-                : cat === 'women'
-                ? 'Femmes'
-                : 'Maison'}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          ariaLabel="Filtrer le catalogue par rayon"
+          options={[
+            { id: 'all', label: 'Tous' },
+            { id: 'men', label: 'Hommes' },
+            { id: 'women', label: 'Femmes' },
+            { id: 'home', label: 'Maison' },
+          ]}
+          value={selectedCategory}
+          onChange={setSelectedCategory}
+        />
       </div>
 
       <div className="flex items-center justify-between mb-3 text-[12px] text-zinc-500">
@@ -121,20 +111,12 @@ export const ClothingCatalogSection: React.FC = () => {
       {/* Service type filter chips */}
       <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-zinc-100">
         <span className="text-[11.5px] font-bold text-zinc-500 uppercase mr-1">Traitement :</span>
-        {services.map((srv) => (
-          <button
-            key={srv.id}
-            type="button"
-            onClick={() => setSelectedServiceFilter(srv.id)}
-            className={`text-[11.5px] font-semibold border rounded-full px-3 py-1 transition-all ${
-              selectedServiceFilter === srv.id
-                ? 'bg-[#09090b] text-white border-[#09090b] shadow-2xs'
-                : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-100'
-            }`}
-          >
-            {srv.label}
-          </button>
-        ))}
+        <SegmentedControl
+          ariaLabel="Choisir le traitement appliqué aux articles ajoutés"
+          options={services}
+          value={selectedServiceFilter}
+          onChange={setSelectedServiceFilter}
+        />
       </div>
     </Reveal>
   );

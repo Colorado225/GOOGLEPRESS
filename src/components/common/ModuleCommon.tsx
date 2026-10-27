@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Info, RotateCcw } from 'lucide-react';
+import { SegmentedControl } from './SegmentedControl';
 import type { PeriodPreset } from '../../lib/periods';
 import { PERIOD_PRESET_LABELS } from '../../lib/periods';
 
@@ -92,23 +93,12 @@ export const PeriodFilter: React.FC<PeriodFilterProps> = ({
   const presets = Object.keys(PERIOD_PRESET_LABELS) as PeriodPreset[];
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Choisir une période">
-        {presets.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => onPresetChange(p)}
-            aria-pressed={preset === p}
-            className={`px-2.5 py-1.5 rounded-lg text-[12px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
-              preset === p
-                ? 'bg-[#09090b] text-white shadow-2xs'
-                : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50 bg-white'
-            }`}
-          >
-            {PERIOD_PRESET_LABELS[p]}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Choisir une période"
+        options={presets.map((p) => ({ id: p, label: PERIOD_PRESET_LABELS[p] }))}
+        value={preset}
+        onChange={onPresetChange}
+      />
 
       {preset === 'custom' && (
         <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
