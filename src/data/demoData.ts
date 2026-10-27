@@ -15,16 +15,29 @@ import imgChemise from '../assets/images/articles/chemise.webp';
 import imgPantalon from '../assets/images/articles/pantalon.webp';
 import imgRobe from '../assets/images/articles/robe.webp';
 import imgCostume from '../assets/images/articles/costume.webp';
-import imgVeste from '../assets/images/articles/veste.webp';
-import imgJupe from '../assets/images/articles/jupe.webp';
+import imgManteau from '../assets/images/articles/manteau.webp';
+import imgJupeLongue from '../assets/images/articles/jupe-longue.webp';
 import imgPull from '../assets/images/articles/pull.webp';
 import imgBlouseUniforme from '../assets/images/articles/blouse-uniforme.webp';
 import imgGilet from '../assets/images/articles/gilet.webp';
 import imgTeeShirt from '../assets/images/articles/tee-shirt.webp';
 import imgJean from '../assets/images/articles/jean.webp';
-import imgSweatCapuche from '../assets/images/articles/sweat-capuche.webp';
-import imgShort from '../assets/images/articles/short.webp';
-import imgChaussettes from '../assets/images/articles/chaussettes.webp';
+import imgHoodie from '../assets/images/articles/hoodie.webp';
+import imgShortColore from '../assets/images/articles/short-colore.webp';
+import imgChaussettesPhoto from '../assets/images/articles/chaussettes-photo.webp';
+import imgFoulard from '../assets/images/articles/foulard.webp';
+import imgDraps from '../assets/images/articles/draps.webp';
+import imgServiettes from '../assets/images/articles/serviettes.webp';
+import imgTaieOreiller from '../assets/images/articles/taie-oreiller.webp';
+import imgNappe from '../assets/images/articles/nappe.webp';
+import imgTailleur from '../assets/images/articles/tailleur.webp';
+import imgSalopette from '../assets/images/articles/salopette.webp';
+import imgMarcel from '../assets/images/articles/marcel.webp';
+import imgVesteCuir from '../assets/images/articles/veste-cuir.webp';
+import imgDoudoune from '../assets/images/articles/doudoune.webp';
+import imgBaskets from '../assets/images/articles/baskets.webp';
+import imgPyjama from '../assets/images/articles/pyjama.webp';
+import imgPeignoir from '../assets/images/articles/peignoir.webp';
 
 export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   // --- PRESSING (Bleu) ---
@@ -33,27 +46,35 @@ export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   { id: 'c3', name: 'Robe', category: 'women', serviceCategory: 'pressing', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '👗', image: imgRobe, description: 'Soie, mousseline, soirée' },
   { id: 'c4', name: 'Costume', category: 'men', serviceCategory: 'pressing', unitPrice: 5000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🤵', image: imgCostume, description: '2 ou 3 pièces en laine' },
   { id: 'c5', name: 'Boubou bazin', category: 'men', serviceCategory: 'pressing', unitPrice: 4500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🥻', description: 'Bazin riche, broderie or' },
-  { id: 'c6', name: 'Veste & Manteau', category: 'men', serviceCategory: 'pressing', unitPrice: 4000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgVeste, description: 'Laine, velours, doublé' },
-  { id: 'c7', name: 'Foulard & Soie', category: 'women', serviceCategory: 'pressing', unitPrice: 800, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧕', description: 'Soie, mousseline, wax délicat' },
-  { id: 'c8', name: 'Jupe', category: 'women', serviceCategory: 'pressing', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🩳', image: imgJupe, description: 'Droite, plissée, tailleur' },
+  { id: 'c6', name: 'Veste & Manteau', category: 'men', serviceCategory: 'pressing', unitPrice: 4000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgManteau, description: 'Laine, velours, doublé' },
+  { id: 'c7', name: 'Foulard & Soie', category: 'women', serviceCategory: 'pressing', unitPrice: 800, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧕', image: imgFoulard, description: 'Soie, mousseline, wax délicat' },
+  { id: 'c8', name: 'Jupe', category: 'women', serviceCategory: 'pressing', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🩳', image: imgJupeLongue, description: 'Droite, plissée, tailleur' },
   { id: 'c9', name: 'Pull & Tricot', category: 'all', serviceCategory: 'pressing', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧶', image: imgPull, description: 'Cachemire, laine délicate' },
   { id: 'c10', name: 'Retouche / Ourlet', category: 'all', serviceCategory: 'pressing', unitPrice: 1500, pricingType: 'unit', unitLabel: 'prestation', emoji: '🪡', description: 'Ourlet pantalon, reprise taille' },
   { id: 'c11', name: 'Gilet', category: 'men', serviceCategory: 'pressing', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgGilet, description: 'Gilet habillé, costume 3 pièces' },
   { id: 'c12', name: 'Tee-shirt & Polo', category: 'all', serviceCategory: 'pressing', unitPrice: 1000, pricingType: 'unit', unitLabel: 'pièce', emoji: '👕', image: imgTeeShirt, description: 'Coton, col rond ou polo' },
   { id: 'c13', name: 'Jean', category: 'all', serviceCategory: 'pressing', unitPrice: 1500, pricingType: 'unit', unitLabel: 'pièce', emoji: '👖', image: imgJean, description: 'Denim, pli léger' },
-  { id: 'c14', name: 'Sweat à capuche', category: 'all', serviceCategory: 'pressing', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgSweatCapuche, description: 'Molleton, poche kangourou' },
-  { id: 'c15', name: 'Short & Culotte', category: 'all', serviceCategory: 'pressing', unitPrice: 1000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🩳', image: imgShort, description: 'Bermuda, short de ville ou de sport' },
+  { id: 'c14', name: 'Sweat à capuche', category: 'all', serviceCategory: 'pressing', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgHoodie, description: 'Molleton, poche kangourou' },
+  { id: 'c15', name: 'Short & Culotte', category: 'all', serviceCategory: 'pressing', unitPrice: 1000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🩳', image: imgShortColore, description: 'Bermuda, short de ville ou de sport' },
+  { id: 'c16', name: 'Tailleur femme', category: 'women', serviceCategory: 'pressing', unitPrice: 6000, pricingType: 'unit', unitLabel: 'ensemble', emoji: '👩‍💼', image: imgTailleur, description: 'Ensemble veste + pantalon ou jupe' },
+  { id: 'c17', name: 'Combinaison & Salopette', category: 'all', serviceCategory: 'pressing', unitPrice: 3000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🦺', image: imgSalopette, description: 'Salopette, combinaison mode ou de travail' },
+  { id: 'c18', name: 'Marcel & Débardeur', category: 'all', serviceCategory: 'pressing', unitPrice: 800, pricingType: 'unit', unitLabel: 'pièce', emoji: '🎽', image: imgMarcel, description: 'Marcel, débardeur, top sans manches' },
+  { id: 'c19', name: 'Veste en cuir', category: 'men', serviceCategory: 'pressing', unitPrice: 8000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgVesteCuir, description: 'Cuir et simili, nettoyage spécial' },
+  { id: 'c20', name: 'Doudoune & Veste matelassée', category: 'all', serviceCategory: 'pressing', unitPrice: 5000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgDoudoune, description: 'Matelassée, garnissage plume ou synthétique' },
+  { id: 'c21', name: 'Baskets & Chaussures', category: 'all', serviceCategory: 'pressing', unitPrice: 3000, pricingType: 'unit', unitLabel: 'paire', emoji: '👟', image: imgBaskets, description: 'Nettoyage baskets et chaussures de ville' },
 
   // --- BLANCHISSERIE (Vert turquoise) ---
-  { id: 'b1', name: 'Draps & Housses', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛏️', description: '1 ou 2 places, grand format' },
-  { id: 'b2', name: 'Serviettes de bain', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 1200, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧖', description: 'Éponge épaisse, désinfection' },
-  { id: 'b3', name: 'Taies d’oreiller', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 800, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛌', description: 'Coton blanc, satin de coton' },
-  { id: 'b4', name: 'Nappes & Serviettes table', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🍽️', description: 'Restauration, amidonnage' },
+  { id: 'b1', name: 'Draps & Housses', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛏️', image: imgDraps, description: '1 ou 2 places, grand format' },
+  { id: 'b2', name: 'Serviettes de bain', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 1200, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧖', image: imgServiettes, description: 'Éponge épaisse, désinfection' },
+  { id: 'b3', name: 'Taies d’oreiller', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 800, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛌', image: imgTaieOreiller, description: 'Coton blanc, satin de coton' },
+  { id: 'b4', name: 'Nappes & Serviettes table', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🍽️', image: imgNappe, description: 'Restauration, amidonnage' },
   { id: 'b5', name: 'Uniformes pro / Médical', category: 'pro', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🦺', image: imgBlouseUniforme, description: 'Blouse, tenue cuisine/sécurité' },
   { id: 'b6', name: 'Linge au kilo (au poids)', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 1000, pricingType: 'kilo', unitLabel: 'kg', emoji: '⚖️', description: 'Pesée au comptoir • 1 000 FCFA/kg' },
   { id: 'b7', name: 'Couette & Édredon', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 5000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛋️', description: 'Duvet plume ou synthétique' },
   { id: 'b8', name: 'Rideaux & Voilages', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 3000, pricingType: 'unit', unitLabel: 'panneau', emoji: '🪟', description: 'Lavage & défroissage vapeur' },
-  { id: 'b9', name: 'Chaussettes & petit linge', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧦', image: imgChaussettes, description: 'Chaussettes, sous-vêtements, petit linge' },
+  { id: 'b9', name: 'Chaussettes & petit linge', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧦', image: imgChaussettesPhoto, description: 'Chaussettes, sous-vêtements, petit linge' },
+  { id: 'b10', name: 'Pyjama (ensemble)', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'ensemble', emoji: '🌙', image: imgPyjama, description: 'Haut + bas assortis' },
+  { id: 'b11', name: 'Peignoir & Robe de chambre', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '👘', image: imgPeignoir, description: 'Peignoir de bain, kimono, robe de chambre' },
 ];
 
 export const INITIAL_CUSTOMERS: Customer[] = [
