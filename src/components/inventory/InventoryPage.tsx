@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard } from '../common/ModuleCommon';
+import { Tabs } from '../common/Tabs';
 import { ProductFormModal } from './ProductFormModal';
 import { StockMovementModal } from './StockMovementModal';
 import { StockMovementHistory } from './StockMovementHistory';
@@ -211,45 +212,33 @@ export const InventoryPage: React.FC = () => {
         />
       </div>
 
-      {topOutputs.length > 0 && tab === 'catalog' && (
-        <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs mb-3 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-zinc-700">
-            <TrendingDown className="w-3.5 h-3.5 text-zinc-400" /> Plus sortis (30 jours) :
-          </span>
-          {topOutputs.map(({ product, qty }) => (
-            <button
-              key={product.id}
-              type="button"
-              onClick={() => setDetailProductId(product.id)}
-              className="text-[11.5px] font-semibold bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-full px-2.5 py-1 tabular-nums transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
-            >
-              {product.name} · {formatQuantity(qty, product.unit)}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Onglets */}
-      <div className="flex flex-wrap gap-1.5 mb-3" role="tablist" aria-label="Sections du stock">
-        {([
-          ['catalog', 'Catalogue', <Boxes key="i" className="w-4 h-4" />],
-          ['alerts', `Alertes${alerts.length > 0 ? ` (${alerts.length})` : ''}`, <AlertTriangle key="i" className="w-4 h-4" />],
-          ['history', `Mouvements (${recentMovementsCount})`, <History key="i" className="w-4 h-4" />],
-        ] as [TabId, string, React.ReactNode][]).map(([id, label, icon]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
-              tab === id ? 'bg-[#09090b] text-white shadow-2xs' : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-            }`}
-          >
-            {icon} {label}
-          </button>
-        ))}
-      </div>
+      {/* Onglets par contexte : le catalogue · ce qui demande attention · l'historique */}
+      <Tabs
+        ariaLabel="Sections du module Stocks"
+        className="mb-3"
+        activeId={tab}
+        onChange={setTab}
+        tabs={[
+          {
+            id: 'catalog',
+            label: 'Catalogue',
+            icon: <Boxes className="w-4 h-4" aria-hidden="true" />,
+            badge: filteredProducts.length,
+          },
+          {
+            id: 'alerts',
+            label: 'Alertes',
+            icon: <AlertTriangle className="w-4 h-4" aria-hidden="true" />,
+            badge: alerts.length > 0 ? alerts.length : undefined,
+          },
+          {
+            id: 'history',
+            label: 'Mouvements',
+            icon: <History className="w-4 h-4" aria-hidden="true" />,
+            badge: recentMovementsCount,
+          },
+        ]}
+      />
 
       {tab === 'alerts' && (
         <StockAlertsPanel
@@ -260,11 +249,30 @@ export const InventoryPage: React.FC = () => {
       )}
 
       {tab === 'history' && (
-        <StockMovementHistory
-          movements={stockMovements}
-          products={products}
-          onViewProduct={(p) => setDetailProductId(p.id)}
-        />
+        <>
+          {topOutputs.length > 0 && (
+            <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs mb-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-zinc-700">
+                <TrendingDown className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" /> Plus sortis (30 jours) :
+              </span>
+              {topOutputs.map(({ product, qty }) => (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => setDetailProductId(product.id)}
+                  className="text-[11.5px] font-semibold bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-full px-2.5 py-1 tabular-nums transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                >
+                  {product.name} · {formatQuantity(qty, product.unit)}
+                </button>
+              ))}
+            </div>
+          )}
+          <StockMovementHistory
+            movements={stockMovements}
+            products={products}
+            onViewProduct={(p) => setDetailProductId(p.id)}
+          />
+        </>
       )}
 
       {tab === 'catalog' && (
