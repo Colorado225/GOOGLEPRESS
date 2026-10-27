@@ -110,6 +110,9 @@ interface AppContextType {
   resetNewOrderFlow: (category?: ServiceCategory) => void;
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  isMobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
+  toggleMobileMenu: () => void;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -150,6 +153,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeScreen, setActiveScreen] = useState<ScreenId>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState<boolean>(false);
 
   // Service Selection & Order Journey Steps
@@ -868,6 +872,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  // Tiroir de navigation mobile (< 768 px) : la barre latérale devient un panneau coulissant
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen((prev) => !prev);
+  };
+
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1032,6 +1041,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetNewOrderFlow,
         isSidebarCollapsed,
         toggleSidebar,
+        isMobileMenuOpen,
+        setMobileMenuOpen: setIsMobileMenuOpen,
+        toggleMobileMenu,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,

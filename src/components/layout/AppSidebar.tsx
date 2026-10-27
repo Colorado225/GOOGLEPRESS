@@ -31,10 +31,15 @@ export const AppSidebar: React.FC = () => {
     setClosingZModalOpen,
     isSidebarCollapsed,
     toggleSidebar,
+    isMobileMenuOpen,
+    setMobileMenuOpen,
     setShortcutHelpOpen,
     nextTicketNumber,
     products,
   } = useApp();
+
+  // En tiroir mobile, la barre est toujours rendue déployée (le repli ne concerne que le bureau)
+  const collapsed = isSidebarCollapsed && !isMobileMenuOpen;
 
   const receivedCount = orders.filter((o) => o.status === 'received').length;
   const stockAlertCount = getAlertProducts(products).length;
@@ -119,7 +124,7 @@ export const AppSidebar: React.FC = () => {
   return (
     <aside
       className={`bg-[#09090b] text-white flex flex-col justify-between rounded-2xl md:rounded-r-2xl select-none z-20 transition-all duration-300 ease-in-out transform origin-left relative flex-1 min-h-[calc(100vh-5.5rem)] h-[calc(100%-1.5rem)] overflow-y-auto ${
-        isSidebarCollapsed
+        collapsed
           ? '-translate-x-full w-0 opacity-0 pointer-events-none overflow-hidden border-0 my-3 ml-0 p-0 shadow-none'
           : 'translate-x-0 w-[255px] opacity-100 shadow-2xl border border-zinc-800/80 my-3 ml-0 md:ml-3 p-4 md:p-5'
       }`}
@@ -141,8 +146,15 @@ export const AppSidebar: React.FC = () => {
         {/* Sidebar Header Slide/Collapse Button */}
         <button
           type="button"
-          onClick={toggleSidebar}
-          title="Masquer le volet latéral (Alt+S)"
+          onClick={() => {
+            if (isMobileMenuOpen) {
+              setMobileMenuOpen(false);
+            } else {
+              toggleSidebar();
+            }
+          }}
+          title={isMobileMenuOpen ? 'Fermer le menu de navigation' : 'Masquer le volet latéral (Alt+S)'}
+          aria-label={isMobileMenuOpen ? 'Fermer le menu de navigation' : 'Masquer le volet latéral'}
           className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white transition-colors"
         >
           <PanelLeftClose className="w-4 h-4" />
@@ -168,10 +180,11 @@ export const AppSidebar: React.FC = () => {
                 } else {
                   setActiveScreen(item.id);
                 }
+                setMobileMenuOpen(false);
               }}
-              title={isSidebarCollapsed ? `${item.label} ${item.shortcut ? `(${item.shortcut})` : ''}` : undefined}
+              title={collapsed ? `${item.label} ${item.shortcut ? `(${item.shortcut})` : ''}` : undefined}
               className={`w-full flex items-center rounded-xl text-left transition-all duration-150 relative group ${
-                isSidebarCollapsed
+                collapsed
                   ? 'justify-center p-2.5 my-1'
                   : 'gap-3 px-3 py-2.5'
               } ${
@@ -268,14 +281,14 @@ export const AppSidebar: React.FC = () => {
           onClick={() => setShortcutHelpOpen(true)}
           title="Guide des raccourcis clavier (?)"
           className={`w-full py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900/60 hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 text-[11px] flex items-center transition-colors ${
-            isSidebarCollapsed ? 'justify-center px-1' : 'justify-between px-2.5'
+            collapsed ? 'justify-center px-1' : 'justify-between px-2.5'
           }`}
         >
           <span className="flex items-center gap-1.5">
             <Keyboard className="w-3.5 h-3.5 text-zinc-400" />
-            {!isSidebarCollapsed && <span>Raccourcis</span>}
+            {!collapsed && <span>Raccourcis</span>}
           </span>
-          {!isSidebarCollapsed && (
+          {!collapsed && (
             <kbd className="px-1 py-0.5 bg-zinc-800 text-[10px] font-mono rounded text-zinc-300">
               ?
             </kbd>
@@ -285,14 +298,14 @@ export const AppSidebar: React.FC = () => {
         {/* User profile identifier */}
         <div
           className={`flex items-center pt-2 border-t border-zinc-800/70 transition-all ${
-            isSidebarCollapsed ? 'justify-center' : 'gap-2.5'
+            collapsed ? 'justify-center' : 'gap-2.5'
           }`}
-          title={isSidebarCollapsed ? (activeScreen === 'workshop' ? 'Moussa Diarra (Chef d\'atelier)' : 'Awa Koné (Gérante)') : undefined}
+          title={collapsed ? (activeScreen === 'workshop' ? 'Moussa Diarra (Chef d\'atelier)' : 'Awa Koné (Gérante)') : undefined}
         >
           <div className="w-9 h-9 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center font-black text-sm shrink-0 shadow-inner">
             {activeScreen === 'workshop' ? 'MD' : 'AK'}
           </div>
-          {!isSidebarCollapsed && (
+          {!collapsed && (
             <div className="overflow-hidden animate-in fade-in duration-200">
               <p className="text-[13px] font-semibold text-white truncate">
                 {activeScreen === 'workshop' ? 'Moussa Diarra' : 'Awa Koné'}

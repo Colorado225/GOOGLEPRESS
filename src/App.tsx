@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { AppSidebar } from './components/layout/AppSidebar';
 import { DashboardPage } from './components/dashboard/DashboardPage';
@@ -22,11 +22,29 @@ import { NewCustomerModal } from './components/pos/NewCustomerModal';
 import { KeyboardShortcutsModal } from './components/modals/KeyboardShortcutsModal';
 import { ToastNotification } from './components/common/ToastNotification';
 import { MainLayoutHeader } from './components/layout/MainLayoutHeader';
-import { Menu, X } from 'lucide-react';
 
 const MainLayout: React.FC = () => {
-  const { activeScreen, isSidebarCollapsed } = useApp();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { activeScreen, isSidebarCollapsed, isMobileMenuOpen, setMobileMenuOpen } = useApp();
+
+  // Fermer le tiroir de navigation mobile avec la touche Échap
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isMobileMenuOpen, setMobileMenuOpen]);
+
+  // Refermer automatiquement le tiroir quand la fenêtre repasse en largeur tablette/bureau
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setMobileMenuOpen(false);
+    };
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, [setMobileMenuOpen]);
 
   return (
     <div className="min-h-screen bg-[#f4f4f5] text-zinc-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col">
@@ -35,13 +53,27 @@ const MainLayout: React.FC = () => {
 
       {/* Main Container */}
       <div className="max-w-[1366px] w-full mx-auto flex-1 flex flex-col md:flex-row relative items-stretch">
-        {/* Desktop Collapsible Sliding Sidebar */}
+        {/* Fond assombri du tiroir mobile : un appui dessus referme la navigation */}
+        {isMobileMenuOpen && (
+          <div
+            aria-hidden="true"
+            onClick={() => setMobileMenuOpen(false)}
+            className="fixed inset-0 bg-black/50 z-30 md:hidden animate-in fade-in duration-150"
+          />
+        )}
+
+        {/* Barre latérale : coulissante/repliable sur bureau, tiroir par-dessus le contenu sur mobile */}
         <div
-          className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out self-stretch flex flex-col ${
+          id="app-sidebar-nav"
+          className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out self-stretch flex-col ${
+            isMobileMenuOpen
+              ? 'flex fixed inset-y-0 left-0 z-40 w-[255px] opacity-100 translate-x-0 animate-in slide-in-from-left duration-200'
+              : 'hidden md:flex'
+          } md:static md:z-auto ${
             isSidebarCollapsed
-              ? 'w-0 opacity-0 -translate-x-full pointer-events-none'
-              : 'w-[255px] opacity-100 translate-x-0'
-          } ${mobileMenuOpen ? 'flex' : 'hidden md:flex'}`}
+              ? 'md:w-0 md:opacity-0 md:-translate-x-full md:pointer-events-none'
+              : 'md:w-[255px] md:opacity-100 md:translate-x-0'
+          }`}
         >
           <AppSidebar />
         </div>

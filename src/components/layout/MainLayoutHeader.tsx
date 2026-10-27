@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
+  Menu,
   PanelLeftClose,
   PanelLeftOpen,
   Keyboard,
@@ -25,6 +26,8 @@ export const MainLayoutHeader: React.FC = () => {
     setActiveScreen,
     isSidebarCollapsed,
     toggleSidebar,
+    isMobileMenuOpen,
+    toggleMobileMenu,
     setShortcutHelpOpen,
     orders,
     customers,
@@ -132,6 +135,20 @@ export const MainLayoutHeader: React.FC = () => {
       <div className="flex items-center justify-between gap-3">
         {/* Left Section: Toggle Trigger, Brand & Breadcrumbs */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          {/* Bouton Menu mobile : ouvre le tiroir de navigation (visible sous 768 px) */}
+          <button
+            type="button"
+            onClick={toggleMobileMenu}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="app-sidebar-nav"
+            aria-label={isMobileMenuOpen ? 'Fermer le menu de navigation' : 'Ouvrir le menu de navigation'}
+            title="Menu de navigation"
+            className="flex md:hidden items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-100 text-zinc-700 text-[12px] font-semibold shadow-2xs transition-colors cursor-pointer"
+          >
+            <Menu className="w-4 h-4" />
+            <span>Menu</span>
+          </button>
+
           {/* Desktop Sliding Sidebar Toggle Trigger */}
           <button
             type="button"
