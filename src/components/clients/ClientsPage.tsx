@@ -1,19 +1,35 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { Search, Plus, UserCheck, Phone, MapPin, ArrowLeft, ShoppingBag } from 'lucide-react';
+import { Search, Plus, UserCheck, Phone, MapPin, ArrowLeft, ShoppingBag, Users, Star, Wallet } from 'lucide-react';
+import { Tabs } from '../common/Tabs';
 import { Customer } from '../../types';
 
 export const ClientsPage: React.FC = () => {
   const { customers, setSelectedCustomer, setActiveScreen, setNewCustomerModalOpen } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
+  const [tab, setTab] = useState<'all' | 'loyalty' | 'due'>('all');
 
-  const filteredCustomers = customers.filter(
+  const searchedCustomers = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.phone.includes(searchTerm) ||
       c.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Segments métier : tout le fichier · clients fidélisés (VIP ou remise fidélité) · soldes à recouvrer
+  const inTab = (cust: Customer, t: typeof tab): boolean => {
+    switch (t) {
+      case 'loyalty':
+        return Boolean(cust.isVip) || cust.loyaltyDiscountPercent > 0;
+      case 'due':
+        return cust.balance > 0;
+      default:
+        return true;
+    }
+  };
+  const countFor = (t: typeof tab) => searchedCustomers.filter((c) => inTab(c, t)).length;
+  const filteredCustomers = searchedCustomers.filter((c) => inTab(c, tab));
 
   const handleStartOrder = (cust: Customer) => {
     setSelectedCustomer(cust);
@@ -49,6 +65,19 @@ export const ClientsPage: React.FC = () => {
         </button>
       </div>
 
+      {/* Onglets par segment de clientèle */}
+      <Tabs
+        ariaLabel="Segments du fichier clients"
+        className="mb-3"
+        activeId={tab}
+        onChange={setTab}
+        tabs={[
+          { id: 'all', label: 'Tous les clients', icon: <Users className="w-4 h-4" aria-hidden="true" />, badge: searchedCustomers.length },
+          { id: 'loyalty', label: 'VIP & fidélité', icon: <Star className="w-4 h-4" aria-hidden="true" />, badge: countFor('loyalty') },
+          { id: 'due', label: 'Soldes dus', icon: <Wallet className="w-4 h-4" aria-hidden="true" />, badge: countFor('due') },
+        ]}
+      />
+
       <div className="bg-white border border-zinc-200/90 rounded-xl overflow-hidden shadow-2xs">
         <div className="p-3 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-2">
           <div className="relative">
@@ -67,6 +96,11 @@ export const ClientsPage: React.FC = () => {
           </span>
         </div>
 
+        {filteredCustomers.length === 0 && (
+          <p className="p-6 text-center text-[13px] text-zinc-500">
+            Aucun client dans ce segment pour cette recherche.
+          </p>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
           {filteredCustomers.map((cust) => (
             <div
