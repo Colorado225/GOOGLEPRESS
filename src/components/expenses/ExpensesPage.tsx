@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard, PeriodFilter } from '../common/ModuleCommon';
+import { Tabs } from '../common/Tabs';
 import { ExpenseFormModal } from './ExpenseFormModal';
 import { ExpenseDetailPanel } from './ExpenseDetailPanel';
 import { ExpenseCategoriesSection } from './ExpenseCategoriesSection';
@@ -18,9 +19,9 @@ import {
 } from '../../lib/periods';
 import { downloadCsv } from '../../lib/csv';
 import { normalizeText } from '../../lib/utils';
-import { Search, Plus, Eye, Pencil, Ban, Download, ReceiptText, FolderCog } from 'lucide-react';
+import { Search, Plus, Eye, Pencil, Ban, Download, ReceiptText, FolderCog, ChartColumn } from 'lucide-react';
 
-type TabId = 'register' | 'categories';
+type TabId = 'overview' | 'register' | 'categories';
 type SortKey = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
 const STATUS_BADGE: Record<Expense['status'], string> = {
@@ -35,7 +36,7 @@ const STATUS_LABELS: Record<Expense['status'], string> = {
 export const ExpensesPage: React.FC = () => {
   const { expenses, expenseCategories, setActiveScreen, cancelExpense, showToast } = useApp();
 
-  const [tab, setTab] = useState<TabId>('register');
+  const [tab, setTab] = useState<TabId>('overview');
   const [preset, setPreset] = useState<PeriodPreset>('month');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -283,6 +284,35 @@ export const ExpensesPage: React.FC = () => {
         />
       </div>
 
+      {/* Onglets par contexte : analyser (vue d'ensemble) · consulter/agir (registre) · configurer (catégories) */}
+      <Tabs
+        ariaLabel="Sections du module Dépenses"
+        className="mb-4"
+        activeId={tab}
+        onChange={setTab}
+        tabs={[
+          {
+            id: 'overview',
+            label: "Vue d'ensemble",
+            icon: <ChartColumn className="w-4 h-4" aria-hidden="true" />,
+          },
+          {
+            id: 'register',
+            label: 'Registre',
+            icon: <ReceiptText className="w-4 h-4" aria-hidden="true" />,
+            badge: filteredExpenses.length,
+          },
+          {
+            id: 'categories',
+            label: 'Catégories',
+            icon: <FolderCog className="w-4 h-4" aria-hidden="true" />,
+            badge: expenseCategories.filter((c) => c.isActive).length,
+          },
+        ]}
+      />
+
+      {tab === 'overview' && (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <KpiCard label="Total de la période" value={formatFCFA(periodTotal)} hint="dépenses enregistrées, hors annulées" />
         <KpiCard label="Opérations retenues" value={String(periodExpenses.length)} hint={`sur la période sélectionnée`} />
@@ -358,35 +388,12 @@ export const ExpensesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Onglets Registre / Catégories */}
-      <div className="flex gap-1.5 mb-3" role="tablist" aria-label="Registre et catégories">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'register'}
-          onClick={() => setTab('register')}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
-            tab === 'register' ? 'bg-[#09090b] text-white shadow-2xs' : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-          }`}
-        >
-          <ReceiptText className="w-4 h-4" /> Registre
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'categories'}
-          onClick={() => setTab('categories')}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
-            tab === 'categories' ? 'bg-[#09090b] text-white shadow-2xs' : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-          }`}
-        >
-          <FolderCog className="w-4 h-4" /> Catégories
-        </button>
-      </div>
+        </>
+      )}
 
       {tab === 'categories' ? (
         <ExpenseCategoriesSection />
-      ) : (
+      ) : tab === 'register' ? (
         <div className="bg-white border border-zinc-200/90 rounded-xl overflow-hidden shadow-2xs">
           <div className="p-3 border-b border-zinc-200 flex flex-wrap items-center gap-2">
             <div className="relative">
@@ -559,7 +566,7 @@ export const ExpensesPage: React.FC = () => {
             </>
           )}
         </div>
-      )}
+      ) : null}
 
       {formOpen && <ExpenseFormModal expense={editingExpense} onClose={() => setFormOpen(false)} />}
 
