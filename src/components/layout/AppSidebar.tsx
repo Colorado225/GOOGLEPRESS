@@ -14,9 +14,14 @@ import {
   Truck,
   Wallet,
   Users,
+  ContactRound,
+  Boxes,
+  ReceiptText,
+  ChartColumn,
   Settings,
 } from 'lucide-react';
 import { formatTime } from '../../lib/dates';
+import { getAlertProducts } from '../../lib/inventory';
 
 export const AppSidebar: React.FC = () => {
   const {
@@ -28,9 +33,11 @@ export const AppSidebar: React.FC = () => {
     toggleSidebar,
     setShortcutHelpOpen,
     nextTicketNumber,
+    products,
   } = useApp();
 
   const receivedCount = orders.filter((o) => o.status === 'received').length;
+  const stockAlertCount = getAlertProducts(products).length;
 
   const navItems: {
     id: ScreenId;
@@ -76,6 +83,31 @@ export const AppSidebar: React.FC = () => {
       label: 'Clients',
       icon: <Users className="w-[18px] h-[18px] shrink-0" />,
       shortcut: 'Alt+5',
+    },
+    {
+      id: 'employees',
+      label: 'Personnel',
+      icon: <ContactRound className="w-[18px] h-[18px] shrink-0" />,
+      shortcut: 'Alt+7',
+    },
+    {
+      id: 'inventory',
+      label: 'Stocks',
+      icon: <Boxes className="w-[18px] h-[18px] shrink-0" />,
+      badge: stockAlertCount > 0 ? stockAlertCount : undefined,
+      shortcut: 'Alt+8',
+    },
+    {
+      id: 'expenses',
+      label: 'Dépenses',
+      icon: <ReceiptText className="w-[18px] h-[18px] shrink-0" />,
+      shortcut: 'Alt+9',
+    },
+    {
+      id: 'reports',
+      label: 'Rapports',
+      icon: <ChartColumn className="w-[18px] h-[18px] shrink-0" />,
+      shortcut: 'Alt+0',
     },
     {
       id: 'settings',

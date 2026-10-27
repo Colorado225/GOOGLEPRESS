@@ -157,3 +157,61 @@ export function getPickupLabel(option: PickupOption): string {
       return 'Standard 48h';
   }
 }
+
+/* ============================================================================
+ * Dates ISO (YYYY-MM-DD) — utilisées par les modules Personnel, Stocks et
+ * Dépenses pour des comparaisons et des regroupements fiables.
+ * Les chaînes ISO se comparent lexicographiquement (= chronologiquement).
+ * ========================================================================== */
+
+/** Date locale → "2026-10-27" (sans décalage UTC). */
+export function toISODate(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+export function todayISO(): string {
+  return toISODate(new Date());
+}
+
+/** "2026-10-27" → Date locale (midi, pour éviter tout effet de fuseau). Null si invalide. */
+export function parseISODate(iso: string | undefined | null): Date | null {
+  if (!iso) return null;
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0, 0);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function isValidISODate(iso: string | undefined | null): boolean {
+  return parseISODate(iso) !== null;
+}
+
+/** Affiche une date ISO en français : "27/10/2026" (défaut) ou "27 oct. 2026". */
+export function formatISODateFr(iso: string | undefined | null, short = false): string {
+  const d = parseISODate(iso);
+  if (!d) return 'Non renseigné';
+  return short ? formatShortDate(d) : formatDate(d);
+}
+
+/** "mardi 27 octobre 2026" depuis une date ISO. */
+export function formatISODateLongFr(iso: string | undefined | null): string {
+  const d = parseISODate(iso);
+  if (!d) return 'Non renseigné';
+  return formatLongDate(d);
+}
+
+export function addDaysToISO(iso: string, days: number): string {
+  const d = parseISODate(iso) ?? new Date();
+  d.setDate(d.getDate() + days);
+  return toISODate(d);
+}
+
+/** Date ISO à J+offset par rapport à aujourd'hui (données de démo relatives). */
+export function isoDaysFromToday(offsetDays: number): string {
+  return addDaysToISO(todayISO(), offsetDays);
+}
+
+/** Horodatage ISO complet (createdAt / updatedAt des nouveaux modules). */
+export function nowISODateTime(): string {
+  return new Date().toISOString();
+}

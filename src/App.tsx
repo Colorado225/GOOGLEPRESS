@@ -11,6 +11,10 @@ import { PosPage } from './components/pos/PosPage';
 import { WorkshopPage } from './components/workshop/WorkshopPage';
 import { OrdersPage } from './components/orders/OrdersPage';
 import { ClientsPage } from './components/clients/ClientsPage';
+import { EmployeesPage } from './components/employees/EmployeesPage';
+import { InventoryPage } from './components/inventory/InventoryPage';
+import { ExpensesPage } from './components/expenses/ExpensesPage';
+import { ReportsPage } from './components/reports/ReportsPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { TicketPreviewModal } from './components/modals/TicketPreviewModal';
 import { DailyClosingModal } from './components/modals/DailyClosingModal';
@@ -49,6 +53,10 @@ const MainLayout: React.FC = () => {
           {activeScreen === 'workshop' && <WorkshopPage />}
           {activeScreen === 'orders' && <OrdersPage />}
           {activeScreen === 'clients' && <ClientsPage />}
+          {activeScreen === 'employees' && <EmployeesPage />}
+          {activeScreen === 'inventory' && <InventoryPage />}
+          {activeScreen === 'expenses' && <ExpensesPage />}
+          {activeScreen === 'reports' && <ReportsPage />}
           {activeScreen === 'settings' && <SettingsPage />}
         </main>
       </div>

@@ -1,9 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Customer, LaundryOrder, OrderLine, ClothingItem, CashRegisterData, OrderStatus, ServiceCategory, PickupOption } from '../types';
-import { INITIAL_CUSTOMERS, INITIAL_ORDERS, INITIAL_CASH_REGISTER } from '../data/demoData';
+import {
+  Customer, LaundryOrder, OrderLine, ClothingItem, CashRegisterData, OrderStatus, ServiceCategory, PickupOption,
+  Employee, EmployeeStatus, EmployeeFormData, AttendanceRecord,
+  InventoryProduct, ProductFormData, StockMovement, StockMovementInput,
+  Expense, ExpenseFormData, ExpenseCategory, ActionResult,
+} from '../types';
+import {
+  INITIAL_CUSTOMERS, INITIAL_ORDERS, INITIAL_CASH_REGISTER,
+  INITIAL_EMPLOYEES, INITIAL_ATTENDANCE, INITIAL_PRODUCTS, INITIAL_STOCK_MOVEMENTS,
+  INITIAL_EXPENSES, INITIAL_EXPENSE_CATEGORIES,
+} from '../data/demoData';
 import { fireOrderCelebration } from '../registry/magicui/confetti';
 import { calculateOrderTotals, calculateLineSubtotal } from '../lib/pricing';
-import { formatPromised, getPromisedDate, nowDateTime } from '../lib/dates';
+import { formatPromised, getPromisedDate, nowDateTime, nowISODateTime } from '../lib/dates';
+import { computeMovement } from '../lib/inventory';
+import { normalizeText } from '../lib/utils';
 
 /** Clé localStorage du compteur séquentiel de tickets (voir plus bas). */
 const TICKET_COUNTER_KEY = 'pressingpro_next_ticket_number';
@@ -14,7 +25,39 @@ const parseTicketNumber = (ticketNumber: string): number => {
   return match ? parseInt(match[1], 10) : 0;
 };
 
-export type ScreenId = 'dashboard' | 'pos' | 'workshop' | 'orders' | 'clients' | 'settings';
+export type ScreenId =
+  | 'dashboard'
+  | 'pos'
+  | 'workshop'
+  | 'orders'
+  | 'clients'
+  | 'employees'
+  | 'inventory'
+  | 'expenses'
+  | 'reports'
+  | 'settings';
+
+/** Chargement localStorage avec repli sur les données initiales (même convention que commandes/clients/caisse). */
+function loadPersistedState<T>(key: string, fallback: T): T {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) return JSON.parse(saved) as T;
+  } catch (e) {
+    console.warn('LocalStorage load error', e);
+  }
+  return fallback;
+}
+
+function persistState(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn('LocalStorage save error', e);
+  }
+}
+
+const genId = (prefix: string): string =>
+  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
 interface AppContextType {
   activeScreen: ScreenId;
@@ -67,6 +110,35 @@ interface AppContextType {
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
   showToast: (msg: string) => void;
+  // --- Module Personnel ---
+  employees: Employee[];
+  attendanceRecords: AttendanceRecord[];
+  addEmployee: (data: EmployeeFormData) => Employee;
+  updateEmployee: (id: string, data: EmployeeFormData) => boolean;
+  setEmployeeStatus: (id: string, status: EmployeeStatus) => void;
+  upsertAttendance: (
+    employeeId: string,
+    date: string,
+    status: AttendanceRecord['status'],
+    extra?: { arrivalTime?: string; reason?: string }
+  ) => void;
+  removeAttendance: (employeeId: string, date: string) => void;
+  // --- Module Stocks ---
+  products: InventoryProduct[];
+  stockMovements: StockMovement[];
+  createProduct: (data: ProductFormData, initialQuantity: number, initialDateISO: string) => ActionResult & { product?: InventoryProduct };
+  updateProduct: (id: string, data: ProductFormData) => ActionResult;
+  setProductActive: (id: string, isActive: boolean) => void;
+  recordStockMovement: (input: StockMovementInput) => ActionResult;
+  // --- Module Dépenses ---
+  expenses: Expense[];
+  expenseCategories: ExpenseCategory[];
+  addExpense: (data: ExpenseFormData) => Expense;
+  updateExpense: (id: string, data: ExpenseFormData) => boolean;
+  cancelExpense: (id: string, reason: string) => void;
+  addExpenseCategory: (label: string) => ActionResult;
+  renameExpenseCategory: (id: string, label: string) => ActionResult;
+  setExpenseCategoryActive: (id: string, isActive: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -160,6 +232,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('LocalStorage save error', e);
     }
   }, [nextTicketNumber]);
+
+  // --- États des modules Personnel / Stocks / Dépenses ---
+  // Même modèle de persistance que le reste de l'application : localStorage
+  // du navigateur uniquement, données de démonstration au premier lancement.
+  const [employees, setEmployees] = useState<Employee[]>(() =>
+    loadPersistedState('pressingpro_employees', INITIAL_EMPLOYEES)
+  );
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() =>
+    loadPersistedState('pressingpro_attendance', INITIAL_ATTENDANCE)
+  );
+  const [products, setProducts] = useState<InventoryProduct[]>(() =>
+    loadPersistedState('pressingpro_inventory_products', INITIAL_PRODUCTS)
+  );
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>(() =>
+    loadPersistedState('pressingpro_stock_movements', INITIAL_STOCK_MOVEMENTS)
+  );
+  const [expenses, setExpenses] = useState<Expense[]>(() =>
+    loadPersistedState('pressingpro_expenses', INITIAL_EXPENSES)
+  );
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>(() =>
+    loadPersistedState('pressingpro_expense_categories', INITIAL_EXPENSE_CATEGORIES)
+  );
+
+  useEffect(() => persistState('pressingpro_employees', employees), [employees]);
+  useEffect(() => persistState('pressingpro_attendance', attendanceRecords), [attendanceRecords]);
+  useEffect(() => persistState('pressingpro_inventory_products', products), [products]);
+  useEffect(() => persistState('pressingpro_stock_movements', stockMovements), [stockMovements]);
+  useEffect(() => persistState('pressingpro_expenses', expenses), [expenses]);
+  useEffect(() => persistState('pressingpro_expense_categories', expenseCategories), [expenseCategories]);
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(customers[0] || INITIAL_CUSTOMERS[0]);
   const [pickupOption, setPickupOption] = useState<PickupOption>('standard');
@@ -467,6 +568,255 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  /* ================= Module Personnel ================= */
+
+  const addEmployee = (data: EmployeeFormData): Employee => {
+    const now = nowISODateTime();
+    const employee: Employee = { ...data, id: genId('emp'), createdAt: now, updatedAt: now };
+    setEmployees((prev) => [employee, ...prev]);
+    showToast(`✓ Employé ajouté : ${employee.fullName}`);
+    return employee;
+  };
+
+  const updateEmployee = (id: string, data: EmployeeFormData): boolean => {
+    let found = false;
+    setEmployees((prev) =>
+      prev.map((e) => {
+        if (e.id !== id) return e;
+        found = true;
+        return { ...e, ...data, id: e.id, updatedAt: nowISODateTime() };
+      })
+    );
+    if (found) showToast('✓ Fiche employé mise à jour');
+    return found;
+  };
+
+  const setEmployeeStatus = (id: string, status: EmployeeStatus) => {
+    const employee = employees.find((e) => e.id === id);
+    setEmployees((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, status, updatedAt: nowISODateTime() } : e))
+    );
+    if (employee) {
+      showToast(
+        status === 'inactive'
+          ? `Employé désactivé : ${employee.fullName}`
+          : status === 'leave'
+          ? `${employee.fullName} marqué en congé`
+          : `✓ Employé réactivé : ${employee.fullName}`
+      );
+    }
+  };
+
+  /** Unicité (employé, date) : une correction remplace la saisie existante. */
+  const upsertAttendance = (
+    employeeId: string,
+    date: string,
+    status: AttendanceRecord['status'],
+    extra?: { arrivalTime?: string; reason?: string }
+  ) => {
+    setAttendanceRecords((prev) => {
+      const existing = prev.find((r) => r.employeeId === employeeId && r.date === date);
+      if (existing) {
+        return prev.map((r) =>
+          r.id === existing.id
+            ? { ...r, status, arrivalTime: extra?.arrivalTime, reason: extra?.reason }
+            : r
+        );
+      }
+      return [
+        ...prev,
+        { id: genId('att'), employeeId, date, status, arrivalTime: extra?.arrivalTime, reason: extra?.reason },
+      ];
+    });
+    showToast('✓ Présence enregistrée');
+  };
+
+  const removeAttendance = (employeeId: string, date: string) => {
+    setAttendanceRecords((prev) =>
+      prev.filter((r) => !(r.employeeId === employeeId && r.date === date))
+    );
+    showToast('Saisie de présence effacée (retour à « Non renseigné »)');
+  };
+
+  /* ================= Module Stocks ================= */
+
+  const isReferenceTaken = (reference: string, exceptId?: string): boolean =>
+    products.some(
+      (p) => p.id !== exceptId && normalizeText(p.reference) === normalizeText(reference)
+    );
+
+  const createProduct = (
+    data: ProductFormData,
+    initialQuantity: number,
+    initialDateISO: string
+  ): ActionResult & { product?: InventoryProduct } => {
+    if (isReferenceTaken(data.reference)) {
+      return { ok: false, error: `La référence « ${data.reference} » est déjà utilisée par un autre produit.` };
+    }
+    if (initialQuantity < 0) {
+      return { ok: false, error: 'La quantité initiale ne peut pas être négative.' };
+    }
+    const product: InventoryProduct = {
+      ...data,
+      id: genId('prod'),
+      currentQuantity: initialQuantity,
+    };
+    setProducts((prev) => [product, ...prev]);
+    // Toute quantité initiale est tracée par un mouvement d'entrée.
+    if (initialQuantity > 0) {
+      setStockMovements((prev) => [
+        {
+          id: genId('mov'),
+          productId: product.id,
+          type: 'in',
+          quantity: initialQuantity,
+          quantityBefore: 0,
+          quantityAfter: initialQuantity,
+          date: initialDateISO,
+          reason: 'Stock initial à la création du produit',
+          unitCostXof: data.unitCostXof,
+        },
+        ...prev,
+      ]);
+    }
+    showToast(`✓ Produit créé : ${product.name}`);
+    return { ok: true, product };
+  };
+
+  const updateProduct = (id: string, data: ProductFormData): ActionResult => {
+    if (isReferenceTaken(data.reference, id)) {
+      return { ok: false, error: `La référence « ${data.reference} » est déjà utilisée par un autre produit.` };
+    }
+    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...data, id: p.id } : p)));
+    showToast('✓ Produit mis à jour');
+    return { ok: true };
+  };
+
+  const setProductActive = (id: string, isActive: boolean) => {
+    const product = products.find((p) => p.id === id);
+    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, isActive } : p)));
+    if (product) {
+      showToast(
+        isActive
+          ? `✓ Produit réactivé : ${product.name}`
+          : `Produit désactivé : ${product.name} (historique conservé)`
+      );
+    }
+  };
+
+  /**
+   * Point d'écriture UNIQUE du stock : quantité du produit et historique des
+   * mouvements sont toujours mis à jour ensemble (voir lib/inventory.ts).
+   */
+  const recordStockMovement = (input: StockMovementInput): ActionResult => {
+    const product = products.find((p) => p.id === input.productId);
+    if (!product) return { ok: false, error: 'Produit introuvable.' };
+    if (!product.isActive) {
+      return { ok: false, error: 'Produit désactivé : réactivez-le avant d’enregistrer un mouvement.' };
+    }
+    if (input.type === 'adjustment' && !input.reason.trim()) {
+      return { ok: false, error: 'Un ajustement exige un motif (ex. inventaire, casse…).' };
+    }
+    const { quantityBefore, quantityAfter, error } = computeMovement(
+      product.currentQuantity,
+      input.type,
+      input.quantity
+    );
+    if (error) return { ok: false, error };
+
+    const movement: StockMovement = {
+      id: genId('mov'),
+      productId: product.id,
+      type: input.type,
+      quantity: input.quantity,
+      quantityBefore,
+      quantityAfter,
+      date: input.date,
+      reason: input.reason.trim(),
+      unitCostXof: input.unitCostXof,
+      note: input.note?.trim() || undefined,
+    };
+    setStockMovements((prev) => [movement, ...prev]);
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === product.id
+          ? {
+              ...p,
+              currentQuantity: quantityAfter,
+              // Une entrée avec coût met à jour le « dernier coût d'achat » du produit.
+              unitCostXof:
+                input.type === 'in' && typeof input.unitCostXof === 'number'
+                  ? input.unitCostXof
+                  : p.unitCostXof,
+            }
+          : p
+      )
+    );
+    showToast(`✓ Mouvement enregistré — ${product.name} : nouveau stock ${quantityAfter} ${product.unit}`);
+    return { ok: true };
+  };
+
+  /* ================= Module Dépenses ================= */
+
+  const addExpense = (data: ExpenseFormData): Expense => {
+    const now = nowISODateTime();
+    const expense: Expense = { ...data, id: genId('exp'), status: 'recorded', createdAt: now, updatedAt: now };
+    setExpenses((prev) => [expense, ...prev]);
+    showToast('✓ Dépense enregistrée');
+    return expense;
+  };
+
+  const updateExpense = (id: string, data: ExpenseFormData): boolean => {
+    let found = false;
+    setExpenses((prev) =>
+      prev.map((e) => {
+        if (e.id !== id) return e;
+        found = true;
+        return { ...e, ...data, id: e.id, updatedAt: nowISODateTime() };
+      })
+    );
+    if (found) showToast('✓ Dépense mise à jour');
+    return found;
+  };
+
+  const cancelExpense = (id: string, reason: string) => {
+    setExpenses((prev) =>
+      prev.map((e) =>
+        e.id === id
+          ? { ...e, status: 'cancelled', cancellationReason: reason.trim(), updatedAt: nowISODateTime() }
+          : e
+      )
+    );
+    showToast('Dépense annulée — exclue des totaux, conservée dans le registre');
+  };
+
+  const addExpenseCategory = (label: string): ActionResult => {
+    const trimmed = label.trim();
+    if (!trimmed) return { ok: false, error: 'Le libellé de la catégorie est obligatoire.' };
+    if (expenseCategories.some((c) => normalizeText(c.label) === normalizeText(trimmed))) {
+      return { ok: false, error: 'Une catégorie avec ce libellé existe déjà.' };
+    }
+    setExpenseCategories((prev) => [...prev, { id: genId('cat'), label: trimmed, isActive: true }]);
+    showToast(`✓ Catégorie ajoutée : ${trimmed}`);
+    return { ok: true };
+  };
+
+  const renameExpenseCategory = (id: string, label: string): ActionResult => {
+    const trimmed = label.trim();
+    if (!trimmed) return { ok: false, error: 'Le libellé de la catégorie est obligatoire.' };
+    if (expenseCategories.some((c) => c.id !== id && normalizeText(c.label) === normalizeText(trimmed))) {
+      return { ok: false, error: 'Une catégorie avec ce libellé existe déjà.' };
+    }
+    setExpenseCategories((prev) => prev.map((c) => (c.id === id ? { ...c, label: trimmed } : c)));
+    showToast('✓ Catégorie renommée');
+    return { ok: true };
+  };
+
+  const setExpenseCategoryActive = (id: string, isActive: boolean) => {
+    setExpenseCategories((prev) => prev.map((c) => (c.id === id ? { ...c, isActive } : c)));
+    showToast(isActive ? 'Catégorie réactivée pour les nouvelles saisies' : 'Catégorie désactivée pour les nouvelles saisies');
+  };
+
   const toggleSidebar = () => {
     setIsSidebarCollapsed((prev) => {
       const next = !prev;
@@ -519,6 +869,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         e.preventDefault();
         setActiveScreen('orders');
         showToast('Commandes récentes (Alt+6)');
+        return;
+      }
+      if (e.altKey && e.key === '7') {
+        e.preventDefault();
+        setActiveScreen('employees');
+        showToast('Personnel (Alt+7)');
+        return;
+      }
+      if (e.altKey && e.key === '8') {
+        e.preventDefault();
+        setActiveScreen('inventory');
+        showToast('Stocks (Alt+8)');
+        return;
+      }
+      if (e.altKey && e.key === '9') {
+        e.preventDefault();
+        setActiveScreen('expenses');
+        showToast('Dépenses (Alt+9)');
+        return;
+      }
+      if (e.altKey && e.key === '0') {
+        e.preventDefault();
+        setActiveScreen('reports');
+        showToast('Rapports (Alt+0)');
         return;
       }
       if (e.altKey && (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'b')) {
@@ -616,6 +990,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setShortcutHelpOpen,
         notificationToast,
         showToast,
+        employees,
+        attendanceRecords,
+        addEmployee,
+        updateEmployee,
+        setEmployeeStatus,
+        upsertAttendance,
+        removeAttendance,
+        products,
+        stockMovements,
+        createProduct,
+        updateProduct,
+        setProductActive,
+        recordStockMovement,
+        expenses,
+        expenseCategories,
+        addExpense,
+        updateExpense,
+        cancelExpense,
+        addExpenseCategory,
+        renameExpenseCategory,
+        setExpenseCategoryActive,
       }}
     >
       {children}

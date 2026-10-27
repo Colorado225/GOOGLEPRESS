@@ -1,5 +1,16 @@
-import { ClothingItem, Customer, LaundryOrder, CashRegisterData } from '../types';
-import { daysFromToday, formatDate, formatDateTime, formatPromised } from '../lib/dates';
+import {
+  ClothingItem,
+  Customer,
+  LaundryOrder,
+  CashRegisterData,
+  Employee,
+  AttendanceRecord,
+  InventoryProduct,
+  StockMovement,
+  Expense,
+  ExpenseCategory,
+} from '../types';
+import { daysFromToday, formatDate, formatDateTime, formatPromised, isoDaysFromToday } from '../lib/dates';
 
 export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   // --- PRESSING (Bleu) ---
@@ -434,3 +445,181 @@ export const REVENUE_7_DAYS = REVENUE_VALUES.map((value, i) => {
 export function formatFCFA(amount: number): string {
   return new Intl.NumberFormat('fr-FR').format(Math.round(amount)) + ' FCFA';
 }
+
+/* ============================================================================
+ * DONNÉES DE DÉMONSTRATION des modules Personnel, Stocks et Dépenses.
+ * Entièrement FICTIVES : noms, montants et quantités d'illustration, chargés
+ * uniquement au premier lancement puis conservés dans le localStorage.
+ * Les dates sont relatives au jour d'ouverture pour rester plausibles.
+ * ========================================================================== */
+
+export const INITIAL_EMPLOYEES: Employee[] = [
+  { id: 'emp-1', fullName: 'Awa Koné', phone: '07 08 09 10 11', position: 'Responsable / Gestion', status: 'active', hiredAt: '2023-01-16', notes: 'Gérante — poste comptoir 01.' },
+  { id: 'emp-2', fullName: 'Moussa Diarra', phone: '05 44 32 18 90', position: 'Lavage', status: 'active', hiredAt: '2023-03-06', notes: "Chef d'atelier." },
+  { id: 'emp-3', fullName: 'Yann Kouadio', phone: '07 59 61 24 08', position: 'Lavage', status: 'active', hiredAt: '2024-02-19' },
+  { id: 'emp-4', fullName: "Grâce N'Dri", phone: '01 41 77 52 63', position: 'Repassage', status: 'active', hiredAt: '2023-09-04' },
+  { id: 'emp-5', fullName: 'Divine Aka', phone: '07 87 30 45 12', position: 'Finition', status: 'active', hiredAt: '2024-06-10', notes: 'Repassage et finition.' },
+  { id: 'emp-6', fullName: 'Ibrahim Sangaré', position: 'Livraison', status: 'active', notes: 'Tournées Cocody / Plateau. Téléphone à compléter.' },
+  { id: 'emp-7', fullName: 'Fatou Bamba', phone: '05 66 94 21 37', position: 'Réception', status: 'leave', hiredAt: '2024-11-25', notes: 'En congé annuel (démonstration).' },
+  { id: 'emp-8', fullName: 'Kouamé Junior', phone: '07 47 12 98 55', position: 'Livraison', status: 'inactive', notes: 'Profil désactivé (démonstration).' },
+  { id: 'emp-9', fullName: 'Aïcha Bamba', phone: '01 52 08 73 46', position: 'Finition', status: 'active' },
+];
+
+const att = (
+  n: number,
+  employeeId: string,
+  offset: number,
+  status: AttendanceRecord['status'],
+  extra?: Partial<AttendanceRecord>
+): AttendanceRecord => ({
+  id: `att-${n}`,
+  employeeId,
+  date: isoDaysFromToday(offset),
+  status,
+  ...extra,
+});
+
+export const INITIAL_ATTENDANCE: AttendanceRecord[] = [
+  // Semaine écoulée (démonstration)
+  att(1, 'emp-1', -6, 'present', { arrivalTime: '07:52' }),
+  att(2, 'emp-2', -6, 'present', { arrivalTime: '08:03' }),
+  att(3, 'emp-3', -6, 'present', { arrivalTime: '08:10' }),
+  att(4, 'emp-4', -6, 'present', { arrivalTime: '07:58' }),
+  att(5, 'emp-5', -6, 'present', { arrivalTime: '08:00' }),
+  att(6, 'emp-1', -5, 'present', { arrivalTime: '07:55' }),
+  att(7, 'emp-2', -5, 'present', { arrivalTime: '08:01' }),
+  att(8, 'emp-3', -5, 'present', { arrivalTime: '08:06' }),
+  att(9, 'emp-4', -5, 'present', { arrivalTime: '08:02' }),
+  att(10, 'emp-1', -4, 'present', { arrivalTime: '07:50' }),
+  att(11, 'emp-2', -4, 'present', { arrivalTime: '08:00' }),
+  att(12, 'emp-4', -4, 'present', { arrivalTime: '08:04' }),
+  att(13, 'emp-7', -4, 'leave', { reason: 'Congé annuel' }),
+  att(14, 'emp-1', -3, 'present', { arrivalTime: '07:57' }),
+  att(15, 'emp-2', -3, 'present', { arrivalTime: '08:05' }),
+  att(16, 'emp-3', -3, 'absent', { reason: 'Absent — a prévenu par téléphone' }),
+  att(17, 'emp-7', -3, 'leave', { reason: 'Congé annuel' }),
+  att(18, 'emp-1', -2, 'present', { arrivalTime: '07:54' }),
+  att(19, 'emp-4', -2, 'present', { arrivalTime: '07:59' }),
+  att(20, 'emp-5', -2, 'late', { arrivalTime: '08:47', reason: 'Embouteillages (déclaré)' }),
+  att(21, 'emp-7', -2, 'leave', { reason: 'Congé annuel' }),
+  att(22, 'emp-1', -1, 'present', { arrivalTime: '07:53' }),
+  att(23, 'emp-2', -1, 'present', { arrivalTime: '08:02' }),
+  att(24, 'emp-4', -1, 'present', { arrivalTime: '08:01' }),
+  att(25, 'emp-9', -1, 'present', { arrivalTime: '08:08' }),
+  att(26, 'emp-7', -1, 'leave', { reason: 'Congé annuel' }),
+  // Aujourd'hui : pointage partiellement saisi (emp-3 et emp-6 restent « Non renseigné »)
+  att(27, 'emp-1', 0, 'present', { arrivalTime: '07:55' }),
+  att(28, 'emp-2', 0, 'present', { arrivalTime: '08:02' }),
+  att(29, 'emp-4', 0, 'present', { arrivalTime: '08:00' }),
+  att(30, 'emp-5', 0, 'late', { arrivalTime: '08:40' }),
+  att(31, 'emp-9', 0, 'present', { arrivalTime: '08:05' }),
+  att(32, 'emp-7', 0, 'leave', { reason: 'Congé annuel' }),
+];
+
+export const INITIAL_PRODUCTS: InventoryProduct[] = [
+  { id: 'prod-1', name: 'Lessive liquide professionnelle', reference: 'LES-20L', category: 'Détergents et lessives', unit: 'L', currentQuantity: 42, alertThreshold: 20, unitCostXof: 850, supplier: 'Siprochim CI (démo)', isActive: true },
+  { id: 'prod-2', name: 'Poudre à laver industrielle', reference: 'POU-25', category: 'Détergents et lessives', unit: 'kg', currentQuantity: 18, alertThreshold: 25, unitCostXof: 600, supplier: 'Siprochim CI (démo)', isActive: true },
+  { id: 'prod-3', name: 'Détachant textile enzymatique', reference: 'DET-05', category: 'Détachants et solvants', unit: 'L', currentQuantity: 3.5, alertThreshold: 5, unitCostXof: 3200, isActive: true },
+  { id: 'prod-4', name: 'Solvant pressing à sec', reference: 'SOL-10', category: 'Détachants et solvants', unit: 'L', currentQuantity: 0, alertThreshold: 8, unitCostXof: 2800, supplier: 'ChimInter (démo)', isActive: true },
+  { id: 'prod-5', name: 'Assouplissant concentré parfumé', reference: 'ASS-10', category: 'Assouplissants et finition', unit: 'L', currentQuantity: 26, alertThreshold: 10, isActive: true },
+  { id: 'prod-6', name: 'Amidon de finition', reference: 'AMI-05', category: 'Assouplissants et finition', unit: 'kg', currentQuantity: 6, alertThreshold: 4, unitCostXof: 1500, isActive: true },
+  { id: 'prod-7', name: 'Cintres métal renforcés', reference: 'CIN-M', category: 'Cintres', unit: 'unité', currentQuantity: 340, alertThreshold: 150, unitCostXof: 75, isActive: true },
+  { id: 'prod-8', name: 'Housses de protection 120 cm', reference: 'HOU-120', category: 'Housses et emballages', unit: 'unité', currentQuantity: 85, alertThreshold: 100, unitCostXof: 120, isActive: true },
+  { id: 'prod-9', name: 'Sacs emballage transparents (x100)', reference: 'SAC-T', category: 'Housses et emballages', unit: 'paquet', currentQuantity: 14, alertThreshold: 6, unitCostXof: 900, isActive: true },
+  { id: 'prod-10', name: 'Étiquettes thermiques pour tickets', reference: 'ETI-TH', category: 'Fournitures diverses', unit: 'paquet', currentQuantity: 2, alertThreshold: 3, unitCostXof: 2500, isActive: true },
+  { id: 'prod-11', name: 'Adoucissant ancienne formule', reference: 'ADO-ANC', category: 'Assouplissants et finition', unit: 'L', currentQuantity: 4, alertThreshold: 5, unitCostXof: 1100, description: 'Produit arrêté — conservé pour l’historique.', isActive: false },
+];
+
+const move = (
+  n: number,
+  productId: string,
+  type: StockMovement['type'],
+  quantity: number,
+  quantityBefore: number,
+  quantityAfter: number,
+  offset: number,
+  reason: string,
+  extra?: Partial<StockMovement>
+): StockMovement => ({
+  id: `mov-${n}`,
+  productId,
+  type,
+  quantity,
+  quantityBefore,
+  quantityAfter,
+  date: isoDaysFromToday(offset),
+  reason,
+  ...extra,
+});
+
+// Séquence cohérente : le dernier « stock après » de chaque produit = sa quantité actuelle.
+export const INITIAL_STOCK_MOVEMENTS: StockMovement[] = [
+  move(1, 'prod-1', 'in', 60, 0, 60, -14, 'Stock initial (démonstration)', { unitCostXof: 850 }),
+  move(2, 'prod-1', 'out', 12, 60, 48, -7, 'Consommation atelier'),
+  move(3, 'prod-1', 'out', 6, 48, 42, -1, 'Consommation atelier'),
+  move(4, 'prod-2', 'in', 50, 0, 50, -14, 'Stock initial (démonstration)', { unitCostXof: 600 }),
+  move(5, 'prod-2', 'out', 32, 50, 18, -4, 'Consommation atelier'),
+  move(6, 'prod-3', 'in', 10, 0, 10, -12, 'Stock initial (démonstration)', { unitCostXof: 3200 }),
+  move(7, 'prod-3', 'out', 6.5, 10, 3.5, -3, 'Consommation atelier'),
+  move(8, 'prod-4', 'in', 20, 0, 20, -12, 'Stock initial (démonstration)', { unitCostXof: 2800 }),
+  move(9, 'prod-4', 'out', 20, 20, 0, -2, 'Consommation atelier — bidon terminé'),
+  move(10, 'prod-5', 'in', 40, 0, 40, -12, 'Stock initial (démonstration)'),
+  move(11, 'prod-5', 'out', 14, 40, 26, -5, 'Consommation atelier'),
+  move(12, 'prod-6', 'in', 10, 0, 10, -12, 'Stock initial (démonstration)', { unitCostXof: 1500 }),
+  move(13, 'prod-6', 'out', 4, 10, 6, -6, 'Consommation atelier'),
+  move(14, 'prod-7', 'in', 500, 0, 500, -14, 'Stock initial (démonstration)', { unitCostXof: 75 }),
+  move(15, 'prod-7', 'out', 150, 500, 350, -6, 'Consommation atelier'),
+  move(16, 'prod-7', 'adjustment', 340, 350, 340, -4, 'Inventaire — cintres cassés retirés'),
+  move(17, 'prod-8', 'in', 200, 0, 200, -14, 'Stock initial (démonstration)', { unitCostXof: 120 }),
+  move(18, 'prod-8', 'out', 115, 200, 85, -5, 'Consommation atelier'),
+  move(19, 'prod-9', 'in', 20, 0, 20, -12, 'Stock initial (démonstration)', { unitCostXof: 900 }),
+  move(20, 'prod-9', 'out', 6, 20, 14, -3, 'Consommation atelier'),
+  move(21, 'prod-10', 'in', 8, 0, 8, -12, 'Stock initial (démonstration)', { unitCostXof: 2500 }),
+  move(22, 'prod-10', 'out', 6, 8, 2, -2, 'Consommation comptoir'),
+  move(23, 'prod-11', 'in', 12, 0, 12, -20, 'Stock initial (démonstration)', { unitCostXof: 1100 }),
+  move(24, 'prod-11', 'out', 8, 12, 4, -9, 'Consommation atelier'),
+];
+
+export const INITIAL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  { id: 'cat-elec', label: 'Électricité / énergie', isActive: true },
+  { id: 'cat-eau', label: 'Eau', isActive: true },
+  { id: 'cat-loyer', label: 'Loyer', isActive: true },
+  { id: 'cat-conso', label: 'Consommables', isActive: true },
+  { id: 'cat-maint', label: 'Maintenance et réparation', isActive: true },
+  { id: 'cat-transp', label: 'Transport et livraison', isActive: true },
+  { id: 'cat-sal', label: 'Salaires / rémunérations', isActive: true },
+  { id: 'cat-admin', label: 'Frais administratifs', isActive: true },
+  { id: 'cat-autre', label: 'Autres dépenses', isActive: true },
+  { id: 'cat-ancien-tel', label: 'Téléphone (ancien libellé)', isActive: false },
+];
+
+const expense = (
+  n: number,
+  offset: number,
+  data: Omit<Expense, 'id' | 'date' | 'status'> & Partial<Pick<Expense, 'status' | 'cancellationReason'>>
+): Expense => {
+  const date = isoDaysFromToday(offset);
+  return {
+    id: `exp-${n}`,
+    date,
+    status: 'recorded',
+    createdAt: `${date}T09:00:00`,
+    ...data,
+  };
+};
+
+export const INITIAL_EXPENSES: Expense[] = [
+  expense(1, -28, { label: 'Loyer boutique Cocody (démo)', categoryId: 'cat-loyer', amountXof: 250000, paymentMethod: 'transfer', supplier: 'SCI Les Jardins (démo)', reference: 'LOY-DEMO' }),
+  expense(2, -21, { label: 'Facture électricité CIE (démo)', categoryId: 'cat-elec', amountXof: 68500, paymentMethod: 'wave', supplier: 'CIE', reference: 'CIE-DEMO-01' }),
+  expense(3, -20, { label: 'Facture électricité CIE — saisie en double', categoryId: 'cat-elec', amountXof: 68500, paymentMethod: 'wave', supplier: 'CIE', status: 'cancelled', cancellationReason: 'Doublon de saisie : facture déjà enregistrée (exp-2).' }),
+  expense(4, -18, { label: 'Facture eau SODECI (démo)', categoryId: 'cat-eau', amountXof: 21400, paymentMethod: 'wave', supplier: 'SODECI', reference: 'SODECI-DEMO' }),
+  expense(5, -15, { label: 'Achat lessive et détachant (démo)', categoryId: 'cat-conso', amountXof: 47200, paymentMethod: 'mtn_momo', supplier: 'Siprochim CI (démo)', reference: 'BL-DEMO-114' }),
+  expense(6, -12, { label: 'Réparation machine L2 — courroie (démo)', categoryId: 'cat-maint', amountXof: 35000, paymentMethod: 'cash', supplier: 'Technicien indépendant (démo)' }),
+  expense(7, -9, { label: 'Carburant livraisons Cocody / Plateau', categoryId: 'cat-transp', amountXof: 15000, paymentMethod: 'cash' }),
+  expense(8, -7, { label: 'Cintres et housses en gros (démo)', categoryId: 'cat-conso', amountXof: 28600, paymentMethod: 'wave', supplier: 'Adjamé grossiste (démo)' }),
+  expense(9, -5, { label: 'Avance salaires équipe atelier (démo)', categoryId: 'cat-sal', amountXof: 120000, paymentMethod: 'transfer' }),
+  expense(10, -4, { label: 'Papeterie et étiquettes tickets', categoryId: 'cat-admin', amountXof: 9400, paymentMethod: 'cash' }),
+  expense(11, -2, { label: 'Crédit appels boutique', categoryId: 'cat-autre', amountXof: 5000, paymentMethod: 'orange_money' }),
+  expense(12, -1, { label: 'Course livraison client hôtel (démo)', categoryId: 'cat-transp', amountXof: 4000, paymentMethod: 'cash' }),
+  expense(13, 0, { label: 'Achat détachant en urgence', categoryId: 'cat-conso', amountXof: 8600, paymentMethod: 'cash', supplier: 'Quincaillerie Riviera (démo)' }),
+];

@@ -90,6 +90,14 @@ export const MainLayoutHeader: React.FC = () => {
         return 'Commandes';
       case 'clients':
         return 'Fichier clients';
+      case 'employees':
+        return 'Personnel & présences';
+      case 'inventory':
+        return 'Stocks & inventaire';
+      case 'expenses':
+        return 'Dépenses';
+      case 'reports':
+        return 'Rapports';
       case 'settings':
         return 'Paramètres';
       default:
