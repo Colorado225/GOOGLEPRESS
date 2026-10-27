@@ -12,6 +12,9 @@ export default defineConfig(() => {
       },
     },
     server: {
+      // Autorise les hôtes de prévisualisation distants (ex. tunnels de dev).
+      // Serveur de développement uniquement — sans effet sur le build prod.
+      allowedHosts: true,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
