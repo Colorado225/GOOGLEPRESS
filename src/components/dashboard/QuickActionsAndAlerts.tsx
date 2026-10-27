@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { getAlertProducts, getStockStatus } from '../../lib/inventory';
 import { getPeriodRange, isISOInRange } from '../../lib/periods';
 import { todayISO } from '../../lib/dates';
 import { formatFCFA } from '../../data/demoData';
+import { Tabs } from '../common/Tabs';
+import { Zap, Bell, Activity } from 'lucide-react';
 
 export const QuickActionsAndAlerts: React.FC = () => {
   const {
@@ -25,6 +27,8 @@ export const QuickActionsAndAlerts: React.FC = () => {
     .filter((e) => e.status === 'recorded' && isISOInRange(e.date, monthRange))
     .reduce((sum, e) => sum + e.amountXof, 0);
 
+  const [panel, setPanel] = useState<'actions' | 'alertes' | 'signaux'>('actions');
+
   const handleTicketClick = (ticketNum: string) => {
     const found = orders.find((o) => o.ticketNumber === ticketNum);
     if (found) {
@@ -33,10 +37,27 @@ export const QuickActionsAndAlerts: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3">
-      {/* Actions rapides */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
-        <h2 className="font-bold text-[14px] text-zinc-900 mb-2.5">Actions rapides</h2>
+    <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
+      {/* Sous-onglets compacts : agir (actions) · surveiller (alertes) · suivre les modules (signaux) */}
+      <Tabs
+        ariaLabel="Raccourcis du tableau de bord"
+        size="sm"
+        className="mb-3"
+        activeId={panel}
+        onChange={setPanel}
+        tabs={[
+          { id: 'actions', label: 'Actions', icon: <Zap className="w-3.5 h-3.5" aria-hidden="true" /> },
+          { id: 'alertes', label: 'Alertes', icon: <Bell className="w-3.5 h-3.5" aria-hidden="true" /> },
+          {
+            id: 'signaux',
+            label: 'Signaux',
+            icon: <Activity className="w-3.5 h-3.5" aria-hidden="true" />,
+            badge: stockAlerts.length > 0 ? stockAlerts.length : undefined,
+          },
+        ]}
+      />
+
+      {panel === 'actions' && (
         <div className="grid grid-cols-2 gap-2 text-[12.5px] font-semibold text-zinc-800">
           <button
             onClick={() => setActiveScreen('pos')}
@@ -63,17 +84,9 @@ export const QuickActionsAndAlerts: React.FC = () => {
             <span>📊</span> <span>Clôture Z</span>
           </button>
         </div>
-      </div>
+      )}
 
-      {/* Retards prioritaires */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
-        <div className="flex justify-between items-center mb-2.5">
-          <h2 className="font-bold text-[14px] text-zinc-900">Retards prioritaires</h2>
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-            6 tickets
-          </span>
-        </div>
-
+      {panel === 'alertes' && (
         <div className="space-y-2 text-[12.5px]">
           {/* Item 1 */}
           <div
@@ -117,11 +130,9 @@ export const QuickActionsAndAlerts: React.FC = () => {
             </span>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Signaux Personnel / Stocks / Dépenses (données réelles des modules) */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
-        <h2 className="font-bold text-[14px] text-zinc-900 mb-2.5">Personnel, stocks & dépenses</h2>
+      {panel === 'signaux' && (
         <div className="space-y-2 text-[12.5px]">
           <button
             type="button"
@@ -179,7 +190,7 @@ export const QuickActionsAndAlerts: React.FC = () => {
             </span>
           </button>
         </div>
-      </div>
+      )}
     </div>
   );
 };

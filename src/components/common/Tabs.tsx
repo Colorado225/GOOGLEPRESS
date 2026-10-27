@@ -14,6 +14,8 @@ interface TabsProps<T extends string> {
   onChange: (id: T) => void;
   ariaLabel: string;
   className?: string;
+  /** 'md' : onglets de page (défaut) · 'sm' : sous-onglets compacts dans une carte. */
+  size?: 'md' | 'sm';
 }
 
 /**
@@ -28,6 +30,7 @@ export function Tabs<T extends string>({
   onChange,
   ariaLabel,
   className = '',
+  size = 'md',
 }: TabsProps<T>): React.ReactElement {
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -55,7 +58,9 @@ export function Tabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(tab.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-bold border transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
+            className={`inline-flex items-center gap-1.5 rounded-lg font-bold border transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
+              size === 'sm' ? 'px-2.5 py-1.5 text-[12px]' : 'px-3.5 py-2 text-[13px]'
+            } ${
               active
                 ? 'bg-[#09090b] text-white border-zinc-900 shadow-2xs'
                 : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-black'
