@@ -65,6 +65,19 @@ export const GARMENT_COLORS: GarmentColor[] = [
 export const getGarmentColorSwatch = (name?: string): string | undefined =>
   GARMENT_COLORS.find((c) => c.name === name)?.swatch;
 
+/**
+ * Normalise une couleur saisie librement : si elle correspond (casse/accents
+ * près) à une couleur de la palette, on retient le nom officiel (pastille
+ * correcte, fusion des lignes cohérente) ; sinon le texte nettoyé est conservé.
+ */
+export const resolveGarmentColorName = (raw: string): string | undefined => {
+  const trimmed = raw.trim().replace(/\s+/g, ' ');
+  if (!trimmed) return undefined;
+  const norm = (value: string) =>
+    value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return GARMENT_COLORS.find((c) => norm(c.name) === norm(trimmed))?.name ?? trimmed;
+};
+
 export interface Customer {
   id: string;
   name: string;
