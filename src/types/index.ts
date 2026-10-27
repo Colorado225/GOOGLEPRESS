@@ -18,6 +18,8 @@ export interface ClothingItem {
   pricingType: PricingType;
   unitLabel?: string; // 'pièce', 'kg', 'panneau'
   emoji: string;
+  /** Vignette illustrée (URL importée) ; si absente, l'emoji est affiché. */
+  image?: string;
   description?: string;
 }
 

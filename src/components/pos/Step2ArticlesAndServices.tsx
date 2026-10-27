@@ -168,7 +168,11 @@ export const Step2ArticlesAndServices: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <span className="text-3xl filter drop-shadow-xs">{item.emoji}</span>
+                    {item.image ? (
+                      <img src={item.image} alt="" className="w-12 h-12 rounded-lg object-cover shadow-2xs shrink-0" />
+                    ) : (
+                      <span className="text-3xl filter drop-shadow-xs">{item.emoji}</span>
+                    )}
                     {count > 0 && (
                       <span
                         className={`text-[11px] font-black px-2 py-0.5 rounded-full tabular-nums text-white ${

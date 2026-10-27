@@ -81,9 +81,17 @@ export const ClothingCatalogSection: React.FC = () => {
                   : 'border-zinc-200 hover:border-zinc-800 bg-white text-zinc-900 hover:shadow-2xs'
               }`}
             >
-              <div className="text-3xl filter drop-shadow-xs transform group-hover:scale-105 transition-transform">
-                {item.emoji}
-              </div>
+              {item.image ? (
+                <img
+                  src={item.image}
+                  alt=""
+                  className="w-14 h-14 rounded-lg object-cover shadow-2xs transform group-hover:scale-105 transition-transform"
+                />
+              ) : (
+                <div className="text-3xl filter drop-shadow-xs transform group-hover:scale-105 transition-transform">
+                  {item.emoji}
+                </div>
+              )}
               <div className="my-1">
                 <p className="font-bold text-[13px] leading-tight">{item.name}</p>
                 <p className={`text-[11.5px] ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`}>
