@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ArrowLeft, Save, Sliders, Smartphone, Printer, Building2 } from 'lucide-react';
+import { Tabs } from '../common/Tabs';
 
 export const SettingsPage: React.FC = () => {
   const { setActiveScreen, showToast } = useApp();
@@ -11,6 +12,7 @@ export const SettingsPage: React.FC = () => {
   const [currency, setCurrency] = useState('FCFA');
   const [enableSms, setEnableSms] = useState(true);
   const [enableThermalPrinter, setEnableThermalPrinter] = useState(true);
+  const [tab, setTab] = useState<'shop' | 'devices'>('shop');
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +41,19 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <form onSubmit={handleSave} className="space-y-4 max-w-2xl">
+        {/* Onglets par domaine de réglage (l'enregistrement couvre les deux) */}
+        <Tabs
+          ariaLabel="Domaines de paramètres"
+          activeId={tab}
+          onChange={setTab}
+          tabs={[
+            { id: 'shop', label: 'Établissement', icon: <Building2 className="w-4 h-4" aria-hidden="true" /> },
+            { id: 'devices', label: 'Périphériques & passerelles', icon: <Sliders className="w-4 h-4" aria-hidden="true" /> },
+          ]}
+        />
+
         {/* Shop Info */}
+        {tab === 'shop' && (
         <div className="bg-white border border-zinc-200/90 rounded-xl p-5 shadow-2xs space-y-4 text-[13px]">
           <div className="flex items-center gap-2 pb-2 border-b border-zinc-100">
             <Building2 className="w-4 h-4 text-blue-600" />
@@ -95,8 +109,10 @@ export const SettingsPage: React.FC = () => {
             />
           </div>
         </div>
+        )}
 
         {/* Devices & Integrations */}
+        {tab === 'devices' && (
         <div className="bg-white border border-zinc-200/90 rounded-xl p-5 shadow-2xs space-y-4 text-[13px]">
           <div className="flex items-center gap-2 pb-2 border-b border-zinc-100">
             <Sliders className="w-4 h-4 text-blue-600" />
@@ -137,6 +153,7 @@ export const SettingsPage: React.FC = () => {
             </label>
           </div>
         </div>
+        )}
 
         <button
           type="submit"
