@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { LaundryOrder } from '../../types';
 import { Search, Eye, Filter } from 'lucide-react';
-import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback } from '../common/DataTable';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, TablePagination } from '../common/DataTable';
 import { getInitials } from '../../lib/utils';
+
+const PAGE_SIZE = 5;
 
 export const RecentOrdersTable: React.FC = () => {
   const { orders, setPreviewTicket, setActiveScreen } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -26,6 +29,17 @@ export const RecentOrdersTable: React.FC = () => {
 
     return matchesSearch && matchesStatus;
   });
+
+  // Pagination : 5 lignes par page, retour à la page 1 dès que le filtre change
+  const pageCount = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const firstShown = filteredOrders.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const lastShown = Math.min(currentPage * PAGE_SIZE, filteredOrders.length);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter]);
 
   const getStatusBadge = (order: LaundryOrder) => {
     switch (order.status) {
@@ -45,13 +59,14 @@ export const RecentOrdersTable: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-zinc-200/90 rounded-xl mt-3 overflow-hidden shadow-2xs">
+    <div className="card-3d mt-3 overflow-hidden rounded-2xl">
       {/* Table Header Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-zinc-200 gap-2">
-        <h2 className="font-bold text-[14.5px] text-zinc-900">
-          Dernières réceptions{' '}
-          <span className="font-normal text-zinc-500 text-[13px]">— à traiter en atelier</span>
-        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-[15px] font-bold tracking-tight text-zinc-900">Dernières réceptions</h2>
+          <Badge variant="secondary" size="sm">{filteredOrders.length}</Badge>
+          <span className="text-[12.5px] text-zinc-500">à traiter en atelier</span>
+        </div>
         <div className="flex items-center gap-2 text-[12px]">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -59,14 +74,16 @@ export const RecentOrdersTable: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="🔍 Rechercher client, ticket…"
-              className="border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 w-48 sm:w-60 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-800"
+              placeholder="Rechercher client, ticket…"
+              aria-label="Rechercher une réception par client, ticket ou article"
+              className="border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 w-48 sm:w-60 text-zinc-900 placeholder-zinc-400 shadow-2xs focus:outline-none focus:ring-2 focus:ring-zinc-900"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-2.5 py-1.5 font-semibold text-zinc-700 bg-white cursor-pointer"
+            aria-label="Filtrer par statut de commande"
+            className="border border-zinc-200 rounded-lg px-2.5 py-1.5 font-semibold text-zinc-700 bg-white shadow-2xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-900"
           >
             <option value="all">Tous les statuts</option>
             <option value="received">Réceptionné</option>
@@ -94,7 +111,15 @@ export const RecentOrdersTable: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody className="divide-zinc-200">
-            {filteredOrders.slice(0, 7).map((order) => {
+            {filteredOrders.length === 0 && (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={8} className="px-4 py-10 text-center">
+                  <p className="text-[13px] font-semibold text-zinc-700">Aucune réception ne correspond à la recherche</p>
+                  <p className="mt-0.5 text-[12px] text-zinc-500">Modifiez le texte recherché ou le statut pour élargir la liste.</p>
+                </TableCell>
+              </TableRow>
+            )}
+            {paginatedOrders.map((order) => {
               const summaryArticles = order.lines
                 .map((l) => `${l.quantity > 1 ? `${l.quantity} ` : ''}${l.name.toLowerCase()}`)
                 .join(' + ');
@@ -157,15 +182,23 @@ export const RecentOrdersTable: React.FC = () => {
         </FramePanel>
       </Frame>
 
-      {/* Table Footer info */}
-      <div className="px-4 py-2 text-[11.5px] text-zinc-500 bg-zinc-50 border-t border-zinc-200 flex flex-wrap items-center justify-between">
-        <p>Maquette 1/3 • Shadcn UI + Tailwind • Données en FCFA • Tablette paysage 1366×768</p>
-        <button
-          onClick={() => setActiveScreen('orders')}
-          className="text-blue-600 hover:text-blue-700 font-semibold text-[11.5px]"
-        >
-          Voir toutes les {orders.length} commandes →
-        </button>
+      {/* Pied : plage affichée, pagination et accès à l'historique complet */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-zinc-200 bg-zinc-50/70 px-4 py-2.5">
+        <p className="text-[11.5px] text-zinc-500 tabular-nums" aria-live="polite">
+          {filteredOrders.length === 0
+            ? 'Aucune commande à afficher'
+            : `Affichage de ${firstShown} à ${lastShown} sur ${filteredOrders.length} commande${filteredOrders.length > 1 ? 's' : ''} · Page ${currentPage} sur ${pageCount}`}
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <TablePagination page={currentPage} pageCount={pageCount} onPageChange={setPage} />
+          <button
+            type="button"
+            onClick={() => setActiveScreen('orders')}
+            className="text-[12px] font-semibold text-blue-600 hover:text-blue-700"
+          >
+            Voir toutes les {orders.length} commandes →
+          </button>
+        </div>
       </div>
     </div>
   );

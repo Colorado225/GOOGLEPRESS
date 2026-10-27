@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 /**
  * Primitives de tableaux partagées par toute l'application, adaptées du motif
@@ -159,3 +160,90 @@ export const AvatarFallback: React.FC<React.HTMLAttributes<HTMLSpanElement>> = (
     {children}
   </span>
 );
+
+/* ————————————————— Pagination : navigation par pages ————————————————— */
+
+interface TablePaginationProps {
+  /** Page courante (1-indexée). */
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
+  className?: string;
+}
+
+/** Fenêtre de numéros affichés : tous jusqu'à 7 pages, sinon 1 … voisines … dernière. */
+function pageWindow(current: number, total: number): Array<number | '…'> {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const keep = new Set<number>([1, total, current - 1, current, current + 1]);
+  const sorted = [...keep].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out: Array<number | '…'> = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (prev && p - prev > 1) out.push('…');
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}
+
+/**
+ * Pagination segmentée (même langage visuel que les onglets) : piste zinc,
+ * page courante blanche en relief, Précédent/Suivant désactivés aux bornes.
+ * Ne rend rien lorsqu'il n'y a qu'une seule page.
+ */
+export const TablePagination: React.FC<TablePaginationProps> = ({ page, pageCount, onPageChange, className }) => {
+  if (pageCount <= 1) return null;
+  const segment =
+    'inline-flex items-center justify-center gap-1 rounded-md px-2.5 py-1.5 text-[12px] font-bold tabular-nums transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-zinc-900 disabled:pointer-events-none disabled:opacity-40';
+  const idle = 'text-zinc-600 hover:bg-white/70 hover:text-zinc-950';
+  return (
+    <nav
+      aria-label="Pagination du tableau"
+      className={cn(
+        'inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-100 p-0.5 shadow-[inset_0_1px_2px_rgb(9_9_11/0.05)]',
+        className,
+      )}
+    >
+      <button
+        type="button"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+        aria-label="Page précédente"
+        title="Page précédente"
+        className={cn(segment, idle)}
+      >
+        <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+        <span className="hidden sm:inline">Précédent</span>
+      </button>
+      {pageWindow(page, pageCount).map((p, i) =>
+        p === '…' ? (
+          <span key={`ellipsis-${i}`} className="px-1 text-[12px] text-zinc-400" aria-hidden="true">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            aria-current={p === page ? 'page' : undefined}
+            aria-label={`Page ${p}`}
+            onClick={() => onPageChange(p)}
+            className={cn(segment, 'min-w-8', p === page ? 'bg-white text-zinc-950 shadow-sm' : idle)}
+          >
+            {p}
+          </button>
+        ),
+      )}
+      <button
+        type="button"
+        disabled={page >= pageCount}
+        onClick={() => onPageChange(page + 1)}
+        aria-label="Page suivante"
+        title="Page suivante"
+        className={cn(segment, idle)}
+      >
+        <span className="hidden sm:inline">Suivant</span>
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </nav>
+  );
+};
