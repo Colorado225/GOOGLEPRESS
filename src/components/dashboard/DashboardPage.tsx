@@ -7,6 +7,7 @@ import { QuickActionsAndAlerts } from './QuickActionsAndAlerts';
 import { RecentOrdersTable } from './RecentOrdersTable';
 import { Plus } from 'lucide-react';
 import { capitalize, formatLongDate } from '../../lib/dates';
+import { Reveal } from '../common/Reveal';
 
 export const DashboardPage: React.FC = () => {
   const { setActiveScreen } = useApp();
@@ -22,18 +23,24 @@ export const DashboardPage: React.FC = () => {
         }}
       />
 
-      <MetricCards />
+      <Reveal>
+        <MetricCards />
+      </Reveal>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <Reveal delay={90}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="lg:col-span-2">
           <RevenueChart />
         </div>
         <div>
           <QuickActionsAndAlerts />
         </div>
-      </div>
+        </div>
+      </Reveal>
 
-      <RecentOrdersTable />
+      <Reveal delay={160}>
+        <RecentOrdersTable />
+      </Reveal>
     </div>
   );
 };

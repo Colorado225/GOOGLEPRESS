@@ -52,7 +52,7 @@ export const OrderCartTicket: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-zinc-200/90 rounded-xl overflow-hidden shadow-sm sticky top-3">
+    <div className="card-3d rounded-xl overflow-hidden sticky top-3">
       {/* Dark Ticket Header */}
       <div className="bg-[#09090b] text-white px-5 py-4 flex justify-between items-center border-b border-zinc-800">
         <div>

@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
 import { ClothingItem } from '../../types';
 import { CurrentColorSelector } from './ColorPicker';
+import { Reveal } from '../common/Reveal';
 
 export const ClothingCatalogSection: React.FC = () => {
   const { addCartItem, cartLines, selectedServiceFilter, setSelectedServiceFilter } = useApp();
@@ -30,7 +31,7 @@ export const ClothingCatalogSection: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
+    <Reveal className="card-3d rounded-xl p-4">
       {/* Category selector header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
         <h2 className="font-bold text-[14.5px] text-zinc-900">2 • Articles & services</h2>
@@ -80,20 +81,20 @@ export const ClothingCatalogSection: React.FC = () => {
               key={item.id}
               type="button"
               onClick={() => addCartItem(item)}
-              className={`border-1.5 rounded-xl p-3 text-center transition-all cursor-pointer relative group flex flex-col items-center justify-between min-h-[115px] select-none ${
+              className={`border-1.5 rounded-xl p-3 text-center transition-all duration-200 cursor-pointer relative group flex flex-col items-center justify-between min-h-[115px] select-none ${
                 isSelected
-                  ? 'border-[#09090b] bg-[#09090b] text-white shadow-md'
-                  : 'border-zinc-200 hover:border-zinc-800 bg-white text-zinc-900 hover:shadow-2xs'
+                  ? 'border-[#09090b] bg-[#09090b] text-white shadow-pop scale-[1.02]'
+                  : 'border-zinc-300 hover:border-zinc-800 bg-white text-zinc-900 shadow-card hover:shadow-card-hover hover:-translate-y-0.5'
               }`}
             >
               {item.image ? (
                 <img
                   src={item.image}
                   alt=""
-                  className="w-14 h-14 rounded-lg object-cover shadow-2xs transform group-hover:scale-105 transition-transform"
+                  className="w-14 h-14 rounded-lg object-cover shadow-xs transform group-hover:scale-110 transition-transform duration-300"
                 />
               ) : (
-                <div className="text-3xl filter drop-shadow-xs transform group-hover:scale-105 transition-transform">
+                <div className="text-3xl filter drop-shadow-xs transform group-hover:scale-110 transition-transform duration-300">
                   {item.emoji}
                 </div>
               )}
@@ -135,6 +136,6 @@ export const ClothingCatalogSection: React.FC = () => {
           </button>
         ))}
       </div>
-    </div>
+    </Reveal>
   );
 };

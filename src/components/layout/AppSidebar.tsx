@@ -126,7 +126,7 @@ export const AppSidebar: React.FC = () => {
       className={`bg-[#09090b] text-white flex flex-col justify-between rounded-2xl md:rounded-r-2xl select-none z-20 transition-all duration-300 ease-in-out transform origin-left relative flex-1 min-h-[calc(100vh-5.5rem)] h-[calc(100%-1.5rem)] overflow-y-auto ${
         collapsed
           ? '-translate-x-full w-0 opacity-0 pointer-events-none overflow-hidden border-0 my-3 ml-0 p-0 shadow-none'
-          : 'translate-x-0 w-[255px] opacity-100 shadow-2xl border border-zinc-800/80 my-3 ml-0 md:ml-3 p-4 md:p-5'
+          : 'translate-x-0 w-[255px] opacity-100 shadow-pop border border-zinc-700 my-3 ml-0 md:ml-3 p-4 md:p-5'
       }`}
     >
       {/* Brand Header with Collapse Sliding Button */}
@@ -183,7 +183,7 @@ export const AppSidebar: React.FC = () => {
                 setMobileMenuOpen(false);
               }}
               title={collapsed ? `${item.label} ${item.shortcut ? `(${item.shortcut})` : ''}` : undefined}
-              className={`w-full flex items-center rounded-xl text-left transition-all duration-150 relative group ${
+              className={`w-full flex items-center rounded-xl text-left transition-all duration-200 hover:translate-x-0.5 relative group ${
                 collapsed
                   ? 'justify-center p-2.5 my-1'
                   : 'gap-3 px-3 py-2.5'

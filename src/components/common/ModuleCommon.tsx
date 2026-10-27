@@ -154,7 +154,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({ label, value, hint, tone = 'de
       ? 'text-emerald-700'
       : 'text-zinc-950';
   return (
-    <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
+    <div className="card-3d hover-lift rounded-xl p-4">
       <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-400">{label}</p>
       <p className={`text-[22px] font-black tabular-nums tracking-tight mt-1 ${toneClass}`}>{value}</p>
       {hint && <p className="text-[11.5px] text-zinc-500 mt-0.5">{hint}</p>}

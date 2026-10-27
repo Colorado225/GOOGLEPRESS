@@ -1,4 +1,19 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* ——— Design PressingPro : élévations & ombres prononcées ———
+   Échelle d'ombres enrichie : toutes les cartes existantes (shadow-2xs/xs/sm/md)
+   gagnent en profondeur. Jetons dédiés aux cadres 3D et aux fenêtres.
+   Pour régler l'intensité globale du relief, tout se joue ici. */
+@theme {
+  --shadow-2xs: 0 0 0 1px rgb(9 9 11 / 0.03), 0 1px 2px rgb(9 9 11 / 0.07), 0 6px 16px -6px rgb(9 9 11 / 0.14);
+  --shadow-xs: 0 0 0 1px rgb(9 9 11 / 0.03), 0 1px 3px rgb(9 9 11 / 0.08), 0 8px 20px -6px rgb(9 9 11 / 0.16);
+  --shadow-sm: 0 0 0 1px rgb(9 9 11 / 0.04), 0 2px 4px rgb(9 9 11 / 0.08), 0 12px 24px -8px rgb(9 9 11 / 0.18);
+  --shadow-md: 0 0 0 1px rgb(9 9 11 / 0.04), 0 4px 8px -2px rgb(9 9 11 / 0.1), 0 16px 32px -10px rgb(9 9 11 / 0.22);
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.85), inset 0 -1px 0 rgb(9 9 11 / 0.04), 0 0 0 1px rgb(9 9 11 / 0.05), 0 2px 4px rgb(9 9 11 / 0.07), 0 14px 30px -10px rgb(9 9 11 / 0.22);
+  --shadow-card-hover: inset 0 1px 0 rgb(255 255 255 / 0.9), inset 0 -1px 0 rgb(9 9 11 / 0.05), 0 0 0 1px rgb(9 9 11 / 0.07), 0 4px 8px rgb(9 9 11 / 0.09), 0 22px 40px -12px rgb(9 9 11 / 0.3);
+  --shadow-pop: 0 0 0 1px rgb(9 9 11 / 0.06), 0 12px 24px -8px rgb(9 9 11 / 0.28), 0 32px 64px -16px rgb(9 9 11 / 0.35);
+}
 
 @layer base {
   body {
@@ -15,18 +30,127 @@
 
 /* Custom scrollbars for clean ERP look */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
+  background: linear-gradient(180deg, #d8d8de, #b9b9c2);
+  border: 1px solid rgb(255 255 255 / 0.65);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #a1a1aa;
+}
+
+/* ——— Micro-interactions globales : curseur, clic en scale, transitions douces ——— */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  button:not(:disabled) {
+    transition:
+      transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease,
+      box-shadow 0.2s ease;
+  }
+
+  button:not(:disabled):active {
+    transform: scale(0.98);
+  }
+}
+
+/* ——— Cadres 3D : bordure prononcée, biseau lumineux, ombre portée profonde ——— */
+@layer components {
+  .card-3d {
+    background: linear-gradient(180deg, #ffffff 0%, #fdfdfd 55%, #f6f6f7 100%);
+    border: 1px solid #d4d4d8;
+    box-shadow: var(--shadow-card);
+  }
+
+  .hover-lift {
+    transition:
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.22s ease,
+      border-color 0.22s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+
+/* ——— Révélation au défilement (composant common/Reveal) ——— */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px) scale(0.99);
+  transition:
+    opacity 0.55s ease,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ——— Transition d'écran (changement de page, App.tsx) ——— */
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.screen-enter {
+  animation: screen-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ——— Accessibilité : mouvements réduits ——— */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Impression : ne jamais imprimer un bloc encore masqué par la révélation */
+@media print {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* Impression ciblée : selon la classe posée sur <body> par lib/print.ts,

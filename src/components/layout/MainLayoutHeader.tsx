@@ -131,7 +131,7 @@ export const MainLayoutHeader: React.FC = () => {
   const hasResults = matchingOrders.length > 0 || matchingCustomers.length > 0;
 
   return (
-    <header className="bg-white/90 backdrop-blur-md border-b border-zinc-200 sticky top-0 z-30 px-3 sm:px-5 py-2 transition-all">
+    <header className="bg-white/90 backdrop-blur-md border-b border-zinc-200 shadow-xs sticky top-0 z-30 px-3 sm:px-5 py-2 transition-all">
       <div className="flex items-center justify-between gap-3">
         {/* Left Section: Toggle Trigger, Brand & Breadcrumbs */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">

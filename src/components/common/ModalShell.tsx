@@ -54,7 +54,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-white rounded-2xl border border-zinc-200 shadow-2xl ${maxWidthClass} w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto`}
+        className={`bg-white rounded-2xl border border-zinc-300 shadow-pop ${maxWidthClass} w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto`}
       >
         <div className="bg-[#09090b] text-white px-5 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
@@ -118,7 +118,7 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({ title, subtitle, onClose
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="bg-white w-full max-w-lg h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-200 flex flex-col"
+        className="bg-white w-full max-w-lg h-full overflow-y-auto border-l border-zinc-300 shadow-pop animate-in slide-in-from-right duration-200 flex flex-col"
       >
         <div className="bg-[#09090b] text-white px-5 py-4 flex items-center justify-between gap-3 sticky top-0 z-10">
           <div className="min-w-0">
@@ -176,7 +176,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
-        className="bg-white rounded-2xl border border-zinc-200 shadow-2xl max-w-sm w-full p-5 space-y-3 animate-in fade-in zoom-in-95 duration-150"
+        className="bg-white rounded-2xl border border-zinc-300 shadow-pop max-w-sm w-full p-5 space-y-3 animate-in fade-in zoom-in-95 duration-200"
       >
         <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto ${danger ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
           <AlertTriangle className="w-5 h-5" />

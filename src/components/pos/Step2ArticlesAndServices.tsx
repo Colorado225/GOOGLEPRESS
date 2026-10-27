@@ -151,32 +151,33 @@ export const Step2ArticlesAndServices: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs">
+          <div className="card-3d rounded-xl p-3">
             <CurrentColorSelector />
           </div>
 
           {/* Catalog Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {catalogItems.map((item) => {
+            {catalogItems.map((item, index) => {
               const count = getItemCount(item.id);
               const isKilo = item.pricingType === 'kilo';
 
               return (
                 <div
                   key={item.id}
-                  className={`bg-white border-1.5 rounded-xl p-3 flex flex-col justify-between transition-all duration-150 hover:shadow-xs select-none ${
+                  className={`bg-white border-1.5 rounded-xl p-3 flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 select-none group animate-in fade-in zoom-in-95 ${
                     count > 0
                       ? isPressing
-                        ? 'border-blue-500 bg-blue-50/20 shadow-2xs'
-                        : 'border-teal-500 bg-teal-50/20 shadow-2xs'
-                      : 'border-zinc-200 hover:border-zinc-400'
+                        ? 'border-blue-500 bg-blue-50/20 shadow-pop'
+                        : 'border-teal-500 bg-teal-50/20 shadow-pop'
+                      : 'border-zinc-300 hover:border-zinc-400 shadow-card hover:shadow-card-hover'
                   }`}
+                  style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                 >
                   <div className="flex items-start justify-between gap-1">
                     {item.image ? (
-                      <img src={item.image} alt="" className="w-12 h-12 rounded-lg object-cover shadow-2xs shrink-0" />
+                      <img src={item.image} alt="" className="w-12 h-12 rounded-lg object-cover shadow-xs shrink-0 transition-transform duration-300 group-hover:scale-105" />
                     ) : (
-                      <span className="text-3xl filter drop-shadow-xs">{item.emoji}</span>
+                      <span className="text-3xl filter drop-shadow-xs inline-block transition-transform duration-300 group-hover:scale-110">{item.emoji}</span>
                     )}
                     {count > 0 && (
                       <span

@@ -14,7 +14,7 @@ export const MetricCards: React.FC = () => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       {/* KPI 1: CA du jour */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs hover:border-zinc-300 transition-all">
+      <div className="card-3d hover-lift rounded-xl p-4">
         <div className="flex justify-between items-start">
           <p className="text-[11.5px] font-semibold text-zinc-500 uppercase tracking-wide">
             CA du jour
@@ -34,7 +34,7 @@ export const MetricCards: React.FC = () => {
       </div>
 
       {/* KPI 2: Commandes en cours */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs hover:border-zinc-300 transition-all">
+      <div className="card-3d hover-lift rounded-xl p-4">
         <div className="flex justify-between items-start">
           <p className="text-[11.5px] font-semibold text-zinc-500 uppercase tracking-wide">
             Commandes en cours
@@ -52,7 +52,7 @@ export const MetricCards: React.FC = () => {
       </div>
 
       {/* KPI 3: Prêts à remettre */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs hover:border-zinc-300 transition-all">
+      <div className="card-3d hover-lift rounded-xl p-4">
         <div className="flex justify-between items-start">
           <p className="text-[11.5px] font-semibold text-zinc-500 uppercase tracking-wide">
             Prêts à remettre
@@ -70,7 +70,7 @@ export const MetricCards: React.FC = () => {
       </div>
 
       {/* KPI 4: Alertes */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-4 border-l-4 border-l-amber-500 shadow-2xs">
+      <div className="card-3d hover-lift rounded-xl p-4 border-l-4 border-l-amber-500">
         <div className="flex items-center justify-between">
           <p className="text-[11.5px] font-semibold text-zinc-500 uppercase tracking-wide">
             Alertes

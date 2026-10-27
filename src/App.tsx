@@ -80,6 +80,8 @@ const MainLayout: React.FC = () => {
 
         {/* Dynamic Screen View with smooth expand */}
         <main className="flex-1 w-full min-w-0 flex flex-col transition-all duration-300 ease-in-out">
+          {/* Transition d'écran : fondu + légère montée à chaque changement de page */}
+          <div key={activeScreen} className="screen-enter flex-1 flex flex-col min-h-0">
           {activeScreen === 'dashboard' && <DashboardPage />}
           {activeScreen === 'pos' && <PosPage />}
           {activeScreen === 'workshop' && <WorkshopPage />}
@@ -90,6 +92,7 @@ const MainLayout: React.FC = () => {
           {activeScreen === 'expenses' && <ExpensesPage />}
           {activeScreen === 'reports' && <ReportsPage />}
           {activeScreen === 'settings' && <SettingsPage />}
+          </div>
         </main>
       </div>
 
