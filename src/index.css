@@ -28,3 +28,37 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #a1a1aa;
 }
+
+/* Impression des rapports : seul #report-print-area est imprimé,
+   sans barre latérale, en-tête d'application ni contrôles. */
+@media print {
+  body {
+    background: #fff;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #report-print-area,
+  #report-print-area * {
+    visibility: visible;
+  }
+  #report-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  #report-print-area table {
+    break-inside: auto;
+  }
+  #report-print-area tr {
+    break-inside: avoid;
+  }
+  #report-print-area .shadow-2xs,
+  #report-print-area .shadow-sm {
+    box-shadow: none;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

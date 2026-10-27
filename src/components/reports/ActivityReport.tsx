@@ -1,0 +1,245 @@
+import React, { useMemo, useState } from 'react';
+import { useApp } from '../../context/AppContext';
+import { KpiCard, ResetFiltersButton } from '../common/ModuleCommon';
+import { OrderStatus } from '../../types';
+import { formatFCFA } from '../../data/demoData';
+import { DateRange } from '../../lib/periods';
+import {
+  ORDER_STATUS_LABELS,
+  computeAverageTurnaroundHours,
+  formatDurationHours,
+  isOrderFinished,
+  isOrderLate,
+  orderReceivedISO,
+} from '../../lib/reports';
+import { downloadCsv } from '../../lib/csv';
+import { buildDailySeries, HorizontalBars, ReportCard, VerticalBars } from './reportWidgets';
+import { Download } from 'lucide-react';
+
+/**
+ * Rapport d'activité — définitions :
+ * - "Reçue dans la période" : date de réception stockée sur la commande.
+ * - "Terminée" : statut actuel Prête ou Livrée · "Livrée" : statut Livrée.
+ * - "En retard" : drapeau métier isLate de la commande (promisedAt est un
+ *   libellé d'affichage sans année, non recalculable de façon fiable).
+ */
+export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
+  const { orders, setPreviewTicket, showToast } = useApp();
+  const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const periodOrders = useMemo(() => {
+    return orders.filter((o) => {
+      const iso = orderReceivedISO(o);
+      return iso !== null && iso >= range.startISO && iso <= range.endISO;
+    });
+  }, [orders, range.startISO, range.endISO]);
+
+  const unreadableCount = orders.length - orders.filter((o) => orderReceivedISO(o) !== null).length;
+
+  const filtered = useMemo(
+    () =>
+      periodOrders.filter((o) => {
+        if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+        if (categoryFilter !== 'all' && (o.serviceCategory ?? 'unrecorded') !== categoryFilter) return false;
+        return true;
+      }),
+    [periodOrders, statusFilter, categoryFilter]
+  );
+
+  const finished = periodOrders.filter(isOrderFinished).length;
+  const delivered = periodOrders.filter((o) => o.status === 'delivered').length;
+  const lateOrders = periodOrders.filter(isOrderLate);
+  const turnaround = computeAverageTurnaroundHours(periodOrders);
+
+  const volumeByDay = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const o of filtered) {
+      const iso = orderReceivedISO(o);
+      if (iso) map.set(iso, (map.get(iso) ?? 0) + 1);
+    }
+    return map;
+  }, [filtered]);
+  const volumeSeries = buildDailySeries(range, volumeByDay, (v) => (v > 0 ? String(v) : ''));
+
+  const byStatus = useMemo(() => {
+    const counts = new Map<OrderStatus, number>();
+    for (const o of filtered) counts.set(o.status, (counts.get(o.status) ?? 0) + 1);
+    return (Object.keys(ORDER_STATUS_LABELS) as OrderStatus[])
+      .filter((s) => (counts.get(s) ?? 0) > 0)
+      .map((s) => ({
+        label: ORDER_STATUS_LABELS[s],
+        value: counts.get(s) ?? 0,
+        display: `${counts.get(s) ?? 0} commande(s)`,
+      }));
+  }, [filtered]);
+
+  const byService = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const o of filtered) for (const l of o.lines) counts.set(l.serviceType, (counts.get(l.serviceType) ?? 0) + 1);
+    return Array.from(counts.entries())
+      .map(([label, value]) => ({ label, value, display: `${value} ligne(s)` }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [filtered]);
+
+  const exportCsv = () => {
+    downloadCsv(
+      `pressingpro-rapport-activite-${range.startISO}-${range.endISO}.csv`,
+      ['Ticket', 'Date de réception (stockée)', 'Client', 'Statut', 'Total FCFA', 'Reste à payer FCFA', 'En retard (drapeau)'],
+      filtered.map((o) => [
+        o.ticketNumber,
+        o.receivedAt,
+        o.customerName,
+        ORDER_STATUS_LABELS[o.status],
+        o.total,
+        o.remainingBalance,
+        isOrderLate(o) ? 'Oui' : 'Non',
+      ])
+    );
+    showToast(`✓ Rapport d’activité exporté (${filtered.length} commande(s)) — données locales`);
+  };
+
+  const inputClass =
+    'border border-zinc-200 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900';
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <KpiCard label="Commandes reçues" value={String(periodOrders.length)} hint="sur la période (date de réception)" />
+        <KpiCard label="Terminées (prêtes/livrées)" value={String(finished)} hint="parmi celles de la période, à ce jour" tone="success" />
+        <KpiCard label="Livrées" value={String(delivered)} hint="statut actuel « Livrée »" />
+        <KpiCard label="En retard" value={String(lateOrders.length)} hint="drapeau retard de la commande" tone={lateOrders.length > 0 ? 'danger' : 'default'} />
+        <KpiCard
+          label="Délai moyen réception → prêt"
+          value={turnaround ? formatDurationHours(turnaround.hours) : '—'}
+          hint={turnaround ? `sur ${turnaround.sampleSize} commande(s) horodatées` : 'horodatages insuffisants'}
+        />
+      </div>
+
+      <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs flex flex-wrap items-center gap-2 print:hidden">
+        <label htmlFor="act-status" className="sr-only">Filtrer par statut</label>
+        <select id="act-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | OrderStatus)} className={inputClass}>
+          <option value="all">Statut : tous</option>
+          {(Object.keys(ORDER_STATUS_LABELS) as OrderStatus[]).map((s) => (
+            <option key={s} value={s}>{ORDER_STATUS_LABELS[s]}</option>
+          ))}
+        </select>
+        <label htmlFor="act-cat" className="sr-only">Filtrer par univers de service</label>
+        <select id="act-cat" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={inputClass}>
+          <option value="all">Univers : tous</option>
+          <option value="pressing">Pressing</option>
+          <option value="blanchisserie">Blanchisserie</option>
+          <option value="unrecorded">Non renseigné</option>
+        </select>
+        {(statusFilter !== 'all' || categoryFilter !== 'all') && (
+          <ResetFiltersButton
+            onClick={() => {
+              setStatusFilter('all');
+              setCategoryFilter('all');
+            }}
+          />
+        )}
+        <span className="text-[12px] text-zinc-500 tabular-nums">
+          Graphiques et tableau : {filtered.length} commande(s) après filtres métier · KPI ci-dessus : période complète
+        </span>
+        <button
+          type="button"
+          onClick={exportCsv}
+          disabled={filtered.length === 0}
+          className="ml-auto inline-flex items-center gap-1.5 border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-50 text-zinc-800 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        >
+          <Download className="w-3.5 h-3.5" /> Export CSV
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <ReportCard title="Volume de commandes reçues" subtitle="Par jour de réception (semaine si période longue)" className="lg:col-span-2">
+          <VerticalBars
+            data={volumeSeries}
+            ariaLabel="Volume quotidien des commandes reçues"
+            formatFullValue={(v) => `${v} commande(s)`}
+            emptyMessage="Aucune commande reçue sur cette période avec les filtres actuels."
+          />
+        </ReportCard>
+        <ReportCard title="Répartition par statut">
+          <HorizontalBars data={byStatus} emptyMessage="Aucune commande à répartir." />
+        </ReportCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <ReportCard title="Prestations demandées" subtitle="Nombre de lignes par type de prestation">
+          <HorizontalBars data={byService} emptyMessage="Aucune ligne de prestation sur la sélection." />
+        </ReportCard>
+
+        <ReportCard title={`Commandes en retard (${lateOrders.length})`} className="lg:col-span-2">
+          {lateOrders.length === 0 ? (
+            <p className="text-[12.5px] text-zinc-500">Aucune commande marquée en retard parmi celles reçues sur la période.</p>
+          ) : (
+            <ul className="divide-y divide-zinc-100">
+              {lateOrders.map((o) => (
+                <li key={o.id}>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTicket(o)}
+                    className="w-full flex flex-wrap items-center gap-2 py-2 text-left text-[12.5px] hover:bg-zinc-50 rounded-lg px-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  >
+                    <span className="font-bold text-zinc-900">{o.ticketNumber}</span>
+                    <span className="text-zinc-600">{o.customerName}</span>
+                    <span className="text-zinc-400 tabular-nums">reçue {o.receivedAt}</span>
+                    <span className="ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                      {ORDER_STATUS_LABELS[o.status]}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ReportCard>
+      </div>
+
+      <div className="bg-white border border-zinc-200/90 rounded-xl shadow-2xs overflow-hidden">
+        <h3 className="font-bold text-[14px] text-zinc-900 px-4 pt-3.5">Commandes de la sélection ({filtered.length})</h3>
+        <p className="text-[12px] text-zinc-500 px-4 pb-2">Cliquez une ligne pour ouvrir le ticket correspondant.</p>
+        {filtered.length === 0 ? (
+          <p className="px-4 pb-4 text-[12.5px] text-zinc-500">Aucune commande ne correspond à la période et aux filtres métier.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px] text-left min-w-[720px]">
+              <thead>
+                <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
+                  <th className="py-2.5 px-4">Ticket</th>
+                  <th className="py-2.5 px-3">Réception</th>
+                  <th className="py-2.5 px-3">Client</th>
+                  <th className="py-2.5 px-3">Statut</th>
+                  <th className="py-2.5 px-3 text-right">Total</th>
+                  <th className="py-2.5 px-3 text-right">Reste à payer</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {filtered.map((o) => (
+                  <tr key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 cursor-pointer transition-colors">
+                    <td className="py-2.5 px-4 font-bold text-zinc-900">{o.ticketNumber}</td>
+                    <td className="py-2.5 px-3 tabular-nums text-zinc-600">{o.receivedAt}</td>
+                    <td className="py-2.5 px-3 text-zinc-700">{o.customerName}</td>
+                    <td className="py-2.5 px-3 text-zinc-600">
+                      {ORDER_STATUS_LABELS[o.status]}
+                      {isOrderLate(o) && <span className="ml-1.5 text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">Retard</span>}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-bold tabular-nums">{formatFCFA(o.total)}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">{formatFCFA(o.remainingBalance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {unreadableCount > 0 && (
+          <p className="px-4 py-2.5 border-t border-zinc-100 text-[11.5px] text-zinc-400">
+            {unreadableCount} commande(s) exclue(s) des rapports datés : date de réception stockée dans un format illisible.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};

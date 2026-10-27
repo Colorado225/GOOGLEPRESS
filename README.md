@@ -18,9 +18,21 @@ fichier clients & fidélité, caisse et clôture journalière Z.
   remise au client avec encaissement du solde, clôture de caisse Z.
 - **Commandes & Clients** — historique filtrable, fichier clients avec
   fidélité (%), statut VIP et solde dû.
+- **Personnel & présences** — registre des employés (postes, téléphone,
+  salaire facultatif), activation/désactivation sans suppression, saisie
+  des présences (présent, retard, absent, congé) par employé et par jour.
+- **Stocks & inventaire** — catalogue produits avec seuils d'alerte,
+  mouvements d'entrée/sortie/ajustement entièrement tracés (la quantité
+  ne change que par un mouvement), alertes de rupture et de stock faible.
+- **Dépenses** — registre des charges par catégorie (produits, transport,
+  énergie, maintenance…), fournisseurs, modes de paiement, annulation
+  motivée (exclue des totaux), export CSV.
+- **Rapports** — activité, finance (ventes, soldes dus et dépenses
+  distingués, sans encaissements inventés), personnel et stock, par
+  période (jour/semaine/mois/personnalisée), avec impression et exports CSV.
 - **Raccourcis clavier** façon logiciel de caisse : `F1` tableau de bord,
-  `F2` réception, `F3` atelier, `F4` clôture Z, `F9` / `?` aide, `Échap`
-  ferme les fenêtres.
+  `F2` réception, `F3` atelier, `F4` clôture Z, `Alt+7/8/9/0` Personnel /
+  Stocks / Dépenses / Rapports, `F9` / `?` aide, `Échap` ferme les fenêtres.
 
 ## Stack technique
 

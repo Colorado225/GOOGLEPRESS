@@ -18,6 +18,10 @@ export const KeyboardShortcutsModal: React.FC = () => {
         { key: 'F4', alt: 'Alt + 4', single: '', label: 'Caisse & Clôture journalière (Z)', action: () => setClosingZModalOpen(true) },
         { key: 'Alt + 5', alt: 'Alt + U', single: '', label: 'Fichier Clients', action: () => setActiveScreen('clients') },
         { key: 'Alt + 6', alt: 'Alt + O', single: '', label: 'Toutes les Commandes', action: () => setActiveScreen('orders') },
+        { key: 'Alt + 7', alt: '', single: '', label: 'Personnel & présences', action: () => setActiveScreen('employees') },
+        { key: 'Alt + 8', alt: '', single: '', label: 'Stocks & inventaire', action: () => setActiveScreen('inventory') },
+        { key: 'Alt + 9', alt: '', single: '', label: 'Dépenses', action: () => setActiveScreen('expenses') },
+        { key: 'Alt + 0', alt: '', single: '', label: 'Rapports', action: () => setActiveScreen('reports') },
       ],
     },
     {

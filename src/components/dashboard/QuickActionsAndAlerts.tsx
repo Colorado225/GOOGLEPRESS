@@ -1,8 +1,29 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
+import { getAlertProducts, getStockStatus } from '../../lib/inventory';
+import { getPeriodRange, isISOInRange } from '../../lib/periods';
+import { todayISO } from '../../lib/dates';
+import { formatFCFA } from '../../data/demoData';
 
 export const QuickActionsAndAlerts: React.FC = () => {
-  const { setActiveScreen, setClosingZModalOpen, notifyAllSms, setPreviewTicket, orders } = useApp();
+  const {
+    setActiveScreen, setClosingZModalOpen, notifyAllSms, setPreviewTicket, orders,
+    products, attendanceRecords, employees, expenses,
+  } = useApp();
+
+  // Signaux calculés en direct depuis les modules Personnel / Stocks / Dépenses
+  const stockAlerts = getAlertProducts(products);
+  const stockOutCount = stockAlerts.filter(
+    (p) => getStockStatus(p.currentQuantity, p.alertThreshold) === 'out'
+  ).length;
+  const today = todayISO();
+  const presentTodayCount = attendanceRecords.filter(
+    (r) => r.date === today && (r.status === 'present' || r.status === 'late')
+  ).length;
+  const monthRange = getPeriodRange('month');
+  const monthExpensesTotal = expenses
+    .filter((e) => e.status === 'recorded' && isISOInRange(e.date, monthRange))
+    .reduce((sum, e) => sum + e.amountXof, 0);
 
   const handleTicketClick = (ticketNum: string) => {
     const found = orders.find((o) => o.ticketNumber === ticketNum);
@@ -95,6 +116,68 @@ export const QuickActionsAndAlerts: React.FC = () => {
               Jour J
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* Signaux Personnel / Stocks / Dépenses (données réelles des modules) */}
+      <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
+        <h2 className="font-bold text-[14px] text-zinc-900 mb-2.5">Personnel, stocks & dépenses</h2>
+        <div className="space-y-2 text-[12.5px]">
+          <button
+            type="button"
+            onClick={() => setActiveScreen('inventory')}
+            className="w-full flex justify-between items-center border border-zinc-200 hover:border-zinc-300 rounded-lg px-2.5 py-2 hover:bg-zinc-50 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-zinc-900"
+          >
+            <span>
+              <span className="font-bold text-zinc-900 block">Alertes de stock</span>
+              <span className="text-zinc-500 text-[11.5px]">
+                {stockAlerts.length === 0
+                  ? 'Aucun produit sous son seuil'
+                  : `${stockAlerts.length} produit(s) à surveiller · ${stockOutCount} en rupture`}
+              </span>
+            </span>
+            <span
+              className={`text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums ${
+                stockOutCount > 0
+                  ? 'bg-red-100 text-red-700'
+                  : stockAlerts.length > 0
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-emerald-100 text-emerald-700'
+              }`}
+            >
+              {stockAlerts.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveScreen('employees')}
+            className="w-full flex justify-between items-center border border-zinc-200 hover:border-zinc-300 rounded-lg px-2.5 py-2 hover:bg-zinc-50 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-zinc-900"
+          >
+            <span>
+              <span className="font-bold text-zinc-900 block">Présences du jour</span>
+              <span className="text-zinc-500 text-[11.5px]">
+                {presentTodayCount} présent(s) saisi(s) · {employees.filter((e) => e.status === 'active').length} employés actifs
+              </span>
+            </span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 tabular-nums">
+              {presentTodayCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveScreen('expenses')}
+            className="w-full flex justify-between items-center border border-zinc-200 hover:border-zinc-300 rounded-lg px-2.5 py-2 hover:bg-zinc-50 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-zinc-900"
+          >
+            <span>
+              <span className="font-bold text-zinc-900 block">Dépenses du mois</span>
+              <span className="text-zinc-500 text-[11.5px]">enregistrées, hors annulées</span>
+            </span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-800 tabular-nums">
+              {formatFCFA(monthExpensesTotal)}
+            </span>
+          </button>
         </div>
       </div>
     </div>
