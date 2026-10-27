@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { KpiCard } from '../common/ModuleCommon';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../common/DataTable';
 import { formatFCFA } from '../../data/demoData';
 import { DateRange, isISOInRange } from '../../lib/periods';
 import { ORDER_STATUS_LABELS, orderReceivedISO } from '../../lib/reports';
@@ -179,38 +180,40 @@ export const FinancialReport: React.FC<{ range: DateRange }> = ({ range }) => {
         {dueOrders.length === 0 ? (
           <p className="px-4 pb-4 text-[12.5px] text-zinc-500">Aucun solde dû : toutes les commandes de la période sont soldées.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px] text-left min-w-[760px]">
-              <thead>
-                <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                  <th className="py-2.5 px-4">Ticket</th>
-                  <th className="py-2.5 px-3">Client</th>
-                  <th className="py-2.5 px-3">Téléphone</th>
-                  <th className="py-2.5 px-3">Statut</th>
-                  <th className="py-2.5 px-3 text-right">Total</th>
-                  <th className="py-2.5 px-3 text-right">Marqué payé</th>
-                  <th className="py-2.5 px-3 text-right">Solde dû</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
+          <Frame className="m-3 mt-1">
+            <FramePanel className="p-0">
+            <Table className="min-w-[760px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-4">Ticket</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Téléphone</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Marqué payé</TableHead>
+                  <TableHead className="text-right">Solde dû</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {dueOrders.map((o) => (
-                  <tr key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 cursor-pointer transition-colors">
-                    <td className="py-2.5 px-4 font-bold text-zinc-900">{o.ticketNumber}</td>
-                    <td className="py-2.5 px-3 text-zinc-700">{o.customerName}</td>
-                    <td className="py-2.5 px-3 tabular-nums text-zinc-600">{o.customerPhone}</td>
-                    <td className="py-2.5 px-3 text-zinc-600">{ORDER_STATUS_LABELS[o.status]}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums">{formatFCFA(o.total)}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">{formatFCFA(o.depositPaid)}</td>
-                    <td className="py-2.5 px-3 text-right font-bold tabular-nums text-amber-700">{formatFCFA(o.remainingBalance)}</td>
-                  </tr>
+                  <TableRow key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 cursor-pointer transition-colors">
+                    <TableCell className="px-4 font-bold text-zinc-900">{o.ticketNumber}</TableCell>
+                    <TableCell className="text-zinc-700">{o.customerName}</TableCell>
+                    <TableCell className="tabular-nums text-zinc-600">{o.customerPhone}</TableCell>
+                    <TableCell className="text-zinc-600">{ORDER_STATUS_LABELS[o.status]}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatFCFA(o.total)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600">{formatFCFA(o.depositPaid)}</TableCell>
+                    <TableCell className="text-right font-bold tabular-nums text-amber-700">{formatFCFA(o.remainingBalance)}</TableCell>
+                  </TableRow>
                 ))}
-                <tr className="border-t border-zinc-200 font-bold">
-                  <td className="py-2.5 px-4" colSpan={6}>Total des soldes dus</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums">{formatFCFA(dueTotal)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                <TableRow className="border-t border-zinc-200 font-bold">
+                  <TableCell className="px-4" colSpan={6}>Total des soldes dus</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatFCFA(dueTotal)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+            </FramePanel>
+          </Frame>
         )}
       </div>
     </div>

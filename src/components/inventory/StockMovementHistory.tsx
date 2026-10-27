@@ -7,6 +7,7 @@ import { getPeriodRange, isISOInRange, PeriodPreset, formatRangeLabel } from '..
 import { normalizeText } from '../../lib/utils';
 import { EmptyState, PeriodFilter, ResetFiltersButton } from '../common/ModuleCommon';
 import { ModalShell } from '../common/ModalShell';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '../common/DataTable';
 import { MOVEMENT_TYPE_BADGE, MOVEMENT_TYPE_LABELS } from './inventoryLabels';
 import { Eye, History } from 'lucide-react';
 
@@ -133,44 +134,43 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
           action={<ResetFiltersButton onClick={resetFilters} />}
         />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-[13px] text-left min-w-[760px]">
-            <thead>
-              <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                <th className="py-2.5 px-4">Date</th>
-                <th className="py-2.5 px-3">Produit</th>
-                <th className="py-2.5 px-3">Type</th>
-                <th className="py-2.5 px-3 text-right">Variation</th>
-                <th className="py-2.5 px-3 text-right">Stock après</th>
-                <th className="py-2.5 px-3">Motif</th>
-                <th className="py-2.5 px-3 text-right">Détail</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
+        <Frame>
+          <FramePanel className="p-0">
+          <Table className="min-w-[760px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="px-4">Date</TableHead>
+                <TableHead>Produit</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead className="text-right">Variation</TableHead>
+                <TableHead className="text-right">Stock après</TableHead>
+                <TableHead>Motif</TableHead>
+                <TableHead className="text-right">Détail</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filtered.map((m) => {
                 const product = productById.get(m.productId);
                 const variation = variationOf(m);
                 return (
-                  <tr key={m.id} className="hover:bg-zinc-50/70 transition-colors">
-                    <td className="py-2.5 px-4 tabular-nums text-zinc-600 whitespace-nowrap">{formatISODateFr(m.date)}</td>
-                    <td className="py-2.5 px-3">
+                  <TableRow key={m.id} className="hover:bg-zinc-50/70 transition-colors">
+                    <TableCell className="px-4 tabular-nums text-zinc-600 whitespace-nowrap">{formatISODateFr(m.date)}</TableCell>
+                    <TableCell>
                       <span className="font-semibold text-zinc-900">{product?.name ?? 'Produit supprimé de la liste'}</span>
                       {product && <span className="text-zinc-400 text-[11.5px]"> · {product.reference}{product.isActive ? '' : ' (désactivé)'}</span>}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${MOVEMENT_TYPE_BADGE[m.type]}`}>
-                        {MOVEMENT_TYPE_LABELS[m.type]}
-                      </span>
-                    </td>
-                    <td className={`py-2.5 px-3 text-right font-semibold tabular-nums ${variation < 0 ? 'text-orange-700' : variation > 0 ? 'text-emerald-700' : 'text-zinc-500'}`}>
+                    </TableCell>
+                    <TableCell>
+                      <Badge size="sm" className={MOVEMENT_TYPE_BADGE[m.type]}>{MOVEMENT_TYPE_LABELS[m.type]}</Badge>
+                    </TableCell>
+                    <TableCell className={`text-right font-semibold tabular-nums ${variation < 0 ? 'text-orange-700' : variation > 0 ? 'text-emerald-700' : 'text-zinc-500'}`}>
                       {variation > 0 ? '+' : ''}
                       {formatQuantity(variation, product?.unit ?? '')}
-                    </td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-700">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-700">
                       {formatQuantity(m.quantityAfter, product?.unit ?? '')}
-                    </td>
-                    <td className="py-2.5 px-3 text-zinc-600">{m.reason}</td>
-                    <td className="py-2.5 px-3 text-right">
+                    </TableCell>
+                    <TableCell className="text-zinc-600">{m.reason}</TableCell>
+                    <TableCell className="text-right">
                       <button
                         type="button"
                         onClick={() => setDetail(m)}
@@ -179,13 +179,14 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+          </FramePanel>
+        </Frame>
       )}
 
       {detail && (

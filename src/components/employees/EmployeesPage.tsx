@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard } from '../common/ModuleCommon';
 import { Tabs } from '../common/Tabs';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback } from '../common/DataTable';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeeDetailPanel } from './EmployeeDetailPanel';
 import { AttendanceSection } from './AttendanceSection';
@@ -305,61 +306,57 @@ export const EmployeesPage: React.FC = () => {
           ) : (
             <>
               {/* Tableau (ordinateur / tablette) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-[13px] text-left">
-                  <thead>
-                    <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                      <th className="py-2.5 px-4">Employé</th>
-                      <th className="py-2.5 px-3">Poste</th>
-                      <th className="py-2.5 px-3">Téléphone</th>
-                      <th className="py-2.5 px-3">Statut</th>
-                      <th className="py-2.5 px-3">Aujourd’hui</th>
-                      <th className="py-2.5 px-3">Activité atelier</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100">
+              <Frame className="hidden md:block">
+                <FramePanel className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-4">Employé</TableHead>
+                      <TableHead>Poste</TableHead>
+                      <TableHead>Téléphone</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Aujourd’hui</TableHead>
+                      <TableHead>Activité atelier</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {filteredEmployees.map((employee) => {
                       const presence = getAttendanceStatus(attendanceRecords, employee.id, today);
                       const activity = activityByEmployee.get(employee.id) ?? { assigned: 0, finished: 0 };
                       return (
-                        <tr
+                        <TableRow
                           key={employee.id}
                           onClick={() => setDetailEmployeeId(employee.id)}
                           className="hover:bg-zinc-50/70 cursor-pointer transition-colors"
                         >
-                          <td className="py-2.5 px-4">
+                          <TableCell className="px-4">
                             <span className="flex items-center gap-2.5 min-w-0">
-                              <span className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-[11px] shrink-0" aria-hidden="true">
-                                {getInitials(employee.fullName)}
-                              </span>
+                              <Avatar size="sm" aria-hidden="true"><AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback></Avatar>
                               <span className="font-bold text-zinc-900 truncate">{employee.fullName}</span>
                             </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-zinc-600">{employee.position}</td>
-                          <td className="py-2.5 px-3 text-zinc-600 tabular-nums">{employee.phone ?? 'Non renseigné'}</td>
-                          <td className="py-2.5 px-3">
-                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${EMPLOYEE_STATUS_BADGE[employee.status]}`}>
-                              {EMPLOYEE_STATUS_LABELS[employee.status]}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${ATTENDANCE_STATUS_BADGE[presence]}`}>
-                              {ATTENDANCE_STATUS_LABELS[presence]}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-zinc-600 tabular-nums">
+                          </TableCell>
+                          <TableCell className="text-zinc-600">{employee.position}</TableCell>
+                          <TableCell className="text-zinc-600 tabular-nums">{employee.phone ?? 'Non renseigné'}</TableCell>
+                          <TableCell>
+                            <Badge size="sm" className={EMPLOYEE_STATUS_BADGE[employee.status]}>{EMPLOYEE_STATUS_LABELS[employee.status]}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge size="sm" className={ATTENDANCE_STATUS_BADGE[presence]}>{ATTENDANCE_STATUS_LABELS[presence]}</Badge>
+                          </TableCell>
+                          <TableCell className="text-zinc-600 tabular-nums">
                             {activity.assigned === 0
                               ? 'Aucune commande connue'
                               : `${activity.assigned} affectée(s) · ${activity.finished} terminée(s)`}
-                          </td>
-                          <td className="py-2.5 px-3 text-right">{renderActions(employee)}</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell className="text-right">{renderActions(employee)}</TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </Table>
+                </FramePanel>
+              </Frame>
 
               {/* Cartes (mobile) */}
               <div className="md:hidden grid grid-cols-1 gap-3 p-3">
@@ -373,9 +370,7 @@ export const EmployeesPage: React.FC = () => {
                       className="border border-zinc-200 rounded-xl p-3.5 bg-zinc-50/40"
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="w-9 h-9 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-[12px] shrink-0" aria-hidden="true">
-                          {getInitials(employee.fullName)}
-                        </span>
+                        <Avatar aria-hidden="true"><AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback></Avatar>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-[14px] text-zinc-900 truncate">{employee.fullName}</p>
                           <p className="text-[12px] text-zinc-500">{employee.position}</p>
@@ -387,12 +382,8 @@ export const EmployeesPage: React.FC = () => {
                         <span className="tabular-nums">{employee.phone ?? 'Non renseigné'}</span>
                       </p>
                       <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${EMPLOYEE_STATUS_BADGE[employee.status]}`}>
-                          {EMPLOYEE_STATUS_LABELS[employee.status]}
-                        </span>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${ATTENDANCE_STATUS_BADGE[presence]}`}>
-                          Auj. : {ATTENDANCE_STATUS_LABELS[presence]}
-                        </span>
+                        <Badge size="sm" className={EMPLOYEE_STATUS_BADGE[employee.status]}>{EMPLOYEE_STATUS_LABELS[employee.status]}</Badge>
+                        <Badge size="sm" className={ATTENDANCE_STATUS_BADGE[presence]}>Auj. : {ATTENDANCE_STATUS_LABELS[presence]}</Badge>
                         <span className="text-[11.5px] text-zinc-500 tabular-nums ml-auto">
                           {activity.assigned === 0 ? 'Aucune activité connue' : `${activity.assigned} cmd · ${activity.finished} terminée(s)`}
                         </span>

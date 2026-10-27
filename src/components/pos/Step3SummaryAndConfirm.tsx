@@ -20,6 +20,7 @@ import {
   Loader2,
   Sparkles,
 } from 'lucide-react';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../common/DataTable';
 
 export const Step3SummaryAndConfirm: React.FC = () => {
   const {
@@ -182,41 +183,43 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-[12.5px] text-left">
-                <thead>
-                  <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                    <th className="py-2">Article / Prestation</th>
-                    <th className="py-2">Traitement</th>
-                    <th className="py-2 text-center">Quantité / Poids</th>
-                    <th className="py-2 text-right">Tarif unitaire</th>
-                    <th className="py-2 text-right">Sous-total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
+            <Frame>
+              <FramePanel className="p-0">
+              <Table className="text-[12.5px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Article / Prestation</TableHead>
+                    <TableHead>Traitement</TableHead>
+                    <TableHead className="text-center">Quantité / Poids</TableHead>
+                    <TableHead className="text-right">Tarif unitaire</TableHead>
+                    <TableHead className="text-right">Sous-total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {cartLines.map((line) => (
-                    <tr key={line.id}>
-                      <td className="py-2.5 font-bold text-zinc-900">
+                    <TableRow key={line.id}>
+                      <TableCell className="font-bold text-zinc-900">
                         {line.name}
                         {line.color && (
                           <span className="block mt-0.5"><GarmentColorChip color={line.color} /></span>
                         )}
-                      </td>
-                      <td className="py-2.5 text-zinc-600">{line.serviceType}</td>
-                      <td className="py-2.5 text-center font-bold tabular-nums">
+                      </TableCell>
+                      <TableCell className="text-zinc-600">{line.serviceType}</TableCell>
+                      <TableCell className="text-center font-bold tabular-nums">
                         {line.quantity} {line.pricingType === 'kilo' ? 'kg' : 'pièce(s)'}
-                      </td>
-                      <td className="py-2.5 text-right tabular-nums text-zinc-600">
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-zinc-600">
                         {formatFCFA(line.unitPrice)}
-                      </td>
-                      <td className="py-2.5 text-right font-bold text-zinc-900 tabular-nums">
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-zinc-900 tabular-nums">
                         {formatFCFA(line.subtotal)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+              </FramePanel>
+            </Frame>
 
             {/* Financial Breakdown */}
             <div className="mt-3 pt-3 border-t border-zinc-200 space-y-1.5 text-[13px]">

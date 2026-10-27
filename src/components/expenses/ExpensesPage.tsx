@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard, PeriodFilter } from '../common/ModuleCommon';
 import { Tabs } from '../common/Tabs';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '../common/DataTable';
 import { ExpenseFormModal } from './ExpenseFormModal';
 import { ExpenseDetailPanel } from './ExpenseDetailPanel';
 import { ExpenseCategoriesSection } from './ExpenseCategoriesSection';
@@ -471,49 +472,49 @@ export const ExpensesPage: React.FC = () => {
             />
           ) : (
             <>
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-[13px] text-left">
-                  <thead>
-                    <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                      <th className="py-2.5 px-4">Date</th>
-                      <th className="py-2.5 px-3">Libellé</th>
-                      <th className="py-2.5 px-3">Catégorie</th>
-                      <th className="py-2.5 px-3 text-right">Montant</th>
-                      <th className="py-2.5 px-3">Paiement</th>
-                      <th className="py-2.5 px-3">Référence</th>
-                      <th className="py-2.5 px-3">Statut</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100">
+              <Frame className="hidden md:block">
+                <FramePanel className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-4">Date</TableHead>
+                      <TableHead>Libellé</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead className="text-right">Montant</TableHead>
+                      <TableHead>Paiement</TableHead>
+                      <TableHead>Référence</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {visibleExpenses.map((expense) => (
-                      <tr
+                      <TableRow
                         key={expense.id}
                         onClick={() => setDetailExpenseId(expense.id)}
                         className={`hover:bg-zinc-50/70 cursor-pointer transition-colors ${expense.status === 'cancelled' ? 'opacity-60' : ''}`}
                       >
-                        <td className="py-2.5 px-4 tabular-nums text-zinc-600 whitespace-nowrap">{formatISODateFr(expense.date)}</td>
-                        <td className="py-2.5 px-3">
+                        <TableCell className="px-4 tabular-nums text-zinc-600 whitespace-nowrap">{formatISODateFr(expense.date)}</TableCell>
+                        <TableCell>
                           <span className="font-semibold text-zinc-900">{expense.label}</span>
                           {expense.supplier && <span className="block text-[11.5px] text-zinc-400">{expense.supplier}</span>}
-                        </td>
-                        <td className="py-2.5 px-3 text-zinc-600">{categoryLabel(expense.categoryId)}</td>
-                        <td className={`py-2.5 px-3 text-right font-bold tabular-nums ${expense.status === 'cancelled' ? 'line-through text-zinc-400' : 'text-zinc-900'}`}>
+                        </TableCell>
+                        <TableCell className="text-zinc-600">{categoryLabel(expense.categoryId)}</TableCell>
+                        <TableCell className={`text-right font-bold tabular-nums ${expense.status === 'cancelled' ? 'line-through text-zinc-400' : 'text-zinc-900'}`}>
                           {formatFCFA(expense.amountXof)}
-                        </td>
-                        <td className="py-2.5 px-3 text-zinc-600">{EXPENSE_PAYMENT_LABELS[expense.paymentMethod]}</td>
-                        <td className="py-2.5 px-3 text-zinc-500">{expense.reference ?? '—'}</td>
-                        <td className="py-2.5 px-3">
-                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STATUS_BADGE[expense.status]}`}>
-                            {STATUS_LABELS[expense.status]}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right">{renderActions(expense)}</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="text-zinc-600">{EXPENSE_PAYMENT_LABELS[expense.paymentMethod]}</TableCell>
+                        <TableCell className="text-zinc-500">{expense.reference ?? '—'}</TableCell>
+                        <TableCell>
+                          <Badge size="sm" className={STATUS_BADGE[expense.status]}>{STATUS_LABELS[expense.status]}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{renderActions(expense)}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </Table>
+                </FramePanel>
+              </Frame>
 
               <div className="md:hidden grid grid-cols-1 gap-3 p-3">
                 {visibleExpenses.map((expense) => (
@@ -536,9 +537,7 @@ export const ExpensesPage: React.FC = () => {
                         {formatFCFA(expense.amountXof)}
                       </span>
                       <span className="text-[11.5px] text-zinc-500">{EXPENSE_PAYMENT_LABELS[expense.paymentMethod]}</span>
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ml-auto ${STATUS_BADGE[expense.status]}`}>
-                        {STATUS_LABELS[expense.status]}
-                      </span>
+                      <Badge size="sm" className={`ml-auto ${STATUS_BADGE[expense.status]}`}>{STATUS_LABELS[expense.status]}</Badge>
                     </div>
                     {(expense.supplier || expense.reference) && (
                       <p className="text-[11.5px] text-zinc-500 mt-1.5 truncate">

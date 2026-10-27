@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard } from '../common/ModuleCommon';
 import { Tabs } from '../common/Tabs';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '../common/DataTable';
 import { ProductFormModal } from './ProductFormModal';
 import { StockMovementModal } from './StockMovementModal';
 import { StockMovementHistory } from './StockMovementHistory';
@@ -349,56 +350,56 @@ export const InventoryPage: React.FC = () => {
             />
           ) : (
             <>
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-[13px] text-left">
-                  <thead>
-                    <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                      <th className="py-2.5 px-4">Produit</th>
-                      <th className="py-2.5 px-3">Catégorie</th>
-                      <th className="py-2.5 px-3">Unité</th>
-                      <th className="py-2.5 px-3 text-right">Stock actuel</th>
-                      <th className="py-2.5 px-3 text-right">Seuil</th>
-                      <th className="py-2.5 px-3 text-right">Dernier coût</th>
-                      <th className="py-2.5 px-3">État</th>
-                      <th className="py-2.5 px-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100">
+              <Frame className="hidden md:block">
+                <FramePanel className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-4">Produit</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Unité</TableHead>
+                      <TableHead className="text-right">Stock actuel</TableHead>
+                      <TableHead className="text-right">Seuil</TableHead>
+                      <TableHead className="text-right">Dernier coût</TableHead>
+                      <TableHead>État</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {filteredProducts.map((product) => {
                       const status = getStockStatus(product.currentQuantity, product.alertThreshold);
                       return (
-                        <tr
+                        <TableRow
                           key={product.id}
                           onClick={() => setDetailProductId(product.id)}
                           className={`hover:bg-zinc-50/70 cursor-pointer transition-colors ${product.isActive ? '' : 'opacity-60'}`}
                         >
-                          <td className="py-2.5 px-4">
+                          <TableCell className="px-4">
                             <span className="font-bold text-zinc-900">{product.name}</span>
                             <span className="block text-[11.5px] text-zinc-400">{product.reference}{product.isActive ? '' : ' · désactivé'}</span>
-                          </td>
-                          <td className="py-2.5 px-3 text-zinc-600">{product.category}</td>
-                          <td className="py-2.5 px-3 text-zinc-600">{product.unit}</td>
-                          <td className="py-2.5 px-3 text-right font-bold tabular-nums text-zinc-900">
+                          </TableCell>
+                          <TableCell className="text-zinc-600">{product.category}</TableCell>
+                          <TableCell className="text-zinc-600">{product.unit}</TableCell>
+                          <TableCell className="text-right font-bold tabular-nums text-zinc-900">
                             {formatQuantity(product.currentQuantity, product.unit)}
-                          </td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-zinc-500">
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-zinc-500">
                             {formatQuantity(product.alertThreshold, product.unit)}
-                          </td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-zinc-600">
                             {product.unitCostXof !== undefined ? formatFCFA(product.unitCostXof) : 'Non renseigné'}
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STOCK_STATUS_BADGE[status]}`}>
-                              {STOCK_STATUS_LABELS[status]}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-right">{renderActions(product)}</td>
-                        </tr>
+                          </TableCell>
+                          <TableCell>
+                            <Badge size="sm" className={STOCK_STATUS_BADGE[status]}>{STOCK_STATUS_LABELS[status]}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">{renderActions(product)}</TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </Table>
+                </FramePanel>
+              </Frame>
 
               <div className="md:hidden grid grid-cols-1 gap-3 p-3">
                 {filteredProducts.map((product) => {
@@ -419,9 +420,7 @@ export const InventoryPage: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                         <span className="font-black tabular-nums text-zinc-950">{formatQuantity(product.currentQuantity, product.unit)}</span>
                         <span className="text-[11.5px] text-zinc-500 tabular-nums">seuil {formatQuantity(product.alertThreshold, product.unit)}</span>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ml-auto ${STOCK_STATUS_BADGE[status]}`}>
-                          {STOCK_STATUS_LABELS[status]}
-                        </span>
+                        <Badge size="sm" className={`ml-auto ${STOCK_STATUS_BADGE[status]}`}>{STOCK_STATUS_LABELS[status]}</Badge>
                       </div>
                       <p className="text-[11.5px] text-zinc-500 tabular-nums mt-1.5">
                         Dernier coût : {product.unitCostXof !== undefined ? `${formatFCFA(product.unitCostXof)} / ${product.unit}` : 'Non renseigné'}

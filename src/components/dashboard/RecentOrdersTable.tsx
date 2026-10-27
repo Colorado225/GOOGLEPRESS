@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { LaundryOrder } from '../../types';
 import { Search, Eye, Filter } from 'lucide-react';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback } from '../common/DataTable';
+import { getInitials } from '../../lib/utils';
 
 export const RecentOrdersTable: React.FC = () => {
   const { orders, setPreviewTicket, setActiveScreen } = useApp();
@@ -28,41 +30,17 @@ export const RecentOrdersTable: React.FC = () => {
   const getStatusBadge = (order: LaundryOrder) => {
     switch (order.status) {
       case 'received':
-        return (
-          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-200 text-zinc-700">
-            Réceptionné
-          </span>
-        );
+        return <Badge variant="secondary">Réceptionné</Badge>;
       case 'washing':
-        return (
-          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
-            En atelier
-          </span>
-        );
+        return <Badge variant="info">En atelier</Badge>;
       case 'ironing':
-        return (
-          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
-            Finition / Repassage
-          </span>
-        );
+        return <Badge variant="warning">Finition / Repassage</Badge>;
       case 'ready':
-        return (
-          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-700">
-            Prêt ✓
-          </span>
-        );
+        return <Badge variant="purple">Prêt ✓</Badge>;
       case 'delivered':
-        return (
-          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-            Remis ✓
-          </span>
-        );
+        return <Badge variant="success">Remis ✓</Badge>;
       default:
-        return (
-          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
-            {order.status}
-          </span>
-        );
+        return <Badge variant="outline">{order.status}</Badge>;
     }
   };
 
@@ -100,66 +78,66 @@ export const RecentOrdersTable: React.FC = () => {
       </div>
 
       {/* Table Content */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12.5px] text-left border-collapse">
-          <thead>
-            <tr className="text-zinc-500 uppercase text-[11px] font-bold border-b border-zinc-200 bg-zinc-50/80">
-              <th className="px-4 py-2.5 font-bold">Ticket</th>
-              <th className="px-4 py-2.5 font-bold">Client</th>
-              <th className="px-4 py-2.5 font-bold">Articles</th>
-              <th className="px-4 py-2.5 font-bold">Service</th>
-              <th className="px-4 py-2.5 font-bold">Montant</th>
-              <th className="px-4 py-2.5 font-bold">Retour prévu</th>
-              <th className="px-4 py-2.5 font-bold">Statut</th>
-              <th className="px-4 py-2.5 font-bold text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-200">
+      <Frame>
+        <FramePanel className="p-0">
+        <Table className="text-[12.5px]">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="px-4">Ticket</TableHead>
+              <TableHead className="px-4">Client</TableHead>
+              <TableHead className="px-4">Articles</TableHead>
+              <TableHead className="px-4">Service</TableHead>
+              <TableHead className="px-4">Montant</TableHead>
+              <TableHead className="px-4">Retour prévu</TableHead>
+              <TableHead className="px-4">Statut</TableHead>
+              <TableHead className="px-4 text-right">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-zinc-200">
             {filteredOrders.slice(0, 7).map((order) => {
               const summaryArticles = order.lines
                 .map((l) => `${l.quantity > 1 ? `${l.quantity} ` : ''}${l.name.toLowerCase()}`)
                 .join(' + ');
 
               return (
-                <tr
+                <TableRow
                   key={order.id}
                   className="hover:bg-zinc-50/80 transition-colors group cursor-pointer"
                   onClick={() => setPreviewTicket(order)}
                 >
-                  <td className="px-4 py-2.5 font-bold text-zinc-900 whitespace-nowrap">
+                  <TableCell className="px-4 font-bold text-zinc-900 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <span>{order.ticketNumber}</span>
-                      <span
-                        className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase ${
-                          order.serviceCategory === 'blanchisserie'
-                            ? 'bg-teal-50 text-teal-700 border-teal-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
-                        }`}
-                      >
-                        {order.serviceCategory === 'blanchisserie' ? 'Blanch.' : 'Press.'}
-                      </span>
+                      <Badge variant={order.serviceCategory === 'blanchisserie' ? 'teal' : 'info'} size="sm" className="rounded-md px-1.5 text-[9.5px] uppercase">{order.serviceCategory === 'blanchisserie' ? 'Blanch.' : 'Press.'}</Badge>
                     </div>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <p className="font-bold text-zinc-900 leading-snug">{order.customerName}</p>
-                    <p className="text-zinc-500 text-[11.5px]">
-                      {order.customerPhone} {order.customerAddress ? `• ${order.customerAddress}` : ''}
-                    </p>
-                  </td>
-                  <td className="px-4 py-2.5 text-zinc-700 capitalize max-w-[220px] truncate">
+                  </TableCell>
+                  <TableCell className="px-4">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar size="sm" aria-hidden="true">
+                        <AvatarFallback>{getInitials(order.customerName)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-bold text-zinc-900 leading-snug">{order.customerName}</p>
+                        <p className="text-zinc-500 text-[11.5px]">
+                          {order.customerPhone} {order.customerAddress ? `• ${order.customerAddress}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 text-zinc-700 capitalize max-w-[220px] truncate">
                     {summaryArticles || 'Articles de pressing'}
-                  </td>
-                  <td className="px-4 py-2.5 text-zinc-600 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 text-zinc-600 whitespace-nowrap">
                     {order.lines[0]?.serviceType || 'Pressing classique'}
-                  </td>
-                  <td className="px-4 py-2.5 font-bold text-zinc-900 tabular-nums whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 font-bold text-zinc-900 tabular-nums whitespace-nowrap">
                     {formatFCFA(order.total)}
-                  </td>
-                  <td className="px-4 py-2.5 text-zinc-600 font-medium whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 text-zinc-600 font-medium whitespace-nowrap">
                     {order.promisedAt}
-                  </td>
-                  <td className="px-4 py-2.5 whitespace-nowrap">{getStatusBadge(order)}</td>
-                  <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 whitespace-nowrap">{getStatusBadge(order)}</TableCell>
+                  <TableCell className="px-4 text-right whitespace-nowrap">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -170,13 +148,14 @@ export const RecentOrdersTable: React.FC = () => {
                       <Eye className="w-3 h-3" />
                       <span>Ticket</span>
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+        </FramePanel>
+      </Frame>
 
       {/* Table Footer info */}
       <div className="px-4 py-2 text-[11.5px] text-zinc-500 bg-zinc-50 border-t border-zinc-200 flex flex-wrap items-center justify-between">

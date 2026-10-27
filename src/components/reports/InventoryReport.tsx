@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { KpiCard, ResetFiltersButton } from '../common/ModuleCommon';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '../common/DataTable';
 import { StockStatus } from '../../types';
 import { formatFCFA } from '../../data/demoData';
 import { DateRange, isISOInRange } from '../../lib/periods';
@@ -166,56 +167,56 @@ export const InventoryReport: React.FC<{ range: DateRange }> = ({ range }) => {
         {rows.length === 0 ? (
           <p className="px-4 pb-4 text-[12.5px] text-zinc-500">Aucun produit ne correspond aux filtres.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px] text-left min-w-[860px]">
-              <thead>
-                <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                  <th className="py-2.5 px-4">Produit</th>
-                  <th className="py-2.5 px-3 text-right">Stock actuel</th>
-                  <th className="py-2.5 px-3">État</th>
-                  <th className="py-2.5 px-3 text-right">Entrées (période)</th>
-                  <th className="py-2.5 px-3 text-right">Sorties (période)</th>
-                  <th className="py-2.5 px-3 text-right">Dernier coût</th>
-                  <th className="py-2.5 px-3 text-right">Valeur estimée</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
+          <Frame className="m-3 mt-1">
+            <FramePanel className="p-0">
+            <Table className="min-w-[860px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-4">Produit</TableHead>
+                  <TableHead className="text-right">Stock actuel</TableHead>
+                  <TableHead>État</TableHead>
+                  <TableHead className="text-right">Entrées (période)</TableHead>
+                  <TableHead className="text-right">Sorties (période)</TableHead>
+                  <TableHead className="text-right">Dernier coût</TableHead>
+                  <TableHead className="text-right">Valeur estimée</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map(({ product, inQty, outQty, value }) => {
                   const status = getStockStatus(product.currentQuantity, product.alertThreshold);
                   return (
-                    <tr key={product.id} className={`hover:bg-zinc-50/70 transition-colors ${product.isActive ? '' : 'opacity-60'}`}>
-                      <td className="py-2.5 px-4">
+                    <TableRow key={product.id} className={`hover:bg-zinc-50/70 transition-colors ${product.isActive ? '' : 'opacity-60'}`}>
+                      <TableCell className="px-4">
                         <span className="font-bold text-zinc-900">{product.name}</span>
                         <span className="block text-[11px] text-zinc-400">
                           {product.reference} · {product.category}{product.isActive ? '' : ' · désactivé'}
                         </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-bold tabular-nums">
+                      </TableCell>
+                      <TableCell className="text-right font-bold tabular-nums">
                         {formatQuantity(product.currentQuantity, product.unit)}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STOCK_STATUS_BADGE[status]}`}>
-                          {STOCK_STATUS_LABELS[status]}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-right tabular-nums text-emerald-700">
+                      </TableCell>
+                      <TableCell>
+                        <Badge size="sm" className={STOCK_STATUS_BADGE[status]}>{STOCK_STATUS_LABELS[status]}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-emerald-700">
                         {inQty > 0 ? `+${formatQuantity(inQty, product.unit)}` : '—'}
-                      </td>
-                      <td className="py-2.5 px-3 text-right tabular-nums text-orange-700">
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-orange-700">
                         {outQty > 0 ? `−${formatQuantity(outQty, product.unit)}` : '—'}
-                      </td>
-                      <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-zinc-600">
                         {product.unitCostXof !== undefined ? formatFCFA(product.unitCostXof) : 'Non renseigné'}
-                      </td>
-                      <td className="py-2.5 px-3 text-right tabular-nums font-semibold">
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-semibold">
                         {value !== undefined ? formatFCFA(value) : '—'}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+            </FramePanel>
+          </Frame>
         )}
       </div>
     </div>

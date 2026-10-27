@@ -212,3 +212,22 @@
   size: 80mm auto;
   margin: 4mm 3mm;
 }
+
+/* Impression : les cadres Frame des tableaux (rapports) redeviennent invisibles,
+   le rendu papier reste celui d'un tableau nu pleine largeur. */
+@media print {
+  .ui-frame {
+    background: #fff !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .ui-frame-panel {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+}

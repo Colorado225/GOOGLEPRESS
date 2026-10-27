@@ -3,8 +3,26 @@ import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2, Inbox, Shirt } from 'lucide-react';
 import { Tabs } from '../common/Tabs';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, type BadgeVariant } from '../common/DataTable';
+import { getInitials } from '../../lib/utils';
 import { isOrderLate } from '../../lib/reports';
 import { LaundryOrder } from '../../types';
+
+const ORDER_STATUS_BADGE_VARIANT: Record<LaundryOrder['status'], BadgeVariant> = {
+  received: 'secondary',
+  washing: 'info',
+  ironing: 'warning',
+  ready: 'purple',
+  delivered: 'success',
+};
+
+const ORDER_STATUS_LABEL: Record<LaundryOrder['status'], string> = {
+  received: 'Réceptionné',
+  washing: 'Lavage',
+  ironing: 'Repassage',
+  ready: 'Prêt ✓',
+  delivered: 'Remis ✓',
+};
 
 export const OrdersPage: React.FC = () => {
   const { orders, setPreviewTicket, setActiveScreen } = useApp();
@@ -92,86 +110,66 @@ export const OrdersPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-[12.5px] text-left border-collapse">
-            <thead>
-              <tr className="text-zinc-500 uppercase text-[11px] font-bold border-b border-zinc-200 bg-zinc-50/80">
-                <th className="px-4 py-2.5">Ticket</th>
-                <th className="px-4 py-2.5">Client & Contact</th>
-                <th className="px-4 py-2.5">Articles confiés</th>
-                <th className="px-4 py-2.5">Montant Total</th>
-                <th className="px-4 py-2.5">Acompte / Reste</th>
-                <th className="px-4 py-2.5">Promis pour</th>
-                <th className="px-4 py-2.5">Statut</th>
-                <th className="px-4 py-2.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-200">
+        <Frame>
+          <FramePanel className="p-0">
+          <Table className="text-[12.5px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="px-4">Ticket</TableHead>
+                <TableHead className="px-4">Client & Contact</TableHead>
+                <TableHead className="px-4">Articles confiés</TableHead>
+                <TableHead className="px-4">Montant Total</TableHead>
+                <TableHead className="px-4">Acompte / Reste</TableHead>
+                <TableHead className="px-4">Promis pour</TableHead>
+                <TableHead className="px-4">Statut</TableHead>
+                <TableHead className="px-4 text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-zinc-200">
               {filteredOrders.map((order) => (
-                <tr
+                <TableRow
                   key={order.id}
                   onClick={() => setPreviewTicket(order)}
                   className="hover:bg-zinc-50/80 cursor-pointer transition-colors"
                 >
-                  <td className="px-4 py-3 font-bold text-zinc-900 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 font-bold text-zinc-900 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <span>{order.ticketNumber}</span>
-                      <span
-                        className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border uppercase ${
-                          order.serviceCategory === 'blanchisserie'
-                            ? 'bg-teal-50 text-teal-700 border-teal-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
-                        }`}
-                      >
-                        {order.serviceCategory === 'blanchisserie' ? 'Blanch.' : 'Press.'}
-                      </span>
+                      <Badge variant={order.serviceCategory === 'blanchisserie' ? 'teal' : 'info'} size="sm" className="rounded-md px-1.5 text-[9.5px] uppercase">{order.serviceCategory === 'blanchisserie' ? 'Blanch.' : 'Press.'}</Badge>
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-bold text-zinc-900">{order.customerName}</p>
-                    <p className="text-zinc-500 text-[11.5px]">{order.customerPhone}</p>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-700 max-w-[200px] truncate">
+                  </TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar size="sm" aria-hidden="true">
+                        <AvatarFallback>{getInitials(order.customerName)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-bold text-zinc-900">{order.customerName}</p>
+                        <p className="text-zinc-500 text-[11.5px]">{order.customerPhone}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-zinc-700 max-w-[200px] truncate">
                     {order.lines.map((l) => `${l.quantity}× ${l.name}${l.color ? ` (${l.color})` : ''}`).join(', ')}
-                  </td>
-                  <td className="px-4 py-3 font-bold text-zinc-900 tabular-nums whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 font-bold text-zinc-900 tabular-nums whitespace-nowrap">
                     {formatFCFA(order.total)}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums whitespace-nowrap text-[12px]">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 tabular-nums whitespace-nowrap text-[12px]">
                     <span className="text-zinc-600">Payé {formatFCFA(order.depositPaid)}</span>
                     {order.remainingBalance > 0 && (
                       <p className="text-purple-700 font-bold">Reste {formatFCFA(order.remainingBalance)}</p>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-600 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-zinc-600 whitespace-nowrap">
                     {order.promisedAt}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                        order.status === 'ready'
-                          ? 'bg-purple-100 text-purple-700'
-                          : order.status === 'washing'
-                          ? 'bg-blue-100 text-blue-700'
-                          : order.status === 'ironing'
-                          ? 'bg-amber-100 text-amber-800'
-                          : order.status === 'delivered'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-zinc-200 text-zinc-700'
-                      }`}
-                    >
-                      {order.status === 'ready'
-                        ? 'Prêt ✓'
-                        : order.status === 'washing'
-                        ? 'Lavage'
-                        : order.status === 'ironing'
-                        ? 'Repassage'
-                        : order.status === 'delivered'
-                        ? 'Remis ✓'
-                        : 'Réceptionné'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                    <Badge variant={ORDER_STATUS_BADGE_VARIANT[order.status]}>
+                      {ORDER_STATUS_LABEL[order.status]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right whitespace-nowrap">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -182,12 +180,13 @@ export const OrdersPage: React.FC = () => {
                       <Eye className="w-3 h-3" />
                       <span>Ticket</span>
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+          </FramePanel>
+        </Frame>
       </div>
     </div>
   );

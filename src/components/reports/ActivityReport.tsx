@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { KpiCard, ResetFiltersButton } from '../common/ModuleCommon';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '../common/DataTable';
 import { OrderStatus } from '../../types';
 import { formatFCFA } from '../../data/demoData';
 import { DateRange } from '../../lib/periods';
@@ -204,35 +205,37 @@ export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
         {filtered.length === 0 ? (
           <p className="px-4 pb-4 text-[12.5px] text-zinc-500">Aucune commande ne correspond à la période et aux filtres métier.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px] text-left min-w-[720px]">
-              <thead>
-                <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                  <th className="py-2.5 px-4">Ticket</th>
-                  <th className="py-2.5 px-3">Réception</th>
-                  <th className="py-2.5 px-3">Client</th>
-                  <th className="py-2.5 px-3">Statut</th>
-                  <th className="py-2.5 px-3 text-right">Total</th>
-                  <th className="py-2.5 px-3 text-right">Reste à payer</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
+          <Frame className="m-3 mt-1">
+            <FramePanel className="p-0">
+            <Table className="min-w-[720px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-4">Ticket</TableHead>
+                  <TableHead>Réception</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Reste à payer</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filtered.map((o) => (
-                  <tr key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 cursor-pointer transition-colors">
-                    <td className="py-2.5 px-4 font-bold text-zinc-900">{o.ticketNumber}</td>
-                    <td className="py-2.5 px-3 tabular-nums text-zinc-600">{o.receivedAt}</td>
-                    <td className="py-2.5 px-3 text-zinc-700">{o.customerName}</td>
-                    <td className="py-2.5 px-3 text-zinc-600">
+                  <TableRow key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 cursor-pointer transition-colors">
+                    <TableCell className="px-4 font-bold text-zinc-900">{o.ticketNumber}</TableCell>
+                    <TableCell className="tabular-nums text-zinc-600">{o.receivedAt}</TableCell>
+                    <TableCell className="text-zinc-700">{o.customerName}</TableCell>
+                    <TableCell className="text-zinc-600">
                       {ORDER_STATUS_LABELS[o.status]}
-                      {isOrderLate(o) && <span className="ml-1.5 text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">Retard</span>}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-bold tabular-nums">{formatFCFA(o.total)}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">{formatFCFA(o.remainingBalance)}</td>
-                  </tr>
+                      {isOrderLate(o) && <Badge variant="destructive" size="sm" className="ml-1.5 px-1.5 text-[10px]">Retard</Badge>}
+                    </TableCell>
+                    <TableCell className="text-right font-bold tabular-nums">{formatFCFA(o.total)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600">{formatFCFA(o.remainingBalance)}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+            </FramePanel>
+          </Frame>
         )}
         {unreadableCount > 0 && (
           <p className="px-4 py-2.5 border-t border-zinc-100 text-[11.5px] text-zinc-400">

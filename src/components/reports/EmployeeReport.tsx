@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { KpiCard, ResetFiltersButton } from '../common/ModuleCommon';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Avatar, AvatarFallback } from '../common/DataTable';
 import { EMPLOYEE_POSITIONS } from '../../types';
 import { DateRange, enumerateDaysISO } from '../../lib/periods';
 import { getEmployeeAssignedOrders, isOrderFinished, orderReceivedISO } from '../../lib/reports';
@@ -165,46 +166,46 @@ export const EmployeeReport: React.FC<{ range: DateRange }> = ({ range }) => {
         {rows.length === 0 ? (
           <p className="px-4 pb-4 text-[12.5px] text-zinc-500">Aucun employé ne correspond aux filtres.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px] text-left min-w-[820px]">
-              <thead>
-                <tr className="text-zinc-400 uppercase text-[11px] font-bold border-b border-zinc-100">
-                  <th className="py-2.5 px-4">Employé</th>
-                  <th className="py-2.5 px-3 text-right">Présent</th>
-                  <th className="py-2.5 px-3 text-right">dont retard</th>
-                  <th className="py-2.5 px-3 text-right">Absent déclaré</th>
-                  <th className="py-2.5 px-3 text-right">Congé</th>
-                  <th className="py-2.5 px-3 text-right">Sans saisie</th>
-                  <th className="py-2.5 px-3 text-right">Cmd affectées</th>
-                  <th className="py-2.5 px-3 text-right">dont terminées</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
+          <Frame className="m-3 mt-1">
+            <FramePanel className="p-0">
+            <Table className="min-w-[820px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-4">Employé</TableHead>
+                  <TableHead className="text-right">Présent</TableHead>
+                  <TableHead className="text-right">dont retard</TableHead>
+                  <TableHead className="text-right">Absent déclaré</TableHead>
+                  <TableHead className="text-right">Congé</TableHead>
+                  <TableHead className="text-right">Sans saisie</TableHead>
+                  <TableHead className="text-right">Cmd affectées</TableHead>
+                  <TableHead className="text-right">dont terminées</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((r) => (
-                  <tr key={r.employee.id} className="hover:bg-zinc-50/70 transition-colors">
-                    <td className="py-2.5 px-4">
+                  <TableRow key={r.employee.id} className="hover:bg-zinc-50/70 transition-colors">
+                    <TableCell className="px-4">
                       <span className="flex items-center gap-2.5">
-                        <span className="w-7 h-7 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-[10px] shrink-0" aria-hidden="true">
-                          {getInitials(r.employee.fullName)}
-                        </span>
+                        <Avatar size="sm" aria-hidden="true"><AvatarFallback>{getInitials(r.employee.fullName)}</AvatarFallback></Avatar>
                         <span>
                           <span className="font-bold text-zinc-900 block leading-tight">{r.employee.fullName}</span>
                           <span className="text-[11px] text-zinc-400">{r.employee.position}{r.employee.status === 'inactive' ? ' · inactif' : ''}</span>
                         </span>
                       </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-bold tabular-nums">{r.present + r.late}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">{r.late}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">{r.absent}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">{r.leave}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-400">{r.unrecorded}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums">{r.assigned === 0 ? '—' : r.assigned}</td>
-                    <td className="py-2.5 px-3 text-right tabular-nums text-zinc-600">{r.assigned === 0 ? '—' : r.finished}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-right font-bold tabular-nums">{r.present + r.late}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600">{r.late}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600">{r.absent}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600">{r.leave}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-400">{r.unrecorded}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.assigned === 0 ? '—' : r.assigned}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600">{r.assigned === 0 ? '—' : r.finished}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+            </FramePanel>
+          </Frame>
         )}
       </div>
     </div>
