@@ -91,6 +91,33 @@ sont chargées (dates relatives, voir `src/data/demoData.ts`).
 > `Object.keys(localStorage).filter(k => k.startsWith('pressingpro_')).forEach(k => localStorage.removeItem(k))`),
 > puis recharger la page.
 
+## Application installable (PWA)
+
+L'application est une PWA installable, implémentée sans dépendance
+(service worker manuel plutôt que `vite-plugin-pwa`, pour garder le build
+simple et le comportement lisible) :
+
+- **Manifeste** `public/manifest.webmanifest` (nom, `display: standalone`,
+  couleurs de thème) et **icônes** `public/icons/` (192, 512, maskable 512,
+  apple-touch-icon 180), liées depuis `index.html`.
+- **Service worker** `public/sw.js` : coquille applicative précachée,
+  navigations « réseau d'abord » avec repli hors ligne, assets hachés du
+  build et polices « cache d'abord ». Les modules du serveur de dev Vite
+  ne sont jamais interceptés.
+- **Enregistrement et installation** via `src/lib/pwa.ts` (appelé dans
+  `main.tsx`) : capture de `beforeinstallprompt`, bouton « Installer
+  l'application » dans Paramètres, et toast « Nouvelle version disponible »
+  quand une mise à jour est téléchargée (aucun rechargement forcé).
+- **Hors ligne** : après une première visite en ligne, l'application se
+  relance sans réseau ; les données restent celles du `localStorage`
+  (inchangées, toujours limitées à ce navigateur/appareil).
+- **Mises à jour** : si le service worker lui-même évolue, incrémenter
+  `VERSION` dans `public/sw.js` ; les anciens caches sont purgés à
+  l'activation.
+- **Pré-requis** : HTTPS en production (les aperçus et Vercel le
+  fournissent) ; sur iPhone/iPad, installation manuelle via Partager →
+  « Sur l'écran d'accueil ».
+
 ## Limites actuelles
 
 - **Mono-poste** : les données vivent dans un seul navigateur — pas de

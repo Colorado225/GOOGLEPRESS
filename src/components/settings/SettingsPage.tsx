@@ -1,7 +1,82 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ArrowLeft, Save, Sliders, Smartphone, Printer, Building2 } from 'lucide-react';
+import { ArrowLeft, Save, Sliders, Smartphone, Printer, Building2, Download, CheckCircle2 } from 'lucide-react';
 import { Tabs } from '../common/Tabs';
+import { Badge } from '../common/DataTable';
+import { canPromptInstall, isRunningStandalone, promptInstall, PWA_INSTALLABLE_EVENT } from '../../lib/pwa';
+
+/**
+ * Carte « Application installable (PWA) » : reflète l'état réel détecté dans le
+ * navigateur — déjà installée, installable via l'invite native, ou instructions
+ * manuelles (menu du navigateur, écran d'accueil iOS).
+ */
+const PwaInstallCard: React.FC = () => {
+  const [installable, setInstallable] = useState(canPromptInstall());
+  const [installed, setInstalled] = useState(isRunningStandalone());
+
+  useEffect(() => {
+    const sync = () => {
+      setInstallable(canPromptInstall());
+      setInstalled(isRunningStandalone());
+    };
+    window.addEventListener(PWA_INSTALLABLE_EVENT, sync);
+    window.addEventListener('appinstalled', sync);
+    return () => {
+      window.removeEventListener(PWA_INSTALLABLE_EVENT, sync);
+      window.removeEventListener('appinstalled', sync);
+    };
+  }, []);
+
+  return (
+    <section aria-labelledby="pwa-card-title" className="card-3d mt-4 max-w-2xl rounded-2xl p-4">
+      <div className="flex items-start gap-3">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 font-black text-white shadow-xs"
+          aria-hidden="true"
+        >
+          P
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 id="pwa-card-title" className="flex flex-wrap items-center gap-2 text-[14.5px] font-bold text-zinc-900">
+            Application installable (PWA)
+            {installed && (
+              <Badge variant="success" size="sm">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Installée
+              </Badge>
+            )}
+          </h2>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-zinc-500">
+            Installez PressingPro sur l'écran d'accueil (téléphone, tablette ou ordinateur) : lancement
+            plein écran comme une application, et <strong className="text-zinc-700">utilisable hors ligne</strong> —
+            les données restent conservées sur l'appareil, comme aujourd'hui.
+          </p>
+          {installed ? (
+            <p className="mt-2 text-[12.5px] font-medium text-emerald-700">
+              Vous utilisez déjà la version installée. Les mises à jour vous sont signalées automatiquement.
+            </p>
+          ) : installable ? (
+            <button
+              type="button"
+              onClick={() => void promptInstall()}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#09090b] px-4 py-2 text-[13px] font-bold text-white shadow-sm transition-colors hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              Installer l'application
+            </button>
+          ) : (
+            <p className="mt-2 flex items-start gap-1.5 text-[12.5px] leading-relaxed text-zinc-500">
+              <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" aria-hidden="true" />
+              <span>
+                Si le bouton d'installation n'apparaît pas : menu du navigateur → « Installer
+                l'application » (Chrome/Edge), ou sur iPhone/iPad : Partager → « Sur l'écran d'accueil ».
+              </span>
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+};
 
 export const SettingsPage: React.FC = () => {
   const { setActiveScreen, showToast } = useApp();
@@ -162,6 +237,8 @@ export const SettingsPage: React.FC = () => {
           <Save className="w-4 h-4" /> Enregistrer les réglages
         </button>
       </form>
+
+      <PwaInstallCard />
     </div>
   );
 };

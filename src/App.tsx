@@ -22,9 +22,10 @@ import { NewCustomerModal } from './components/pos/NewCustomerModal';
 import { KeyboardShortcutsModal } from './components/modals/KeyboardShortcutsModal';
 import { ToastNotification } from './components/common/ToastNotification';
 import { MainLayoutHeader } from './components/layout/MainLayoutHeader';
+import { PWA_UPDATE_EVENT } from './lib/pwa';
 
 const MainLayout: React.FC = () => {
-  const { activeScreen, isSidebarCollapsed, isMobileMenuOpen, setMobileMenuOpen } = useApp();
+  const { activeScreen, isSidebarCollapsed, isMobileMenuOpen, setMobileMenuOpen, showToast } = useApp();
 
   // Fermer le tiroir de navigation mobile avec la touche Échap
   useEffect(() => {
@@ -45,6 +46,14 @@ const MainLayout: React.FC = () => {
     media.addEventListener('change', onChange);
     return () => media.removeEventListener('change', onChange);
   }, [setMobileMenuOpen]);
+
+  // Mise à jour PWA téléchargée : prévenir sans interrompre le travail en cours
+  useEffect(() => {
+    const onPwaUpdate = () =>
+      showToast('Nouvelle version de l’application disponible : rechargez la page pour l’appliquer');
+    window.addEventListener(PWA_UPDATE_EVENT, onPwaUpdate);
+    return () => window.removeEventListener(PWA_UPDATE_EVENT, onPwaUpdate);
+  }, [showToast]);
 
   return (
     <div className="min-h-screen bg-[#f4f4f5] text-zinc-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col">

@@ -1,0 +1,32 @@
+{
+  "name": "PressingPro CI — Gestion de pressing",
+  "short_name": "PressingPro",
+  "description": "Réception, atelier, commandes, clients, stocks et dépenses pour pressing et blanchisserie. Fonctionne hors ligne, données conservées sur l'appareil.",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f4f5",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
