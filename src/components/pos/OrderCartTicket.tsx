@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { calculateOrderTotals } from '../../lib/pricing';
@@ -87,6 +88,7 @@ export const OrderCartTicket: React.FC = () => {
                   <p className="text-[11.5px] text-zinc-500 truncate">
                     {line.notes || `${formatFCFA(line.unitPrice)} / pièce`}
                   </p>
+                  <LineColorSelect line={line} />
                 </div>
 
                 <div className="flex items-center gap-2">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CurrentColorSelector, LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
 import { calculateSubtotal } from '../../lib/pricing';
@@ -150,6 +151,10 @@ export const Step2ArticlesAndServices: React.FC = () => {
             </div>
           </div>
 
+          <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs">
+            <CurrentColorSelector />
+          </div>
+
           {/* Catalog Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {catalogItems.map((item) => {
@@ -286,6 +291,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
                       <p className="text-[11px] text-zinc-500 truncate">
                         {line.serviceType} • {formatFCFA(line.unitPrice)} / {line.pricingType === 'kilo' ? 'kg' : 'pc'}
                       </p>
+                      <LineColorSelect line={line} />
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">

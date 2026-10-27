@@ -73,6 +73,10 @@ interface AppContextType {
   addCartItem: (item: ClothingItem, serviceType?: string, quantity?: number, weightKg?: number) => void;
   removeCartItem: (lineId: string) => void;
   updateCartItemQty: (lineId: string, delta: number) => void;
+  /** Couleur appliquée aux pièces ajoutées au panier (undefined = non précisée). */
+  selectedGarmentColor: string | undefined;
+  setSelectedGarmentColor: (color: string | undefined) => void;
+  updateCartLineColor: (lineId: string, color: string | undefined) => void;
   clearCart: () => void;
   pickupOption: PickupOption;
   setPickupOption: (opt: PickupOption) => void;
@@ -294,7 +298,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unitPrice: 1500,
       subtotal: 4500,
       serviceType: 'Lavage + Repassage',
-      notes: 'Blanc, bleu, rayée',
+      color: 'Blanc',
+      notes: 'Dont une rayée',
     },
     {
       id: 'cl-2',
@@ -304,9 +309,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unitPrice: 4500,
       subtotal: 4500,
       serviceType: 'Lavage délicat',
+      color: 'Multicolore',
       notes: 'Brodé or • détachage inclus',
     },
   ]);
+
+  const [selectedGarmentColor, setSelectedGarmentColor] = useState<string | undefined>(undefined);
 
   const showToast = (msg: string) => {
     setNotificationToast(msg);
@@ -333,7 +341,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     weightKg?: number
   ) => {
     setCartLines((prev) => {
-      const existing = prev.find((line) => line.clothingItemId === item.id && line.serviceType === serviceType);
+      const existing = prev.find(
+        (line) =>
+          line.clothingItemId === item.id &&
+          line.serviceType === serviceType &&
+          (line.color ?? undefined) === selectedGarmentColor
+      );
       const isKilo = item.pricingType === 'kilo';
       const actualQty = isKilo ? (weightKg || 1) : quantity;
       const calcSubtotal = calculateLineSubtotal(item.unitPrice, actualQty);
@@ -366,6 +379,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           unitPrice: item.unitPrice,
           subtotal: calcSubtotal,
           serviceType: serviceType,
+          color: selectedGarmentColor,
         },
       ];
     });
@@ -397,6 +411,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
         .filter(Boolean) as OrderLine[]
     );
+  };
+
+  const updateCartLineColor = (lineId: string, color: string | undefined) => {
+    setCartLines((prev) => {
+      const target = prev.find((l) => l.id === lineId);
+      if (!target || (target.color ?? undefined) === color) return prev;
+      const twin = prev.find(
+        (l) =>
+          l.id !== lineId &&
+          l.clothingItemId === target.clothingItemId &&
+          l.serviceType === target.serviceType &&
+          (l.color ?? undefined) === color
+      );
+      if (!twin) return prev.map((l) => (l.id === lineId ? { ...l, color } : l));
+      const isKilo = target.pricingType === 'kilo';
+      const newQty = twin.quantity + target.quantity;
+      return prev
+        .filter((l) => l.id !== lineId)
+        .map((l) =>
+          l.id === twin.id
+            ? {
+                ...l,
+                quantity: newQty,
+                weightKg: isKilo ? newQty : undefined,
+                subtotal: calculateLineSubtotal(l.unitPrice, newQty),
+              }
+            : l
+        );
+    });
   };
 
   const clearCart = () => {
@@ -954,6 +997,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addCartItem,
         removeCartItem,
         updateCartItemQty,
+        selectedGarmentColor,
+        setSelectedGarmentColor,
+        updateCartLineColor,
         clearCart,
         pickupOption,
         setPickupOption,

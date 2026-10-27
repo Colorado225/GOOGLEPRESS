@@ -221,6 +221,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
                   <p className="text-[10.5px] text-zinc-600">
                     {line.serviceType}
                     {isClient ? ` • ${priceDetail}` : ''}
+                    {line.color ? ` • Couleur : ${line.color}` : ''}
                   </p>
                   {line.notes && (
                     <p className="text-[10.5px] italic text-zinc-700">↳ {line.notes}</p>

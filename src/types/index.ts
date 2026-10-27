@@ -34,8 +34,36 @@ export interface OrderLine {
   unitLabel?: string;
   subtotal: number;
   serviceType: string;
+  /** Couleur de la pièce (identification et tri) — voir GARMENT_COLORS. Absente = non précisée. */
+  color?: string;
   notes?: string;
 }
+
+export interface GarmentColor {
+  name: string;
+  /** Valeur CSS de la pastille (couleur unie ou dégradé pour Multicolore). */
+  swatch: string;
+}
+
+/** Palette proposée au comptoir pour identifier les pièces confiées (tri au lavage, retrait sans confusion). */
+export const GARMENT_COLORS: GarmentColor[] = [
+  { name: 'Blanc', swatch: '#F8FAFC' },
+  { name: 'Noir', swatch: '#18181B' },
+  { name: 'Gris', swatch: '#A1A1AA' },
+  { name: 'Beige', swatch: '#D8C7A5' },
+  { name: 'Marron', swatch: '#7C4A21' },
+  { name: 'Rouge', swatch: '#DC2626' },
+  { name: 'Orange', swatch: '#EA580C' },
+  { name: 'Jaune', swatch: '#EAB308' },
+  { name: 'Vert', swatch: '#16A34A' },
+  { name: 'Bleu', swatch: '#2563EB' },
+  { name: 'Violet', swatch: '#7C3AED' },
+  { name: 'Rose', swatch: '#EC4899' },
+  { name: 'Multicolore', swatch: 'conic-gradient(#ef4444, #f59e0b, #84cc16, #06b6d4, #8b5cf6, #ef4444)' },
+];
+
+export const getGarmentColorSwatch = (name?: string): string | undefined =>
+  GARMENT_COLORS.find((c) => c.name === name)?.swatch;
 
 export interface Customer {
   id: string;

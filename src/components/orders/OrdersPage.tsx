@@ -132,7 +132,7 @@ export const OrdersPage: React.FC = () => {
                     <p className="text-zinc-500 text-[11.5px]">{order.customerPhone}</p>
                   </td>
                   <td className="px-4 py-3 text-zinc-700 max-w-[200px] truncate">
-                    {order.lines.map((l) => `${l.quantity}× ${l.name}`).join(', ')}
+                    {order.lines.map((l) => `${l.quantity}× ${l.name}${l.color ? ` (${l.color})` : ''}`).join(', ')}
                   </td>
                   <td className="px-4 py-3 font-bold text-zinc-900 tabular-nums whitespace-nowrap">
                     {formatFCFA(order.total)}

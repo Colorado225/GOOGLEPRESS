@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
 import { ClothingItem } from '../../types';
+import { CurrentColorSelector } from './ColorPicker';
 
 export const ClothingCatalogSection: React.FC = () => {
   const { addCartItem, cartLines, selectedServiceFilter, setSelectedServiceFilter } = useApp();
@@ -62,6 +63,10 @@ export const ClothingCatalogSection: React.FC = () => {
         <span className="text-[11px] font-medium text-zinc-400">
           Cliquez sur un vêtement pour l'ajouter
         </span>
+      </div>
+
+      <div className="mb-3 pb-3 border-b border-dashed border-zinc-200">
+        <CurrentColorSelector />
       </div>
 
       {/* Grid of Clothing Items */}

@@ -165,8 +165,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 09 44 12 08',
     customerAddress: 'Cocody, Angré 8e Tranche',
     lines: [
-      { id: 'l1', clothingItemId: 'c1', name: 'Chemise', quantity: 3, unitPrice: 1500, subtotal: 4500, serviceType: 'Lavage + Repassage' },
-      { id: 'l2', clothingItemId: 'c3', name: 'Robe', quantity: 1, unitPrice: 2000, subtotal: 2000, serviceType: 'Lavage + Repassage' },
+      { id: 'l1', clothingItemId: 'c1', name: 'Chemise', quantity: 3, unitPrice: 1500, subtotal: 4500, serviceType: 'Lavage + Repassage', color: 'Blanc' },
+      { id: 'l2', clothingItemId: 'c3', name: 'Robe', quantity: 1, unitPrice: 2000, subtotal: 2000, serviceType: 'Lavage + Repassage', color: 'Rouge' },
     ],
     subtotal: 6500,
     serviceFees: 0,
@@ -191,7 +191,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '05 66 20 91 34',
     customerAddress: 'Plateau',
     lines: [
-      { id: 'l3', clothingItemId: 'c4', name: 'Costume 3 pièces', quantity: 1, unitPrice: 5000, subtotal: 5000, serviceType: 'Pressing à sec' },
+      { id: 'l3', clothingItemId: 'c4', name: 'Costume 3 pièces', quantity: 1, unitPrice: 5000, subtotal: 5000, serviceType: 'Pressing à sec', color: 'Noir' },
     ],
     subtotal: 5000,
     serviceFees: 0,
@@ -215,7 +215,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 47 88 03 55',
     customerAddress: 'Yopougon',
     lines: [
-      { id: 'l4', clothingItemId: 'c5', name: 'Boubou wax brodé', quantity: 2, unitPrice: 3700, subtotal: 7400, serviceType: 'Lavage délicat' },
+      { id: 'l4', clothingItemId: 'c5', name: 'Boubou wax brodé', quantity: 2, unitPrice: 3700, subtotal: 7400, serviceType: 'Lavage délicat', color: 'Multicolore' },
       { id: 'l5', clothingItemId: 'c7', name: 'Foulard soie', quantity: 4, unitPrice: 400, subtotal: 1600, serviceType: 'Lavage délicat' },
     ],
     subtotal: 9000,
@@ -291,7 +291,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 12 99 88 77',
     customerAddress: 'Riviera Palmeraie',
     lines: [
-      { id: 'l8', clothingItemId: 'c2', name: 'Pantalon', quantity: 4, unitPrice: 1500, subtotal: 6000, serviceType: 'Lavage + Repassage' },
+      { id: 'l8', clothingItemId: 'c2', name: 'Pantalon', quantity: 4, unitPrice: 1500, subtotal: 6000, serviceType: 'Lavage + Repassage', color: 'Gris' },
       { id: 'l9', clothingItemId: 'c1', name: 'Chemise', quantity: 2, unitPrice: 1500, subtotal: 3000, serviceType: 'Lavage + Repassage' },
     ],
     subtotal: 9000,

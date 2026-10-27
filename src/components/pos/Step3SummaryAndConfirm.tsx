@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { GarmentColorChip } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { calculateOrderTotals } from '../../lib/pricing';
@@ -195,7 +196,12 @@ export const Step3SummaryAndConfirm: React.FC = () => {
                 <tbody className="divide-y divide-zinc-100">
                   {cartLines.map((line) => (
                     <tr key={line.id}>
-                      <td className="py-2.5 font-bold text-zinc-900">{line.name}</td>
+                      <td className="py-2.5 font-bold text-zinc-900">
+                        {line.name}
+                        {line.color && (
+                          <span className="block mt-0.5"><GarmentColorChip color={line.color} /></span>
+                        )}
+                      </td>
                       <td className="py-2.5 text-zinc-600">{line.serviceType}</td>
                       <td className="py-2.5 text-center font-bold tabular-nums">
                         {line.quantity} {line.pricingType === 'kilo' ? 'kg' : 'pièce(s)'}

@@ -23,7 +23,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   const isReady = order.status === 'ready';
 
   const summaryArticles = order.lines
-    .map((l) => `${l.quantity > 1 ? `${l.quantity} ` : ''}${l.name.toLowerCase()}`)
+    .map((l) => `${l.quantity > 1 ? `${l.quantity} ` : ''}${l.name.toLowerCase()}${l.color ? ` (${l.color.toLowerCase()})` : ''}`)
     .join(' + ');
 
   return (
