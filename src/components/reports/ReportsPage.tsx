@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PageHeader, LocalDataNotice, PeriodFilter } from '../common/ModuleCommon';
+import { Tabs } from '../common/Tabs';
 import { ActivityReport } from './ActivityReport';
 import { FinancialReport } from './FinancialReport';
 import { EmployeeReport } from './EmployeeReport';
@@ -159,13 +160,28 @@ export const ReportsPage: React.FC = () => {
         </div>
       ) : (
         <>
-          <button
-            type="button"
-            onClick={() => setActiveReport(null)}
-            className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-600 hover:text-black border border-zinc-200 bg-white hover:bg-zinc-50 rounded-lg px-2.5 py-1.5 mb-3 transition-colors print:hidden focus:outline-none focus:ring-2 focus:ring-zinc-900"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Retour au centre des rapports
-          </button>
+          <div className="flex flex-wrap items-center gap-2 mb-3 print:hidden">
+            <button
+              type="button"
+              onClick={() => setActiveReport(null)}
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-600 hover:text-black border border-zinc-200 bg-white hover:bg-zinc-50 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Centre des rapports
+            </button>
+            {/* Bascule directe entre rapports, même modèle d'onglets que les autres pages */}
+            <Tabs
+              ariaLabel="Basculer de rapport"
+              size="sm"
+              activeId={activeReport}
+              onChange={setActiveReport}
+              tabs={[
+                { id: 'activity', label: 'Activité', icon: <Activity className="w-3.5 h-3.5" aria-hidden="true" /> },
+                { id: 'financial', label: 'Financier', icon: <Wallet className="w-3.5 h-3.5" aria-hidden="true" /> },
+                { id: 'employees', label: 'Personnel', icon: <Users className="w-3.5 h-3.5" aria-hidden="true" /> },
+                { id: 'inventory', label: 'Stock', icon: <Boxes className="w-3.5 h-3.5" aria-hidden="true" /> },
+              ]}
+            />
+          </div>
 
           {/* Zone imprimable : en-tête de document + contenu du rapport */}
           <div id="report-print-area">
