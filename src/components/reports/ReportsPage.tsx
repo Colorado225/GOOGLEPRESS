@@ -10,6 +10,7 @@ import { formatLongDateTime, todayISO } from '../../lib/dates';
 import { formatRangeLabel, getPeriodRange, isISOInRange, PeriodPreset } from '../../lib/periods';
 import { getAlertProducts } from '../../lib/inventory';
 import { orderReceivedISO } from '../../lib/reports';
+import { printDocument } from '../../lib/print';
 import { Activity, Wallet, Users, Boxes, ArrowLeft, Printer, ChevronRight } from 'lucide-react';
 
 type ReportId = 'activity' | 'financial' | 'employees' | 'inventory';
@@ -104,7 +105,7 @@ export const ReportsPage: React.FC = () => {
             activeReport ? (
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => printDocument('report')}
                 className="bg-[#09090b] text-white rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
                 title="Imprimer ce rapport (ou l’enregistrer en PDF via la boîte de dialogue)"
               >

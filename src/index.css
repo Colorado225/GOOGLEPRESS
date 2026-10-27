@@ -29,24 +29,33 @@
   background: #a1a1aa;
 }
 
-/* Impression des rapports : seul #report-print-area est imprimé,
+/* Impression ciblée : selon la classe posée sur <body> par lib/print.ts,
+   seule la zone visée est imprimée (rapport A4 ou reçu thermique 80 mm),
    sans barre latérale, en-tête d'application ni contrôles. */
 @media print {
   body {
     background: #fff;
   }
-  body * {
+
+  body.printing-report *,
+  body.printing-receipt * {
     visibility: hidden;
   }
-  #report-print-area,
-  #report-print-area * {
+
+  body.printing-report #report-print-area,
+  body.printing-report #report-print-area *,
+  body.printing-receipt #receipt-print-area,
+  body.printing-receipt #receipt-print-area * {
     visibility: visible;
   }
-  #report-print-area {
+
+  /* Rapport : pleine page */
+  body.printing-report #report-print-area {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
+    page: report;
   }
   #report-print-area table {
     break-inside: auto;
@@ -58,7 +67,24 @@
   #report-print-area .shadow-sm {
     box-shadow: none;
   }
-  @page {
-    margin: 14mm;
+
+  /* Reçu : rouleau thermique 80 mm, centré */
+  body.printing-receipt #receipt-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    width: 80mm;
+    page: receipt;
   }
+}
+
+@page report {
+  margin: 14mm;
+}
+
+@page receipt {
+  size: 80mm auto;
+  margin: 4mm 3mm;
 }
