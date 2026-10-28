@@ -3,7 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard, PeriodFilter } from '../common/ModuleCommon';
 import { Tabs } from '../common/Tabs';
-import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '../common/DataTable';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, TablePaginationFooter } from '../common/DataTable';
+import { usePagination } from '../../lib/pagination';
 import { ExpenseFormModal } from './ExpenseFormModal';
 import { ExpenseDetailPanel } from './ExpenseDetailPanel';
 import { ExpenseCategoriesSection } from './ExpenseCategoriesSection';
@@ -153,12 +154,8 @@ export const ExpensesPage: React.FC = () => {
     .filter((e) => e.status === 'recorded')
     .reduce((sum, e) => sum + e.amountXof, 0);
 
-  // Affichage progressif du registre (le total et l'export portent toujours sur toutes les lignes filtrées).
-  const [visibleCount, setVisibleCount] = useState(50);
-  useEffect(() => {
-    setVisibleCount(50);
-  }, [searchTerm, categoryFilter, paymentFilter, statusFilter, preset, customStart, customEnd, sortKey]);
-  const visibleExpenses = filteredExpenses.slice(0, visibleCount);
+  // Pagination du registre (le total affiché et l'export CSV portent toujours sur toutes les lignes filtrées).
+  const { page, pageCount, setPage, pageItems: pagedExpenses, rangeStart, rangeEnd } = usePagination(filteredExpenses, 10, [searchTerm, categoryFilter, paymentFilter, statusFilter, preset, customStart, customEnd, sortKey]);
 
   const hasRegisterFilters =
     searchTerm.trim() !== '' || categoryFilter !== 'all' || paymentFilter !== 'all' || statusFilter !== 'all';
@@ -488,7 +485,7 @@ export const ExpensesPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {visibleExpenses.map((expense) => (
+                    {pagedExpenses.map((expense) => (
                       <TableRow
                         key={expense.id}
                         onClick={() => setDetailExpenseId(expense.id)}
@@ -513,11 +510,21 @@ export const ExpensesPage: React.FC = () => {
                     ))}
                   </TableBody>
                 </Table>
+                <TablePaginationFooter
+                  page={page}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  rangeStart={rangeStart}
+                  rangeEnd={rangeEnd}
+                  total={filteredExpenses.length}
+                  label="dépense(s)"
+                  className="border-t border-zinc-200 dark:border-zinc-700"
+                />
                 </FramePanel>
               </Frame>
 
               <div className="md:hidden grid grid-cols-1 gap-3 p-3">
-                {visibleExpenses.map((expense) => (
+                {pagedExpenses.map((expense) => (
                   <div
                     key={expense.id}
                     onClick={() => setDetailExpenseId(expense.id)}
@@ -548,20 +555,16 @@ export const ExpensesPage: React.FC = () => {
                 ))}
               </div>
 
-              {filteredExpenses.length > visibleCount && (
-                <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-center gap-3">
-                  <span className="text-[12px] text-zinc-500 dark:text-zinc-400 tabular-nums">
-                    {visibleCount} ligne(s) affichée(s) sur {filteredExpenses.length}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setVisibleCount((c) => c + 50)}
-                    className="border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
-                  >
-                    Afficher plus
-                  </button>
-                </div>
-              )}
+              <TablePaginationFooter
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                total={filteredExpenses.length}
+                label="dépense(s)"
+                className="md:hidden border-t border-zinc-100 dark:border-zinc-800"
+              />
             </>
           )}
         </div>

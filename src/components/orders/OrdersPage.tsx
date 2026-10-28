@@ -3,7 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2, Inbox, Shirt } from 'lucide-react';
 import { Tabs } from '../common/Tabs';
-import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, type BadgeVariant } from '../common/DataTable';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, TablePaginationFooter, type BadgeVariant } from '../common/DataTable';
+import { usePagination } from '../../lib/pagination';
 import { getInitials } from '../../lib/utils';
 import { isOrderLate } from '../../lib/reports';
 import { LaundryOrder } from '../../types';
@@ -44,6 +45,7 @@ export const OrdersPage: React.FC = () => {
   };
   const countFor = (t: typeof tab) => searchedOrders.filter((o) => inTab(o, t)).length;
   const filteredOrders = searchedOrders.filter((o) => inTab(o, tab));
+  const { page, pageCount, setPage, pageItems: pagedOrders, rangeStart, rangeEnd } = usePagination(filteredOrders, 10, [searchTerm, tab]);
 
   return (
     <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
@@ -126,7 +128,14 @@ export const OrdersPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-zinc-200 dark:divide-zinc-700">
-              {filteredOrders.map((order) => (
+              {pagedOrders.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="px-4 py-8 text-center text-zinc-500 dark:text-zinc-400">
+                    Aucune commande ne correspond à cette recherche.
+                  </TableCell>
+                </TableRow>
+              )}
+              {pagedOrders.map((order) => (
                 <TableRow
                   key={order.id}
                   onClick={() => setPreviewTicket(order)}
@@ -185,6 +194,16 @@ export const OrdersPage: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+          <TablePaginationFooter
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={filteredOrders.length}
+            label="commande(s)"
+            className="border-t border-zinc-200 dark:border-zinc-700"
+          />
           </FramePanel>
         </Frame>
       </div>

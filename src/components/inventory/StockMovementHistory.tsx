@@ -7,7 +7,8 @@ import { getPeriodRange, isISOInRange, PeriodPreset, formatRangeLabel } from '..
 import { normalizeText } from '../../lib/utils';
 import { EmptyState, PeriodFilter, ResetFiltersButton } from '../common/ModuleCommon';
 import { ModalShell } from '../common/ModalShell';
-import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '../common/DataTable';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, TablePaginationFooter } from '../common/DataTable';
+import { usePagination } from '../../lib/pagination';
 import { MOVEMENT_TYPE_BADGE, MOVEMENT_TYPE_LABELS } from './inventoryLabels';
 import { Eye, History } from 'lucide-react';
 
@@ -47,6 +48,8 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [movements, preset, customStart, customEnd, productFilter, typeFilter, reasonSearch, sortDesc]);
+
+  const { page, pageCount, setPage, pageItems: pagedMovements, rangeStart, rangeEnd } = usePagination(filtered, 10, [preset, customStart, customEnd, productFilter, typeFilter, reasonSearch, sortDesc]);
 
   const hasActiveFilters =
     preset !== 'month' || productFilter !== 'all' || typeFilter !== 'all' || reasonSearch.trim() !== '';
@@ -149,7 +152,7 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((m) => {
+              {pagedMovements.map((m) => {
                 const product = productById.get(m.productId);
                 const variation = variationOf(m);
                 return (
@@ -185,6 +188,16 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
               })}
             </TableBody>
           </Table>
+          <TablePaginationFooter
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={filtered.length}
+            label="mouvement(s)"
+            className="border-t border-zinc-200 dark:border-zinc-700"
+          />
           </FramePanel>
         </Frame>
       )}
