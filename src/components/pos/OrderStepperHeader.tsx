@@ -39,8 +39,9 @@ export const OrderStepperHeader: React.FC = () => {
             onClick={() => setSelectedServiceCategory(null)}
             className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
             title="Revenir au choix de service"
+            aria-label="Revenir au choix de service"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           </button>
 
           <div className="flex items-center gap-2">

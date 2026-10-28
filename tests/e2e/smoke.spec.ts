@@ -18,6 +18,11 @@ test.describe('PressingPro — parcours critiques', () => {
 
   test('le CTA Pressing ouvre directement l’étape client du POS', async ({ page }) => {
     await page.getByRole('button', { name: /Réception \(POS\)/ }).click();
+    await expect(
+      page.getByText('Étape 1 • Informations du client & Délais de retrait')
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Revenir au choix de service' }).click();
     await expect(page.getByText('Nouvelle commande — Sélection du service')).toBeVisible();
 
     await page
