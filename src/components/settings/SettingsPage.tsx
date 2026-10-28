@@ -710,8 +710,8 @@ export const SettingsPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Smartphone className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
                 <div>
-                  <p className="font-bold text-zinc-900 dark:text-zinc-100">Passerelle SMS & WhatsApp (Côte d'Ivoire)</p>
-                  <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">Envoi du ticket de dépôt et notification dès que prêt</p>
+                  <p className="font-bold text-zinc-900 dark:text-zinc-100">Notifications externes (non connectées)</p>
+                  <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">Aucun SMS/WhatsApp n’est envoyé pour le moment ; les notifications sont marquées localement.</p>
                 </div>
               </div>
               <input

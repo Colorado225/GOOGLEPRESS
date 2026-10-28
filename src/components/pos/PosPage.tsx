@@ -62,7 +62,7 @@ export const PosPage: React.FC = () => {
           <p className="text-[13px] text-zinc-500 dark:text-zinc-400 ml-7">
             {viewMode === 'stepper'
               ? 'Parcours de commande guidé • Choix du service → Client & Délais → Articles → Validation'
-              : 'Dépôt client au comptoir • ticket imprimé + SMS automatique'}
+              : 'Dépôt client au comptoir • ticket imprimé après validation'}
           </p>
         </div>
 

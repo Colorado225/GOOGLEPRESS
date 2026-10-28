@@ -329,17 +329,17 @@ export const OrderCartTicket: React.FC = () => {
           }`}
         >
           <Check className="w-4 h-4" />
-          <span>✓ Valider • Imprimer + SMS</span>
+          <span>✓ Valider la réception</span>
           <Sparkles className="w-4 h-4 text-yellow-300" />
         </ConfettiButton>
 
-        {/* SMS Preview footnote */}
+        {/* Message client à copier manuellement après validation */}
         <p className="text-center text-[11.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed bg-zinc-50 dark:bg-zinc-800 p-2 rounded-md border border-zinc-200 dark:border-zinc-700">
-          Reçu SMS : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}.{' '}
+          Message à copier après validation : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}.{' '}
           {wantsHomeDelivery
             ? `Livraison ${formatLogisticsSchedule(deliveryDateISO, deliveryTimeSlot).toLowerCase()}`
             : `Retrait ${formatPromised(getPromisedDate(pickupOption)).toLowerCase()}`}
-          . Pressing Pro Cocody »
+          . {shopSettings.name} »
         </p>
       </div>
     </div>

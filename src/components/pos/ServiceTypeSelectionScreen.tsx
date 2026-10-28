@@ -28,10 +28,7 @@ export const ServiceTypeSelectionScreen: React.FC = () => {
       {/* Two Interactive Hero Service Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Card 1: PRESSING (Bleu Roi) */}
-        <div
-          onClick={() => handleSelect('pressing')}
-          className="group relative bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 hover:border-blue-600 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden"
-        >
+        <div className="group relative bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 hover:border-blue-600 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col justify-between overflow-hidden">
           {/* Top highlight bar */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-blue-600 group-hover:h-2 transition-all" />
 
@@ -92,7 +89,9 @@ export const ServiceTypeSelectionScreen: React.FC = () => {
             </span>
             <button
               type="button"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-1.5 group-hover:translate-x-1"
+              onClick={() => handleSelect('pressing')}
+              aria-label="Ouvrir le service Pressing et nettoyage à sec"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-4 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-1.5 cursor-pointer after:content-[''] after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
               <span>Ouvrir Pressing</span>
               <ArrowRight className="w-4 h-4" />
@@ -101,10 +100,7 @@ export const ServiceTypeSelectionScreen: React.FC = () => {
         </div>
 
         {/* Card 2: BLANCHISSERIE (Vert Turquoise) */}
-        <div
-          onClick={() => handleSelect('blanchisserie')}
-          className="group relative bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 hover:border-teal-600 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden"
-        >
+        <div className="group relative bg-white dark:bg-zinc-900 border-2 border-zinc-200 dark:border-zinc-700 hover:border-teal-600 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col justify-between overflow-hidden">
           {/* Top highlight bar */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-teal-600 group-hover:h-2 transition-all" />
 
@@ -165,7 +161,9 @@ export const ServiceTypeSelectionScreen: React.FC = () => {
             </span>
             <button
               type="button"
-              className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-[13px] px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-1.5 group-hover:translate-x-1"
+              onClick={() => handleSelect('blanchisserie')}
+              aria-label="Ouvrir le service Blanchisserie et linge de maison"
+              className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-[13px] px-4 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-1.5 cursor-pointer after:content-[''] after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
             >
               <span>Ouvrir Blanchisserie</span>
               <ArrowRight className="w-4 h-4" />
@@ -180,7 +178,7 @@ export const ServiceTypeSelectionScreen: React.FC = () => {
           <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>Sélection réversible : vous pouvez basculer ou ajuster le service à tout moment pendant la saisie.</span>
         </div>
-        <span className="font-semibold text-zinc-700 dark:text-zinc-300">Poste Comptoir • PressingPro Abidjan</span>
+        <span className="font-semibold text-zinc-700 dark:text-zinc-300">Poste comptoir</span>
       </div>
     </div>
   );

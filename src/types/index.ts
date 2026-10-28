@@ -285,6 +285,10 @@ export interface LaundryOrder {
   machineAssigned?: string; // e.g. "L1 • 40 min"
   assignee?: string; // e.g. "Grâce"
   progressPercent?: number; // for washing machines, e.g. 65%
+  /**
+   * Nom historique conservé pour compatibilité localStorage : signifie
+   * « notification marquée localement », pas « SMS externe confirmé ».
+   */
   smsSent?: boolean;
   /**
    * Logistique (champs optionnels : les anciennes commandes sans ces champs

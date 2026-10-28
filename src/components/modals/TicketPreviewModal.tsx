@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ReceiptTicket, ReceiptVariant } from '../receipt/ReceiptTicket';
 import { printDocument } from '../../lib/print';
-import { X, Printer, Smartphone, ReceiptText, User, WashingMachine } from 'lucide-react';
+import { formatFCFA } from '../../data/demoData';
+import { X, Printer, Copy, ReceiptText, User, WashingMachine } from 'lucide-react';
 
 /**
  * Aperçu du reçu thermique 80 mm d'une commande.
@@ -10,7 +11,7 @@ import { X, Printer, Smartphone, ReceiptText, User, WashingMachine } from 'lucid
  * (production, sans prix). L'impression n'imprime que le ticket.
  */
 export const TicketPreviewModal: React.FC = () => {
-  const { previewTicket, setPreviewTicket, showToast, customers } = useApp();
+  const { previewTicket, setPreviewTicket, showToast, customers, shopSettings } = useApp();
   const [variant, setVariant] = useState<ReceiptVariant>('client');
 
   const order = previewTicket;
@@ -33,8 +34,33 @@ export const TicketPreviewModal: React.FC = () => {
     );
   };
 
-  const handleSendSms = () => {
-    showToast(`SMS envoyé au ${order.customerPhone} : "Votre ticket ${order.ticketNumber} est disponible."`);
+  const handleCopyMessage = async () => {
+    const balanceText =
+      order.remainingBalance > 0
+        ? ` Reste à payer : ${formatFCFA(order.remainingBalance)}.`
+        : ' Commande soldée.';
+    const message = `${shopSettings.name} — Bonjour ${order.customerName}, votre ticket ${order.ticketNumber} est enregistré. Retrait promis : ${order.promisedAt}.${balanceText} Merci.`;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(message);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = message;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (!copied) throw new Error('Copie impossible');
+      }
+      showToast(
+        `Message copié pour ${order.customerPhone} — aucun SMS externe n’est envoyé par l’application.`
+      );
+    } catch {
+      showToast('Copie impossible dans ce navigateur. Le message n’a pas été envoyé.');
+    }
   };
 
   const variantButtonClass = (active: boolean) =>
@@ -109,10 +135,11 @@ export const TicketPreviewModal: React.FC = () => {
           {variant === 'client' && (
             <button
               type="button"
-              onClick={handleSendSms}
+              onClick={handleCopyMessage}
+              title="Copie un message à envoyer manuellement au client. Aucun SMS externe n’est envoyé."
               className="flex-1 bg-[#09090b] hover:bg-zinc-800 text-white font-bold py-2 rounded-lg text-[13px] transition-colors flex items-center justify-center gap-1.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-zinc-900"
             >
-              <Smartphone className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" /> Reçu SMS
+              <Copy className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" /> Copier le message
             </button>
           )}
         </div>

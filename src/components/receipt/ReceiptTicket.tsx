@@ -437,8 +437,8 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <div className="text-[9.5px] leading-[1.45] text-zinc-700 dark:text-zinc-300 mt-2.5 space-y-1">
             <p>
               • {isHomeDelivery
-                ? 'Présentez ce reçu ou le SMS de confirmation au coursier lors de la livraison.'
-                : 'Retrait uniquement contre présentation de ce reçu ou du SMS de confirmation.'}
+                ? 'Présentez ce reçu au coursier lors de la livraison.'
+                : 'Retrait uniquement contre présentation de ce reçu.'}
             </p>
             <p>
               • Merci de vérifier vos articles {isHomeDelivery ? 'avec le coursier lors de la remise' : 'au comptoir lors du retrait'}.
