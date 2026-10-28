@@ -54,9 +54,13 @@ ouvre maintenant l’ERP uniquement avec une session et un membership actif ;
 un build de production non configuré affiche une erreur au lieu d’ouvrir la
 démonstration. La démonstration reste explicitement possible en
 développement ou avec `VITE_ALLOW_LOCAL_DEMO=true`, sans protection des
-données locales. Aucun tenant ou compte réel ne permet encore la recette des
-rôles, et la garde ne restreint pas encore chaque écran historique selon le
-rôle du membership.
+données locales. Les pages `/connexion`, `/inscription` (compte
+propriétaire uniquement) et `/bienvenue` (onboarding créant organisation et
+première agence via la RPC `create_my_organization`) sont livrées et
+testées localement, mais ni cette migration ni l’ouverture des inscriptions
+ne sont activées sur Pressing_Pro : aucun tenant ou compte réel ne permet
+encore la recette des rôles, et la garde ne restreint pas encore chaque
+écran historique selon le rôle du membership.
 
 **Atténuation client livrée.** Les pages `/client/connexion`,
 `/client/inscription`, `/client/nouveau-mot-de-passe` et `/client` sont
@@ -138,20 +142,20 @@ pures dans `src/lib` et des tests de transition avant déplacement.
 
 **Constat corrigé.** Les tests ne ciblent plus seulement Supabase :
 
-- 57 tests unitaires Vitest sur `pricing`, `dates`, `logistics`, `storage`,
-  `backup`, `localPersistence`, `orderTracking`, `customerAuth` et
-  `staffAccess` ;
-- couverture V8 mesurée sur ces cœurs : 77,62 % des instructions, 68,96 %
-  des branches, 80,72 % des fonctions et 80,50 % des lignes au 28/10/2026 ;
-  `pricing.ts` est à 100 % sur ces indicateurs ;
+- 68 tests unitaires Vitest sur `pricing`, `dates`, `logistics`, `storage`,
+  `backup`, `localPersistence`, `orderTracking`, `customerAuth`,
+  `staffAccess` et `staffAuth` ;
+- couverture V8 mesurée sur ces cœurs : 78,94 % des instructions, 70,47 %
+  des branches, 81,50 % des fonctions et 81,75 % des lignes au 28/10/2026 ;
+  `pricing.ts` est à 100 % et `staffAuth.ts` à 98 % sur ces indicateurs ;
 - seuils anti-régression configurés à 70/60/70/72 % ;
-- 50 vérifications Supabase sous PGlite, dont isolation, RLS, transitions,
-  création de commande tarifée côté serveur, paiements, remboursements et
-  profil créé à l’inscription ;
-- 7 smoke tests navigateur Playwright ; leur exécution locale de cette
-  branche reste bloquée par l’absence de Chromium dans le bac à sable, mais
-  le run CI `40702372372` de la PR #5 les a exécutés avec succès au commit
-  `3effa2a`.
+- 56 vérifications Supabase sous PGlite, dont isolation, RLS, transitions,
+  création de commande tarifée côté serveur, paiements, remboursements,
+  onboarding propriétaire et profil créé à l’inscription ;
+- 8 smoke tests navigateur Playwright ; leur exécution locale reste bloquée
+  par l’absence de Chromium dans le bac à sable, la CI de la PR #5 reste
+  l’exécuteur de référence (run `40702372372` vert au commit `3effa2a`,
+  avant l’ajout du 8e test).
 
 **Angles encore faibles.** Transitions complètes d’`AppContext`, rapports,
 clôture de caisse, périodes, inventaire et parcours longs POS/atelier restent

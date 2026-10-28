@@ -93,13 +93,13 @@ est choisi délibérément pour une démonstration sans données réelles (voir
 
 ## Qualité et CI
 
-- **Tests unitaires** : 57 tests Vitest couvrent les cœurs `pricing`, `dates`,
+- **Tests unitaires** : 68 tests Vitest couvrent les cœurs `pricing`, `dates`,
   `logistics`, `storage`, `backup`, `localPersistence`, `orderTracking`,
-  `customerAuth` et `staffAccess` ; `test:coverage` applique des seuils
-  anti-régression sur ce périmètre précis.
-- **Backend** : 50 vérifications `test:phase0` couvrent l’isolation
-  multi-tenant, la RLS, les transitions, la création tarifée côté serveur et
-  le journal de paiements sous PGlite.
+  `customerAuth`, `staffAccess` et `staffAuth` ; `test:coverage` applique des
+  seuils anti-régression sur ce périmètre précis.
+- **Backend** : 56 vérifications `test:phase0` couvrent l’isolation
+  multi-tenant, la RLS, les transitions, la création tarifée côté serveur,
+  le journal de paiements et l’onboarding propriétaire sous PGlite.
 - **Navigateur** : `test:e2e` lance les smoke tests Playwright des parcours
   critiques.
 - **CI GitHub Actions** : `.github/workflows/ci.yml` exécute typage,
@@ -124,6 +124,8 @@ src/
 │   ├── orderTracking.ts     étapes, transitions et libellés du suivi synchronisé
 │   ├── customerAuth.ts      routes, validations et erreurs des pages client
 │   ├── staffAccess.ts       modes d’accès ERP et memberships actifs du personnel
+│   ├── staffAuth.ts         routes, validations et erreurs des pages personnel
+│   ├── supabaseTenant.ts    RPC d’onboarding (création organisation + agence)
 │   ├── supabaseCustomer.ts  profil et liaisons clientes vérifiées
 │   ├── supabaseOrders.ts    commandes distantes, RPC de création/statut et Realtime
 │   ├── supabasePayments.ts  journal distant des paiements, remboursements et totaux
@@ -266,7 +268,10 @@ Le détail, la gravité résiduelle et les critères de clôture sont suivis dan
 [`docs/RISQUES-ET-FAIBLESSES.md`](docs/RISQUES-ET-FAIBLESSES.md), avec les
 preuves de l’intervention dans
 [`docs/AUDIT-FINAL.md`](docs/AUDIT-FINAL.md) et
-[`docs/VALIDATION-TECHNIQUE.md`](docs/VALIDATION-TECHNIQUE.md). Prochaine
+[`docs/VALIDATION-TECHNIQUE.md`](docs/VALIDATION-TECHNIQUE.md) ; le chantier
+d’accès du personnel est détaillé dans
+[`docs/ACCES-PERSONNEL-ONBOARDING.md`](docs/ACCES-PERSONNEL-ONBOARDING.md).
+Prochaine
 étape structurante : créer le premier tenant Supabase réel, appliquer puis
 recetter la migration commandes/paiements, et brancher le POS domaine par
 domaine.
