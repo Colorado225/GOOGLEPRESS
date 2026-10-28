@@ -17,6 +17,8 @@ import { computeMovement } from '../lib/inventory';
 import { normalizeText } from '../lib/utils';
 
 /** Clé localStorage du compteur séquentiel de tickets (voir plus bas). */
+import { AppTheme, applyTheme, getInitialTheme, persistTheme } from '../lib/theme';
+
 const TICKET_COUNTER_KEY = 'pressingpro_next_ticket_number';
 
 /** Extrait le numéro d'un libellé de ticket ("#TK-2854" → 2854), 0 si illisible. */
@@ -113,6 +115,9 @@ interface AppContextType {
   isMobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
   toggleMobileMenu: () => void;
+  theme: AppTheme;
+  setTheme: (theme: AppTheme) => void;
+  toggleTheme: () => void;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -153,6 +158,23 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeScreen, setActiveScreen] = useState<ScreenId>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  // Thème d'interface clair/sombre (lib/theme.ts) : classe `dark` sur <html>,
+  // mémorisé dans ce navigateur (pressingpro_theme), défaut = préférence système.
+  const [theme, setThemeState] = useState<AppTheme>(() => getInitialTheme());
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+  const setTheme = (next: AppTheme) => {
+    persistTheme(next);
+    setThemeState(next);
+  };
+  const toggleTheme = () => {
+    setThemeState((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      persistTheme(next);
+      return next;
+    });
+  };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState<boolean>(false);
 
@@ -952,6 +974,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleSidebar();
         return;
       }
+      if (e.altKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        toggleTheme();
+        return;
+      }
       if (e.key === 'F9') {
         e.preventDefault();
         setShortcutHelpOpen((prev) => !prev);
@@ -1044,6 +1071,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isMobileMenuOpen,
         setMobileMenuOpen: setIsMobileMenuOpen,
         toggleMobileMenu,
+        theme,
+        setTheme,
+        toggleTheme,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,

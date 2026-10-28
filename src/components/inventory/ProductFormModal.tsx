@@ -125,11 +125,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onC
   };
 
   const inputClass = (hasError: boolean) =>
-    `w-full border rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 focus:outline-none focus:ring-2 ${
-      hasError ? 'border-red-400 focus:ring-red-500' : 'border-zinc-300 focus:ring-zinc-900'
+    `w-full border rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 ${
+      hasError ? 'border-red-400 focus:ring-red-500' : 'border-zinc-300 dark:border-zinc-600 focus:ring-zinc-900 dark:focus:ring-zinc-100'
     }`;
-  const labelClass = 'block text-[11.5px] font-bold text-zinc-600 uppercase mb-1';
-  const errorClass = 'text-[11.5px] text-red-600 font-medium mt-1';
+  const labelClass = 'block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1';
+  const errorClass = 'text-[11.5px] text-red-600 dark:text-red-400 font-medium mt-1';
 
   return (
     <ModalShell
@@ -142,7 +142,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onC
     >
       <form onSubmit={handleSubmit} noValidate className="p-5 space-y-3.5 text-[13px]">
         {formError && (
-          <p role="alert" className="text-[12.5px] text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5">
+          <p role="alert" className="text-[12.5px] text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-2.5">
             {formError}
           </p>
         )}
@@ -175,7 +175,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onC
             {errors.reference ? (
               <p className={errorClass}>{errors.reference}</p>
             ) : (
-              <p className="text-[11px] text-zinc-400 mt-1">Unique dans le catalogue. Générée depuis le nom si laissée vide.</p>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">Unique dans le catalogue. Générée depuis le nom si laissée vide.</p>
             )}
           </div>
         </div>
@@ -253,7 +253,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onC
         </div>
 
         {isEdit ? (
-          <p className="text-[12px] text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-lg p-2.5">
+          <p className="text-[12px] text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg p-2.5">
             Stock actuel : <strong className="tabular-nums">{formatQuantity(product.currentQuantity, product.unit)}</strong>.
             La quantité ne se modifie pas ici : utilisez « Enregistrer un mouvement » pour garder une trace.
           </p>
@@ -273,7 +273,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onC
             {errors.initialQuantity ? (
               <p className={errorClass}>{errors.initialQuantity}</p>
             ) : (
-              <p className="text-[11px] text-zinc-400 mt-1">
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">
                 Si renseignée, un mouvement d’entrée « Stock initial » daté d’aujourd’hui sera créé dans l’historique.
               </p>
             )}
@@ -322,14 +322,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onC
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="flex-1 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 bg-[#09090b] hover:bg-zinc-800 disabled:opacity-60 text-white font-bold rounded-lg py-2.5 shadow transition-colors flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="flex-1 bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-60 text-white dark:text-zinc-950 font-bold rounded-lg py-2.5 shadow transition-colors flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSubmitting ? 'Enregistrement…' : 'Enregistrer'}</span>

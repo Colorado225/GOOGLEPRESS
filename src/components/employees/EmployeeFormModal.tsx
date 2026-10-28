@@ -100,11 +100,11 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ employee, 
   };
 
   const inputClass = (hasError: boolean) =>
-    `w-full border rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 focus:outline-none focus:ring-2 ${
-      hasError ? 'border-red-400 focus:ring-red-500' : 'border-zinc-300 focus:ring-zinc-900'
+    `w-full border rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 ${
+      hasError ? 'border-red-400 focus:ring-red-500' : 'border-zinc-300 dark:border-zinc-600 focus:ring-zinc-900 dark:focus:ring-zinc-100'
     }`;
-  const labelClass = 'block text-[11.5px] font-bold text-zinc-600 uppercase mb-1';
-  const errorClass = 'text-[11.5px] text-red-600 font-medium mt-1';
+  const labelClass = 'block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1';
+  const errorClass = 'text-[11.5px] text-red-600 dark:text-red-400 font-medium mt-1';
 
   return (
     <ModalShell
@@ -207,20 +207,20 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ employee, 
           />
         </div>
 
-        <p className="text-[11px] text-zinc-500">* Champ obligatoire. Un champ laissé vide restera « Non renseigné » dans la fiche.</p>
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">* Champ obligatoire. Un champ laissé vide restera « Non renseigné » dans la fiche.</p>
 
         <div className="flex gap-2 pt-1">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="flex-1 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 bg-[#09090b] hover:bg-zinc-800 disabled:opacity-60 text-white font-bold rounded-lg py-2.5 shadow transition-colors flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="flex-1 bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-60 text-white dark:text-zinc-950 font-bold rounded-lg py-2.5 shadow transition-colors flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSubmitting ? 'Enregistrement…' : 'Enregistrer'}</span>

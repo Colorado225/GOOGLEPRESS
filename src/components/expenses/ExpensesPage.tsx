@@ -26,8 +26,8 @@ type TabId = 'overview' | 'register' | 'categories';
 type SortKey = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
 
 const STATUS_BADGE: Record<Expense['status'], string> = {
-  recorded: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  cancelled: 'bg-red-50 text-red-700 border-red-200',
+  recorded: 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+  cancelled: 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
 };
 const STATUS_LABELS: Record<Expense['status'], string> = {
   recorded: 'Enregistrée',
@@ -204,7 +204,7 @@ export const ExpensesPage: React.FC = () => {
   };
 
   const inputClass =
-    'border border-zinc-200 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900';
+    'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100';
 
   const renderActions = (expense: Expense) => (
     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -213,7 +213,7 @@ export const ExpensesPage: React.FC = () => {
         onClick={() => setDetailExpenseId(expense.id)}
         aria-label={`Voir la dépense ${expense.label}`}
         title="Détail"
-        className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
       >
         <Eye className="w-4 h-4" />
       </button>
@@ -226,7 +226,7 @@ export const ExpensesPage: React.FC = () => {
         }}
         aria-label={`Modifier la dépense ${expense.label}`}
         title={expense.status === 'cancelled' ? 'Une dépense annulée ne se modifie plus' : 'Modifier'}
-        className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
       >
         <Pencil className="w-4 h-4" />
       </button>
@@ -240,7 +240,7 @@ export const ExpensesPage: React.FC = () => {
         }}
         aria-label={`Annuler la dépense ${expense.label}`}
         title={expense.status === 'cancelled' ? 'Déjà annulée' : 'Annuler avec motif…'}
-        className="p-2 text-red-500 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-600"
+        className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-600"
       >
         <Ban className="w-4 h-4" />
       </button>
@@ -260,7 +260,7 @@ export const ExpensesPage: React.FC = () => {
               setEditingExpense(null);
               setFormOpen(true);
             }}
-            className="bg-[#09090b] text-white rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Ajouter une dépense</span>
@@ -271,7 +271,7 @@ export const ExpensesPage: React.FC = () => {
       <LocalDataNotice />
 
       {/* Période maître : KPI, graphiques et registre la partagent */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs mb-3">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3 shadow-2xs mb-3">
         <PeriodFilter
           preset={preset}
           onPresetChange={setPreset}
@@ -336,18 +336,18 @@ export const ExpensesPage: React.FC = () => {
 
       {/* Graphiques de la période */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
-        <div className="lg:col-span-2 bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
-          <h2 className="font-bold text-[14px] text-zinc-900">Évolution des dépenses {evolution.length > 31 ? 'par semaine' : 'par jour'}</h2>
-          <p className="text-[12px] text-zinc-500 mb-2">Enregistrées uniquement · {formatRangeLabel(range)}</p>
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-4 shadow-2xs">
+          <h2 className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100">Évolution des dépenses {evolution.length > 31 ? 'par semaine' : 'par jour'}</h2>
+          <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">Enregistrées uniquement · {formatRangeLabel(range)}</p>
           {periodTotal === 0 ? (
-            <p className="text-[12.5px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg p-3">
+            <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
               Aucune dépense enregistrée sur cette période : le graphique restera vide plutôt que d’afficher des valeurs inventées.
             </p>
           ) : (
             <div className="flex items-end gap-1 sm:gap-1.5 h-[150px] pt-5" role="img" aria-label="Graphique en barres des dépenses de la période">
               {evolution.map((d) => (
                 <div key={d.key} className="flex-1 flex flex-col items-center justify-end h-full min-w-0" title={`${d.full} : ${formatFCFA(d.value)}`}>
-                  <span className="text-[9px] font-bold text-zinc-500 tabular-nums">
+                  <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 tabular-nums">
                     {d.value > 0 ? `${Math.round(d.value / 1000)}k` : ''}
                   </span>
                   <div
@@ -355,28 +355,28 @@ export const ExpensesPage: React.FC = () => {
                     style={{ height: `${Math.max(d.value > 0 ? 4 : 1, (d.value / evolutionMax) * 100)}%` }}
                     aria-hidden="true"
                   />
-                  <span className="text-[9.5px] text-zinc-400 tabular-nums mt-1 truncate w-full text-center">{d.label}</span>
+                  <span className="text-[9.5px] text-zinc-400 dark:text-zinc-500 tabular-nums mt-1 truncate w-full text-center">{d.label}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <div className="bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs">
-          <h2 className="font-bold text-[14px] text-zinc-900 mb-2">Répartition par catégorie</h2>
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-4 shadow-2xs">
+          <h2 className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100 mb-2">Répartition par catégorie</h2>
           {byCategory.length === 0 ? (
-            <p className="text-[12.5px] text-zinc-500">Aucune dépense à répartir sur cette période.</p>
+            <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">Aucune dépense à répartir sur cette période.</p>
           ) : (
             <ul className="space-y-2.5">
               {byCategory.map((c) => (
                 <li key={c.id} className="text-[12px]">
                   <div className="flex justify-between gap-2">
-                    <span className="font-semibold text-zinc-700 truncate">{c.label}</span>
-                    <span className="tabular-nums text-zinc-900 font-bold">
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 truncate">{c.label}</span>
+                    <span className="tabular-nums text-zinc-900 dark:text-zinc-100 font-bold">
                       {formatFCFA(c.total)} · {periodTotal > 0 ? Math.round((c.total / periodTotal) * 100) : 0} %
                     </span>
                   </div>
-                  <div className="h-1.5 bg-zinc-100 rounded-full mt-1 overflow-hidden" aria-hidden="true">
+                  <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-1 overflow-hidden" aria-hidden="true">
                     <div
                       className="h-1.5 bg-zinc-800 rounded-full"
                       style={{ width: `${periodTotal > 0 ? (c.total / periodTotal) * 100 : 0}%` }}
@@ -395,10 +395,10 @@ export const ExpensesPage: React.FC = () => {
       {tab === 'categories' ? (
         <ExpenseCategoriesSection />
       ) : tab === 'register' ? (
-        <div className="bg-white border border-zinc-200/90 rounded-xl overflow-hidden shadow-2xs">
-          <div className="p-3 border-b border-zinc-200 flex flex-wrap items-center gap-2">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl overflow-hidden shadow-2xs">
+          <div className="p-3 border-b border-zinc-200 dark:border-zinc-700 flex flex-wrap items-center gap-2">
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
               <label htmlFor="exp-search" className="sr-only">Rechercher une dépense</label>
               <input
                 id="exp-search"
@@ -406,7 +406,7 @@ export const ExpensesPage: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Libellé, fournisseur, référence…"
-                className="border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-72 max-w-full focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                className="border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-72 max-w-full focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               />
             </div>
 
@@ -444,14 +444,14 @@ export const ExpensesPage: React.FC = () => {
             {hasRegisterFilters && <ResetFiltersButton onClick={resetRegisterFilters} />}
 
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-[12px] text-zinc-500 font-medium tabular-nums">
-                {filteredExpenses.length} ligne(s) · total affiché (hors annulées) : <strong className="text-zinc-900">{formatFCFA(displayedTotal)}</strong>
+              <span className="text-[12px] text-zinc-500 dark:text-zinc-400 font-medium tabular-nums">
+                {filteredExpenses.length} ligne(s) · total affiché (hors annulées) : <strong className="text-zinc-900 dark:text-zinc-100">{formatFCFA(displayedTotal)}</strong>
               </span>
               <button
                 type="button"
                 onClick={exportCsv}
                 disabled={filteredExpenses.length === 0}
-                className="inline-flex items-center gap-1.5 border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-800 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                className="inline-flex items-center gap-1.5 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-800 dark:text-zinc-200 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 title="Exporter les lignes filtrées en CSV (séparateur ; pour Excel FR)"
               >
                 <Download className="w-3.5 h-3.5" /> Export CSV
@@ -492,19 +492,19 @@ export const ExpensesPage: React.FC = () => {
                       <TableRow
                         key={expense.id}
                         onClick={() => setDetailExpenseId(expense.id)}
-                        className={`hover:bg-zinc-50/70 cursor-pointer transition-colors ${expense.status === 'cancelled' ? 'opacity-60' : ''}`}
+                        className={`hover:bg-zinc-50/70 dark:hover:bg-zinc-800/70 cursor-pointer transition-colors ${expense.status === 'cancelled' ? 'opacity-60' : ''}`}
                       >
-                        <TableCell className="px-4 tabular-nums text-zinc-600 whitespace-nowrap">{formatISODateFr(expense.date)}</TableCell>
+                        <TableCell className="px-4 tabular-nums text-zinc-600 dark:text-zinc-400 whitespace-nowrap">{formatISODateFr(expense.date)}</TableCell>
                         <TableCell>
-                          <span className="font-semibold text-zinc-900">{expense.label}</span>
-                          {expense.supplier && <span className="block text-[11.5px] text-zinc-400">{expense.supplier}</span>}
+                          <span className="font-semibold text-zinc-900 dark:text-zinc-100">{expense.label}</span>
+                          {expense.supplier && <span className="block text-[11.5px] text-zinc-400 dark:text-zinc-500">{expense.supplier}</span>}
                         </TableCell>
-                        <TableCell className="text-zinc-600">{categoryLabel(expense.categoryId)}</TableCell>
-                        <TableCell className={`text-right font-bold tabular-nums ${expense.status === 'cancelled' ? 'line-through text-zinc-400' : 'text-zinc-900'}`}>
+                        <TableCell className="text-zinc-600 dark:text-zinc-400">{categoryLabel(expense.categoryId)}</TableCell>
+                        <TableCell className={`text-right font-bold tabular-nums ${expense.status === 'cancelled' ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-900 dark:text-zinc-100'}`}>
                           {formatFCFA(expense.amountXof)}
                         </TableCell>
-                        <TableCell className="text-zinc-600">{EXPENSE_PAYMENT_LABELS[expense.paymentMethod]}</TableCell>
-                        <TableCell className="text-zinc-500">{expense.reference ?? '—'}</TableCell>
+                        <TableCell className="text-zinc-600 dark:text-zinc-400">{EXPENSE_PAYMENT_LABELS[expense.paymentMethod]}</TableCell>
+                        <TableCell className="text-zinc-500 dark:text-zinc-400">{expense.reference ?? '—'}</TableCell>
                         <TableCell>
                           <Badge size="sm" className={STATUS_BADGE[expense.status]}>{STATUS_LABELS[expense.status]}</Badge>
                         </TableCell>
@@ -521,26 +521,26 @@ export const ExpensesPage: React.FC = () => {
                   <div
                     key={expense.id}
                     onClick={() => setDetailExpenseId(expense.id)}
-                    className={`border border-zinc-200 rounded-xl p-3.5 bg-zinc-50/40 ${expense.status === 'cancelled' ? 'opacity-60' : ''}`}
+                    className={`border border-zinc-200 dark:border-zinc-700 rounded-xl p-3.5 bg-zinc-50/40 dark:bg-zinc-800/40 ${expense.status === 'cancelled' ? 'opacity-60' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-bold text-[14px] text-zinc-900 truncate">{expense.label}</p>
-                        <p className="text-[11.5px] text-zinc-400 tabular-nums">
+                        <p className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100 truncate">{expense.label}</p>
+                        <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500 tabular-nums">
                           {formatISODateFr(expense.date)} · {categoryLabel(expense.categoryId)}
                         </p>
                       </div>
                       {renderActions(expense)}
                     </div>
                     <div className="flex items-center gap-1.5 mt-2.5">
-                      <span className={`font-black tabular-nums ${expense.status === 'cancelled' ? 'line-through text-zinc-400' : 'text-zinc-950'}`}>
+                      <span className={`font-black tabular-nums ${expense.status === 'cancelled' ? 'line-through text-zinc-400 dark:text-zinc-500' : 'text-zinc-950 dark:text-zinc-50'}`}>
                         {formatFCFA(expense.amountXof)}
                       </span>
-                      <span className="text-[11.5px] text-zinc-500">{EXPENSE_PAYMENT_LABELS[expense.paymentMethod]}</span>
+                      <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">{EXPENSE_PAYMENT_LABELS[expense.paymentMethod]}</span>
                       <Badge size="sm" className={`ml-auto ${STATUS_BADGE[expense.status]}`}>{STATUS_LABELS[expense.status]}</Badge>
                     </div>
                     {(expense.supplier || expense.reference) && (
-                      <p className="text-[11.5px] text-zinc-500 mt-1.5 truncate">
+                      <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 mt-1.5 truncate">
                         {expense.supplier ?? ''}{expense.supplier && expense.reference ? ' · ' : ''}{expense.reference ? `Réf. ${expense.reference}` : ''}
                       </p>
                     )}
@@ -549,14 +549,14 @@ export const ExpensesPage: React.FC = () => {
               </div>
 
               {filteredExpenses.length > visibleCount && (
-                <div className="p-3 border-t border-zinc-100 flex items-center justify-center gap-3">
-                  <span className="text-[12px] text-zinc-500 tabular-nums">
+                <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-center gap-3">
+                  <span className="text-[12px] text-zinc-500 dark:text-zinc-400 tabular-nums">
                     {visibleCount} ligne(s) affichée(s) sur {filteredExpenses.length}
                   </span>
                   <button
                     type="button"
                     onClick={() => setVisibleCount((c) => c + 50)}
-                    className="border border-zinc-300 hover:bg-zinc-50 text-zinc-800 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                    className="border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                   >
                     Afficher plus
                   </button>
@@ -602,7 +602,7 @@ export const ExpensesPage: React.FC = () => {
           onConfirm={confirmCancel}
         >
           <div className="text-left">
-            <label htmlFor="cancel-reason" className="block text-[11.5px] font-bold text-zinc-600 uppercase mb-1">
+            <label htmlFor="cancel-reason" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
               Motif d’annulation *
             </label>
             <input
@@ -615,9 +615,9 @@ export const ExpensesPage: React.FC = () => {
               }}
               placeholder="Ex : saisie en double, montant erroné…"
               aria-invalid={Boolean(cancelError)}
-              className="w-full border border-zinc-300 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
             />
-            {cancelError && <p role="alert" className="text-[11.5px] text-red-600 font-medium mt-1">{cancelError}</p>}
+            {cancelError && <p role="alert" className="text-[11.5px] text-red-600 dark:text-red-400 font-medium mt-1">{cancelError}</p>}
           </div>
         </ConfirmModal>
       )}

@@ -6,7 +6,7 @@ import bannerImage from '../../assets/images/dry_clean_rack_banner_1793109060337
 
 export const PromoBanner: React.FC = () => {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-zinc-200/90 shadow-2xs bg-zinc-950 text-white min-h-[110px] flex items-center">
+    <div className="relative overflow-hidden rounded-xl border border-zinc-200/90 dark:border-zinc-700/90 shadow-2xs bg-zinc-950 text-white min-h-[110px] flex items-center">
       {/* Background Image */}
       <img
         src={bannerImage}
@@ -35,8 +35,8 @@ export const PromoBanner: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-3 py-1.5 rounded-lg text-center">
-            <p className="text-[10px] text-zinc-400 font-semibold uppercase">Garantie</p>
+          <div className="bg-white/10 dark:bg-zinc-900/10 backdrop-blur-xs border border-white/15 px-3 py-1.5 rounded-lg text-center">
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase">Garantie</p>
             <p className="text-[12px] font-bold text-emerald-400 flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5" /> 100% Soigné
             </p>

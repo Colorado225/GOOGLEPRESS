@@ -102,7 +102,7 @@ export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
   };
 
   const inputClass =
-    'border border-zinc-200 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900';
+    'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100';
 
   return (
     <div className="space-y-3">
@@ -118,7 +118,7 @@ export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
         />
       </div>
 
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs flex flex-wrap items-center gap-2 print:hidden">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3 shadow-2xs flex flex-wrap items-center gap-2 print:hidden">
         <label htmlFor="act-status" className="sr-only">Filtrer par statut</label>
         <select id="act-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | OrderStatus)} className={inputClass}>
           <option value="all">Statut : tous</option>
@@ -141,14 +141,14 @@ export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
             }}
           />
         )}
-        <span className="text-[12px] text-zinc-500 tabular-nums">
+        <span className="text-[12px] text-zinc-500 dark:text-zinc-400 tabular-nums">
           Graphiques et tableau : {filtered.length} commande(s) après filtres métier · KPI ci-dessus : période complète
         </span>
         <button
           type="button"
           onClick={exportCsv}
           disabled={filtered.length === 0}
-          className="ml-auto inline-flex items-center gap-1.5 border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-50 text-zinc-800 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+          className="ml-auto inline-flex items-center gap-1.5 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 text-zinc-800 dark:text-zinc-200 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
         >
           <Download className="w-3.5 h-3.5" /> Export CSV
         </button>
@@ -175,20 +175,20 @@ export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
 
         <ReportCard title={`Commandes en retard (${lateOrders.length})`} className="lg:col-span-2">
           {lateOrders.length === 0 ? (
-            <p className="text-[12.5px] text-zinc-500">Aucune commande marquée en retard parmi celles reçues sur la période.</p>
+            <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">Aucune commande marquée en retard parmi celles reçues sur la période.</p>
           ) : (
-            <ul className="divide-y divide-zinc-100">
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {lateOrders.map((o) => (
                 <li key={o.id}>
                   <button
                     type="button"
                     onClick={() => setPreviewTicket(o)}
-                    className="w-full flex flex-wrap items-center gap-2 py-2 text-left text-[12.5px] hover:bg-zinc-50 rounded-lg px-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                    className="w-full flex flex-wrap items-center gap-2 py-2 text-left text-[12.5px] hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                   >
-                    <span className="font-bold text-zinc-900">{o.ticketNumber}</span>
-                    <span className="text-zinc-600">{o.customerName}</span>
-                    <span className="text-zinc-400 tabular-nums">reçue {o.receivedAt}</span>
-                    <span className="ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                    <span className="font-bold text-zinc-900 dark:text-zinc-100">{o.ticketNumber}</span>
+                    <span className="text-zinc-600 dark:text-zinc-400">{o.customerName}</span>
+                    <span className="text-zinc-400 dark:text-zinc-500 tabular-nums">reçue {o.receivedAt}</span>
+                    <span className="ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
                       {ORDER_STATUS_LABELS[o.status]}
                     </span>
                   </button>
@@ -199,11 +199,11 @@ export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
         </ReportCard>
       </div>
 
-      <div className="bg-white border border-zinc-200/90 rounded-xl shadow-2xs overflow-hidden">
-        <h3 className="font-bold text-[14px] text-zinc-900 px-4 pt-3.5">Commandes de la sélection ({filtered.length})</h3>
-        <p className="text-[12px] text-zinc-500 px-4 pb-2">Cliquez une ligne pour ouvrir le ticket correspondant.</p>
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl shadow-2xs overflow-hidden">
+        <h3 className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100 px-4 pt-3.5">Commandes de la sélection ({filtered.length})</h3>
+        <p className="text-[12px] text-zinc-500 dark:text-zinc-400 px-4 pb-2">Cliquez une ligne pour ouvrir le ticket correspondant.</p>
         {filtered.length === 0 ? (
-          <p className="px-4 pb-4 text-[12.5px] text-zinc-500">Aucune commande ne correspond à la période et aux filtres métier.</p>
+          <p className="px-4 pb-4 text-[12.5px] text-zinc-500 dark:text-zinc-400">Aucune commande ne correspond à la période et aux filtres métier.</p>
         ) : (
           <Frame className="m-3 mt-1">
             <FramePanel className="p-0">
@@ -220,16 +220,16 @@ export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
               </TableHeader>
               <TableBody>
                 {filtered.map((o) => (
-                  <TableRow key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 cursor-pointer transition-colors">
-                    <TableCell className="px-4 font-bold text-zinc-900">{o.ticketNumber}</TableCell>
-                    <TableCell className="tabular-nums text-zinc-600">{o.receivedAt}</TableCell>
-                    <TableCell className="text-zinc-700">{o.customerName}</TableCell>
-                    <TableCell className="text-zinc-600">
+                  <TableRow key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/70 cursor-pointer transition-colors">
+                    <TableCell className="px-4 font-bold text-zinc-900 dark:text-zinc-100">{o.ticketNumber}</TableCell>
+                    <TableCell className="tabular-nums text-zinc-600 dark:text-zinc-400">{o.receivedAt}</TableCell>
+                    <TableCell className="text-zinc-700 dark:text-zinc-300">{o.customerName}</TableCell>
+                    <TableCell className="text-zinc-600 dark:text-zinc-400">
                       {ORDER_STATUS_LABELS[o.status]}
                       {isOrderLate(o) && <Badge variant="destructive" size="sm" className="ml-1.5 px-1.5 text-[10px]">Retard</Badge>}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">{formatFCFA(o.total)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-600">{formatFCFA(o.remainingBalance)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">{formatFCFA(o.remainingBalance)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -238,7 +238,7 @@ export const ActivityReport: React.FC<{ range: DateRange }> = ({ range }) => {
           </Frame>
         )}
         {unreadableCount > 0 && (
-          <p className="px-4 py-2.5 border-t border-zinc-100 text-[11.5px] text-zinc-400">
+          <p className="px-4 py-2.5 border-t border-zinc-100 dark:border-zinc-800 text-[11.5px] text-zinc-400 dark:text-zinc-500">
             {unreadableCount} commande(s) exclue(s) des rapports datés : date de réception stockée dans un format illisible.
           </p>
         )}

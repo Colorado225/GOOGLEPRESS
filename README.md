@@ -82,7 +82,8 @@ src/
 
 Sans backend, l'application stocke tout dans le **localStorage** du
 navigateur, sous les clés `pressingpro_orders`, `pressingpro_customers`,
-`pressingpro_cash_register` et `pressingpro_next_ticket_number`.
+`pressingpro_cash_register`, `pressingpro_next_ticket_number` et
+`pressingpro_theme` (thème d'interface choisi sur l'appareil).
 Au premier lancement, des données de démonstration datées du jour courant
 sont chargées (dates relatives, voir `src/data/demoData.ts`).
 
@@ -117,6 +118,18 @@ simple et le comportement lisible) :
 - **Pré-requis** : HTTPS en production (les aperçus et Vercel le
   fournissent) ; sur iPhone/iPad, installation manuelle via Partager →
   « Sur l'écran d'accueil ».
+
+## Thème clair / sombre
+
+L'interface existe en thème clair et en thème sombre : bouton soleil/lune
+dans l'en-tête, raccourci **Alt+T**, ou Paramètres → carte « Apparence ».
+Au premier lancement, la préférence du système (`prefers-color-scheme`) est
+suivie ; le choix est ensuite mémorisé dans ce navigateur
+(`pressingpro_theme`) et appliqué sans clignotement au chargement.
+L'impression (ticket thermique, rapports) s'effectue **toujours en clair**,
+comme sur papier. La barre latérale, les notifications (toasts) et la carte
+de clôture restent sombres par design dans les deux thèmes ; l'aperçu du
+ticket reste blanc, comme le papier.
 
 ## Limites actuelles
 

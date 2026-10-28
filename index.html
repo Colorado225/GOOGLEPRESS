@@ -3,6 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Thème : pose la classe `dark` avant le premier affichage (anti-clignotement).
+         Même règle que src/lib/theme.ts : choix mémorisé, sinon préférence système. -->
+    <script>
+      try {
+        var t = localStorage.getItem('pressingpro_theme');
+        if (t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    </script>
     <title>PressingPro CI — Pressing & Blanchisserie</title>
     <meta name="description" content="ERP professionnel de gestion de pressing et blanchisserie à Abidjan, Côte d'Ivoire." />
     <!-- PWA : manifeste, icônes et couleur de thème (installation + hors ligne) -->

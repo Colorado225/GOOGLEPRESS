@@ -64,7 +64,7 @@ export const ColorDot: React.FC<{ color?: string; className?: string }> = ({
 export const GarmentColorChip: React.FC<{ color?: string }> = ({ color }) => {
   if (!color) return null;
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600">
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
       <ColorDot color={color} />
       {color}
     </span>
@@ -111,8 +111,8 @@ export const CurrentColorSelector: React.FC<{ className?: string }> = ({ classNa
 
   return (
     <div className={`flex flex-wrap items-center gap-x-2.5 gap-y-2 ${className}`}>
-      <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-zinc-700">
-        <Palette className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
+      <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-zinc-700 dark:text-zinc-300">
+        <Palette className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
         Couleur des pièces ajoutées :
       </span>
 
@@ -123,10 +123,10 @@ export const CurrentColorSelector: React.FC<{ className?: string }> = ({ classNa
           setSelectedGarmentColor(undefined);
         }}
         aria-pressed={selectedGarmentColor === undefined}
-        className={`text-[11px] font-semibold border rounded-full px-2.5 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
+        className={`text-[11px] font-semibold border rounded-full px-2.5 py-1 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
           selectedGarmentColor === undefined
-            ? 'bg-[#09090b] text-white border-[#09090b]'
-            : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-100'
+            ? 'bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 border-[#09090b] dark:border-zinc-100'
+            : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
         }`}
       >
         Non précisée
@@ -141,9 +141,9 @@ export const CurrentColorSelector: React.FC<{ className?: string }> = ({ classNa
             aria-label={`Couleur ${color.name}`}
             aria-pressed={selectedGarmentColor === color.name}
             onClick={() => choosePaletteColor(color.name)}
-            className={`w-6 h-6 rounded-full border transition-transform focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
+            className={`w-6 h-6 rounded-full border transition-transform focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
               selectedGarmentColor === color.name
-                ? 'ring-2 ring-zinc-900 ring-offset-1 scale-110 border-zinc-500'
+                ? 'ring-2 ring-zinc-900 dark:ring-zinc-100 ring-offset-1 scale-110 border-zinc-500'
                 : 'border-zinc-400/70 hover:scale-110'
             }`}
             style={{ background: color.swatch }}
@@ -152,12 +152,12 @@ export const CurrentColorSelector: React.FC<{ className?: string }> = ({ classNa
       </span>
 
       {isPaletteColor(selectedGarmentColor) && (
-        <span className="text-[11.5px] font-bold text-zinc-800">{selectedGarmentColor}</span>
+        <span className="text-[11.5px] font-bold text-zinc-800 dark:text-zinc-200">{selectedGarmentColor}</span>
       )}
 
       {/* Saisie libre d'une couleur hors palette, validée par Entrée ou en quittant le champ */}
       <span className="inline-flex items-center gap-1.5">
-        <label htmlFor="current-custom-color" className="text-[11.5px] text-zinc-500 font-medium">
+        <label htmlFor="current-custom-color" className="text-[11.5px] text-zinc-500 dark:text-zinc-400 font-medium">
           ou écrire :
         </label>
         <input
@@ -178,7 +178,7 @@ export const CurrentColorSelector: React.FC<{ className?: string }> = ({ classNa
             if (e.key === 'Escape') setCustomText('');
           }}
           placeholder="ex. bleu roi, wax rouge…"
-          className="w-[170px] text-[12px] font-medium text-zinc-800 bg-white border border-zinc-300 rounded-lg px-2.5 py-1.5 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+          className="w-[170px] text-[12px] font-medium text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg px-2.5 py-1.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
         />
         <datalist id="current-custom-color-options">
           {colorSuggestions().map((name) => (
@@ -237,7 +237,7 @@ export const LineColorSelect: React.FC<{ line: OrderLine }> = ({ line }) => {
         }}
         placeholder="Couleur non précisée"
         title="Écrire la couleur ou la choisir dans les suggestions, puis Entrée"
-        className="w-[142px] text-[11px] font-medium text-zinc-700 bg-white border border-zinc-200 rounded-md px-1.5 py-0.5 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+        className="w-[142px] text-[11px] font-medium text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-1.5 py-0.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
       />
       <datalist id={`color-options-${line.id}`}>
         {colorSuggestions().map((name) => (

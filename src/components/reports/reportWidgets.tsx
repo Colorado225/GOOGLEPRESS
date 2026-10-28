@@ -60,7 +60,7 @@ export const VerticalBars: React.FC<VerticalBarsProps> = ({ data, ariaLabel, for
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
     return (
-      <p className="text-[12.5px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg p-3">
+      <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
         {emptyMessage}
       </p>
     );
@@ -74,13 +74,13 @@ export const VerticalBars: React.FC<VerticalBarsProps> = ({ data, ariaLabel, for
           className="flex-1 flex flex-col items-center justify-end h-full min-w-0"
           title={`${d.fullLabel} : ${formatFullValue(d.value)}`}
         >
-          <span className="text-[9px] font-bold text-zinc-500 tabular-nums">{d.valueLabel ?? ''}</span>
+          <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 tabular-nums">{d.valueLabel ?? ''}</span>
           <div
             className={`w-full rounded-t ${d.key === todayISO() ? 'bg-blue-600' : 'bg-zinc-800'}`}
             style={{ height: `${Math.max(d.value > 0 ? 4 : 1, (d.value / max) * 100)}%` }}
             aria-hidden="true"
           />
-          <span className="text-[9.5px] text-zinc-400 tabular-nums mt-1 truncate w-full text-center">{d.label}</span>
+          <span className="text-[9.5px] text-zinc-400 dark:text-zinc-500 tabular-nums mt-1 truncate w-full text-center">{d.label}</span>
         </div>
       ))}
     </div>
@@ -94,7 +94,7 @@ interface HorizontalBarsProps {
 
 export const HorizontalBars: React.FC<HorizontalBarsProps> = ({ data, emptyMessage }) => {
   if (data.length === 0) {
-    return <p className="text-[12.5px] text-zinc-500">{emptyMessage}</p>;
+    return <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">{emptyMessage}</p>;
   }
   const max = Math.max(1, ...data.map((d) => d.value));
   return (
@@ -102,10 +102,10 @@ export const HorizontalBars: React.FC<HorizontalBarsProps> = ({ data, emptyMessa
       {data.map((d) => (
         <li key={d.label} className="text-[12px]">
           <div className="flex justify-between gap-2">
-            <span className="font-semibold text-zinc-700 truncate">{d.label}</span>
-            <span className="tabular-nums text-zinc-900 font-bold shrink-0">{d.display}</span>
+            <span className="font-semibold text-zinc-700 dark:text-zinc-300 truncate">{d.label}</span>
+            <span className="tabular-nums text-zinc-900 dark:text-zinc-100 font-bold shrink-0">{d.display}</span>
           </div>
-          <div className="h-1.5 bg-zinc-100 rounded-full mt-1 overflow-hidden" aria-hidden="true">
+          <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-1 overflow-hidden" aria-hidden="true">
             <div className="h-1.5 bg-zinc-800 rounded-full" style={{ width: `${(d.value / max) * 100}%` }} />
           </div>
         </li>
@@ -122,9 +122,9 @@ interface ReportCardProps {
 }
 
 export const ReportCard: React.FC<ReportCardProps> = ({ title, subtitle, children, className = '' }) => (
-  <div className={`bg-white border border-zinc-200/90 rounded-xl p-4 shadow-2xs ${className}`}>
-    <h3 className="font-bold text-[14px] text-zinc-900">{title}</h3>
-    {subtitle && <p className="text-[12px] text-zinc-500 mb-2">{subtitle}</p>}
+  <div className={`bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-4 shadow-2xs ${className}`}>
+    <h3 className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100">{title}</h3>
+    {subtitle && <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">{subtitle}</p>}
     <div className={subtitle ? '' : 'mt-2'}>{children}</div>
   </div>
 );

@@ -104,7 +104,7 @@ export const EmployeeReport: React.FC<{ range: DateRange }> = ({ range }) => {
   };
 
   const inputClass =
-    'border border-zinc-200 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900';
+    'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100';
 
   return (
     <div className="space-y-3">
@@ -115,7 +115,7 @@ export const EmployeeReport: React.FC<{ range: DateRange }> = ({ range }) => {
         <KpiCard label="Jours sans saisie" value={String(totals.unrecorded)} hint="« Non renseigné », week-ends inclus" />
       </div>
 
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs flex flex-wrap items-center gap-2 print:hidden">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3 shadow-2xs flex flex-wrap items-center gap-2 print:hidden">
         <label htmlFor="rep-emp" className="sr-only">Filtrer par employé</label>
         <select id="rep-emp" value={employeeFilter} onChange={(e) => setEmployeeFilter(e.target.value)} className={inputClass}>
           <option value="all">Tous les employés</option>
@@ -142,7 +142,7 @@ export const EmployeeReport: React.FC<{ range: DateRange }> = ({ range }) => {
           type="button"
           onClick={exportCsv}
           disabled={rows.length === 0}
-          className="ml-auto inline-flex items-center gap-1.5 border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-50 text-zinc-800 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+          className="ml-auto inline-flex items-center gap-1.5 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 text-zinc-800 dark:text-zinc-200 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
         >
           <Download className="w-3.5 h-3.5" /> Export CSV
         </button>
@@ -157,14 +157,14 @@ export const EmployeeReport: React.FC<{ range: DateRange }> = ({ range }) => {
         />
       </ReportCard>
 
-      <div className="bg-white border border-zinc-200/90 rounded-xl shadow-2xs overflow-hidden">
-        <h3 className="font-bold text-[14px] text-zinc-900 px-4 pt-3.5">Présences et activité par employé</h3>
-        <p className="text-[12px] text-zinc-500 px-4 pb-2">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl shadow-2xs overflow-hidden">
+        <h3 className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100 px-4 pt-3.5">Présences et activité par employé</h3>
+        <p className="text-[12px] text-zinc-500 dark:text-zinc-400 px-4 pb-2">
           Tri alphabétique volontaire : les postes n’étant pas comparables, ce tableau n’est pas un classement de performance.
           L’activité = commandes reçues sur la période où la personne est « assignée à » l’atelier.
         </p>
         {rows.length === 0 ? (
-          <p className="px-4 pb-4 text-[12.5px] text-zinc-500">Aucun employé ne correspond aux filtres.</p>
+          <p className="px-4 pb-4 text-[12.5px] text-zinc-500 dark:text-zinc-400">Aucun employé ne correspond aux filtres.</p>
         ) : (
           <Frame className="m-3 mt-1">
             <FramePanel className="p-0">
@@ -183,23 +183,23 @@ export const EmployeeReport: React.FC<{ range: DateRange }> = ({ range }) => {
               </TableHeader>
               <TableBody>
                 {rows.map((r) => (
-                  <TableRow key={r.employee.id} className="hover:bg-zinc-50/70 transition-colors">
+                  <TableRow key={r.employee.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/70 transition-colors">
                     <TableCell className="px-4">
                       <span className="flex items-center gap-2.5">
                         <Avatar size="sm" aria-hidden="true"><AvatarFallback>{getInitials(r.employee.fullName)}</AvatarFallback></Avatar>
                         <span>
-                          <span className="font-bold text-zinc-900 block leading-tight">{r.employee.fullName}</span>
-                          <span className="text-[11px] text-zinc-400">{r.employee.position}{r.employee.status === 'inactive' ? ' · inactif' : ''}</span>
+                          <span className="font-bold text-zinc-900 dark:text-zinc-100 block leading-tight">{r.employee.fullName}</span>
+                          <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{r.employee.position}{r.employee.status === 'inactive' ? ' · inactif' : ''}</span>
                         </span>
                       </span>
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums">{r.present + r.late}</TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-600">{r.late}</TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-600">{r.absent}</TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-600">{r.leave}</TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-400">{r.unrecorded}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">{r.late}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">{r.absent}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">{r.leave}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-400 dark:text-zinc-500">{r.unrecorded}</TableCell>
                     <TableCell className="text-right tabular-nums">{r.assigned === 0 ? '—' : r.assigned}</TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-600">{r.assigned === 0 ? '—' : r.finished}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">{r.assigned === 0 ? '—' : r.finished}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

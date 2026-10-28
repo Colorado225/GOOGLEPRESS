@@ -47,29 +47,29 @@ export const WorkshopPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveScreen('dashboard')}
-              className="p-1 hover:bg-zinc-200 rounded-lg text-zinc-500 hover:text-black transition-colors"
+              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
               title="Retour au tableau de bord"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-[22px] font-bold tracking-tight text-zinc-900">
+            <h1 className="text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               Production & remises
             </h1>
           </div>
-          <p className="text-[13px] text-zinc-500 ml-7">
+          <p className="text-[13px] text-zinc-500 dark:text-zinc-400 ml-7">
             Suivi atelier en temps réel • glisser-déposer tactile • remise et encaissement au comptoir
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-[12.5px] font-semibold">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Ticket / client…"
-              className="bg-white border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs w-36 sm:w-44"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100 shadow-2xs w-36 sm:w-44"
             />
           </div>
 
@@ -79,16 +79,16 @@ export const WorkshopPage: React.FC = () => {
               setMachineStatusModal(!machineStatusModal);
               showToast('État des machines : L1 (12kg) en service • L2 (25kg) maintenance 14h');
             }}
-            className="bg-white border border-zinc-200 hover:bg-zinc-50 px-3 py-1.5 rounded-lg text-zinc-700 transition-colors shadow-2xs flex items-center gap-1.5"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-700 dark:text-zinc-300 transition-colors shadow-2xs flex items-center gap-1.5"
           >
-            <Settings className="w-3.5 h-3.5 text-zinc-500" />
+            <Settings className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
             <span>Machines : L1 ● L2 ◐</span>
           </button>
 
           <button
             type="button"
             onClick={notifyAllSms}
-            className="px-4 py-1.5 rounded-lg bg-[#09090b] hover:bg-zinc-800 text-white transition-colors shadow-sm flex items-center gap-1.5 whitespace-nowrap"
+            className="px-4 py-1.5 rounded-lg bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-colors shadow-sm flex items-center gap-1.5 whitespace-nowrap"
           >
             <Smartphone className="w-3.5 h-3.5 text-blue-400" />
             <span>Tout notifier (11 SMS)</span>
@@ -129,7 +129,7 @@ export const WorkshopPage: React.FC = () => {
         <KanbanColumn
           title="① Réceptionnés"
           count={receivedOrders.length}
-          headerClass="bg-zinc-200 text-zinc-700"
+          headerClass="bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
           badgeClass="bg-zinc-800 text-white"
           orders={receivedOrders}
           status="received"
@@ -141,7 +141,7 @@ export const WorkshopPage: React.FC = () => {
         <KanbanColumn
           title="② Lavage"
           count={washingOrders.length}
-          headerClass="bg-blue-100 text-blue-800"
+          headerClass="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
           badgeClass="bg-blue-600 text-white"
           orders={washingOrders}
           status="washing"
@@ -154,7 +154,7 @@ export const WorkshopPage: React.FC = () => {
         <KanbanColumn
           title="③ Repassage / Finition"
           count={ironingOrders.length}
-          headerClass="bg-amber-100 text-amber-800"
+          headerClass="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200"
           badgeClass="bg-amber-500 text-white"
           orders={ironingOrders}
           status="ironing"
@@ -168,7 +168,7 @@ export const WorkshopPage: React.FC = () => {
           title="④ Prêts à remettre"
           count={readyOrders.length}
           headerClass="bg-purple-600 text-white"
-          badgeClass="bg-white text-purple-700"
+          badgeClass="bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300"
           orders={readyOrders}
           status="ready"
           prevStatus="ironing"
@@ -186,13 +186,13 @@ export const WorkshopPage: React.FC = () => {
       {tab === 'handover' && (
         <div className="space-y-3">
           {/* Sélection rapide parmi les commandes prêtes */}
-          <div className="bg-white border border-zinc-200/90 rounded-xl p-3.5 shadow-2xs">
-            <h2 className="font-bold text-[13.5px] text-zinc-900">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3.5 shadow-2xs">
+            <h2 className="font-bold text-[13.5px] text-zinc-900 dark:text-zinc-100">
               Commandes prêtes à remettre
-              <span className="text-zinc-500 font-semibold"> · {readyOrders.length} en attente de retrait</span>
+              <span className="text-zinc-500 dark:text-zinc-400 font-semibold"> · {readyOrders.length} en attente de retrait</span>
             </h2>
             {readyOrders.length === 0 ? (
-              <p className="text-[12.5px] text-zinc-500 mt-1.5">
+              <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 mt-1.5">
                 Aucune commande n'est prête pour le moment. Les commandes terminées apparaîtront ici
                 depuis l'onglet Production (colonne « Prêts à remettre »).
               </p>
@@ -204,14 +204,14 @@ export const WorkshopPage: React.FC = () => {
                     type="button"
                     onClick={() => setActiveHandoverOrder(o)}
                     aria-pressed={activeHandoverOrder?.id === o.id}
-                    className={`text-left border rounded-xl px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
+                    className={`text-left border rounded-xl px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
                       activeHandoverOrder?.id === o.id
-                        ? 'bg-[#09090b] text-white border-zinc-900'
-                        : 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-zinc-800'
+                        ? 'bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 border-zinc-900 dark:border-zinc-100'
+                        : 'bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
                     }`}
                   >
                     <span className="block font-bold text-[12.5px]">{o.ticketNumber} • {o.customerName}</span>
-                    <span className={`block text-[11.5px] tabular-nums ${activeHandoverOrder?.id === o.id ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                    <span className={`block text-[11.5px] tabular-nums ${activeHandoverOrder?.id === o.id ? 'text-zinc-300' : 'text-zinc-500 dark:text-zinc-400'}`}>
                       {o.remainingBalance > 0 ? `Reste à payer : ${formatFCFA(o.remainingBalance)}` : 'Déjà soldée'}
                     </span>
                   </button>
@@ -230,7 +230,7 @@ export const WorkshopPage: React.FC = () => {
         </div>
       )}
 
-      <p className="bg-white border border-zinc-200/90 rounded-xl mt-3 px-4 py-2 text-[11.5px] text-zinc-500 shadow-2xs">
+      <p className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl mt-3 px-4 py-2 text-[11.5px] text-zinc-500 dark:text-zinc-400 shadow-2xs">
         Maquette 3/3 • Kanban atelier + remise comptoir + caisse Mobile Money (Wave, MTN, Orange) • Données fictives • FCFA
       </p>
     </div>

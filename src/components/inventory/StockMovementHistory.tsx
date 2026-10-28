@@ -59,13 +59,13 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
 
   const variationOf = (m: StockMovement) => m.quantityAfter - m.quantityBefore;
   const inputClass =
-    'border border-zinc-200 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900';
+    'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100';
 
   const detailProduct = detail ? productById.get(detail.productId) : undefined;
 
   return (
-    <div className="bg-white border border-zinc-200/90 rounded-xl shadow-2xs overflow-hidden">
-      <div className="p-3 border-b border-zinc-200 space-y-2.5">
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl shadow-2xs overflow-hidden">
+      <div className="p-3 border-b border-zinc-200 dark:border-zinc-700 space-y-2.5">
         <PeriodFilter
           preset={preset}
           onPresetChange={setPreset}
@@ -109,14 +109,14 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
           <button
             type="button"
             onClick={() => setSortDesc((v) => !v)}
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-zinc-600 hover:text-black border border-zinc-200 hover:bg-zinc-50 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
             aria-label="Inverser l'ordre chronologique"
           >
             <History className="w-3.5 h-3.5" /> {sortDesc ? 'Plus récents d’abord' : 'Plus anciens d’abord'}
           </button>
 
           {hasActiveFilters && <ResetFiltersButton onClick={resetFilters} />}
-          <span className="text-[12px] text-zinc-500 font-medium ml-auto tabular-nums">
+          <span className="text-[12px] text-zinc-500 dark:text-zinc-400 font-medium ml-auto tabular-nums">
             {filtered.length} mouvement(s)
           </span>
         </div>
@@ -153,29 +153,29 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
                 const product = productById.get(m.productId);
                 const variation = variationOf(m);
                 return (
-                  <TableRow key={m.id} className="hover:bg-zinc-50/70 transition-colors">
-                    <TableCell className="px-4 tabular-nums text-zinc-600 whitespace-nowrap">{formatISODateFr(m.date)}</TableCell>
+                  <TableRow key={m.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/70 transition-colors">
+                    <TableCell className="px-4 tabular-nums text-zinc-600 dark:text-zinc-400 whitespace-nowrap">{formatISODateFr(m.date)}</TableCell>
                     <TableCell>
-                      <span className="font-semibold text-zinc-900">{product?.name ?? 'Produit supprimé de la liste'}</span>
-                      {product && <span className="text-zinc-400 text-[11.5px]"> · {product.reference}{product.isActive ? '' : ' (désactivé)'}</span>}
+                      <span className="font-semibold text-zinc-900 dark:text-zinc-100">{product?.name ?? 'Produit supprimé de la liste'}</span>
+                      {product && <span className="text-zinc-400 dark:text-zinc-500 text-[11.5px]"> · {product.reference}{product.isActive ? '' : ' (désactivé)'}</span>}
                     </TableCell>
                     <TableCell>
                       <Badge size="sm" className={MOVEMENT_TYPE_BADGE[m.type]}>{MOVEMENT_TYPE_LABELS[m.type]}</Badge>
                     </TableCell>
-                    <TableCell className={`text-right font-semibold tabular-nums ${variation < 0 ? 'text-orange-700' : variation > 0 ? 'text-emerald-700' : 'text-zinc-500'}`}>
+                    <TableCell className={`text-right font-semibold tabular-nums ${variation < 0 ? 'text-orange-700 dark:text-orange-300' : variation > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-zinc-500 dark:text-zinc-400'}`}>
                       {variation > 0 ? '+' : ''}
                       {formatQuantity(variation, product?.unit ?? '')}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-700">
+                    <TableCell className="text-right tabular-nums text-zinc-700 dark:text-zinc-300">
                       {formatQuantity(m.quantityAfter, product?.unit ?? '')}
                     </TableCell>
-                    <TableCell className="text-zinc-600">{m.reason}</TableCell>
+                    <TableCell className="text-zinc-600 dark:text-zinc-400">{m.reason}</TableCell>
                     <TableCell className="text-right">
                       <button
                         type="button"
                         onClick={() => setDetail(m)}
                         aria-label="Voir le détail du mouvement"
-                        className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                        className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -208,13 +208,13 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
                 ['Coût unitaire', detail.unitCostXof !== undefined ? formatFCFA(detail.unitCostXof) : 'Non renseigné'],
                 ['Commentaire', detail.note ?? 'Non renseigné'],
               ] as [string, string][]).map(([label, value]) => (
-                <div key={label} className="flex justify-between gap-3 border-b border-zinc-50 pb-1">
-                  <dt className="text-zinc-500">{label}</dt>
-                  <dd className="font-semibold text-zinc-900 text-right tabular-nums">{value}</dd>
+                <div key={label} className="flex justify-between gap-3 border-b border-zinc-50 dark:border-zinc-800 pb-1">
+                  <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
+                  <dd className="font-semibold text-zinc-900 dark:text-zinc-100 text-right tabular-nums">{value}</dd>
                 </div>
               ))}
             </dl>
-            <p className="text-[11.5px] text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg p-2.5">
+            <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg p-2.5">
               Les mouvements ne sont jamais modifiés ni supprimés : pour corriger une erreur,
               enregistrez un ajustement motivé — la trace complète reste visible dans cet historique.
             </p>
@@ -222,7 +222,7 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
               <button
                 type="button"
                 onClick={() => setDetail(null)}
-                className="flex-1 border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                className="flex-1 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               >
                 Fermer
               </button>
@@ -233,7 +233,7 @@ export const StockMovementHistory: React.FC<StockMovementHistoryProps> = ({
                     setDetail(null);
                     onViewProduct(detailProduct);
                   }}
-                  className="flex-1 bg-[#09090b] hover:bg-zinc-800 text-white font-bold rounded-lg py-2.5 shadow transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  className="flex-1 bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold rounded-lg py-2.5 shadow transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 >
                   Voir le produit
                 </button>

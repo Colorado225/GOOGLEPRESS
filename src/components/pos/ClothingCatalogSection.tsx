@@ -35,7 +35,7 @@ export const ClothingCatalogSection: React.FC = () => {
     <Reveal className="card-3d rounded-xl p-4">
       {/* Category selector header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-        <h2 className="font-bold text-[14.5px] text-zinc-900">2 • Articles & services</h2>
+        <h2 className="font-bold text-[14.5px] text-zinc-900 dark:text-zinc-100">2 • Articles & services</h2>
         <SegmentedControl
           ariaLabel="Filtrer le catalogue par rayon"
           options={[
@@ -49,14 +49,14 @@ export const ClothingCatalogSection: React.FC = () => {
         />
       </div>
 
-      <div className="flex items-center justify-between mb-3 text-[12px] text-zinc-500">
+      <div className="flex items-center justify-between mb-3 text-[12px] text-zinc-500 dark:text-zinc-400">
         <p>Tarifs affichés en FCFA • Express = +50 %</p>
-        <span className="text-[11px] font-medium text-zinc-400">
+        <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">
           Cliquez sur un vêtement pour l'ajouter
         </span>
       </div>
 
-      <div className="mb-3 pb-3 border-b border-dashed border-zinc-200">
+      <div className="mb-3 pb-3 border-b border-dashed border-zinc-200 dark:border-zinc-700">
         <CurrentColorSelector />
       </div>
 
@@ -73,8 +73,8 @@ export const ClothingCatalogSection: React.FC = () => {
               onClick={() => addCartItem(item)}
               className={`border-1.5 rounded-xl p-3 text-center transition-all duration-200 cursor-pointer relative group flex flex-col items-center justify-between min-h-[115px] select-none ${
                 isSelected
-                  ? 'border-[#09090b] bg-[#09090b] text-white shadow-pop scale-[1.02]'
-                  : 'border-zinc-300 hover:border-zinc-800 bg-white text-zinc-900 shadow-card hover:shadow-card-hover hover:-translate-y-0.5'
+                  ? 'border-[#09090b] dark:border-zinc-100 bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 shadow-pop scale-[1.02]'
+                  : 'border-zinc-300 dark:border-zinc-600 hover:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-card hover:shadow-card-hover hover:-translate-y-0.5'
               }`}
             >
               {item.image ? (
@@ -90,16 +90,16 @@ export const ClothingCatalogSection: React.FC = () => {
               )}
               <div className="my-1">
                 <p className="font-bold text-[13px] leading-tight">{item.name}</p>
-                <p className={`text-[11.5px] ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                <p className={`text-[11.5px] ${isSelected ? 'text-zinc-300' : 'text-zinc-500 dark:text-zinc-400'}`}>
                   {formatFCFA(item.unitPrice)}
                 </p>
               </div>
               {count > 0 ? (
-                <span className="font-black text-[12px] bg-white/20 text-white px-2 py-0.5 rounded-md mt-0.5 tabular-nums">
+                <span className="font-black text-[12px] bg-white/20 dark:bg-zinc-900/20 text-white px-2 py-0.5 rounded-md mt-0.5 tabular-nums">
                   × {count}
                 </span>
               ) : (
-                <span className="text-[11px] text-zinc-400 group-hover:text-zinc-600 transition-colors">
+                <span className="text-[11px] text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-400 transition-colors">
                   + Ajouter
                 </span>
               )}
@@ -109,8 +109,8 @@ export const ClothingCatalogSection: React.FC = () => {
       </div>
 
       {/* Service type filter chips */}
-      <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-zinc-100">
-        <span className="text-[11.5px] font-bold text-zinc-500 uppercase mr-1">Traitement :</span>
+      <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+        <span className="text-[11.5px] font-bold text-zinc-500 dark:text-zinc-400 uppercase mr-1">Traitement :</span>
         <SegmentedControl
           ariaLabel="Choisir le traitement appliqué aux articles ajoutés"
           options={services}

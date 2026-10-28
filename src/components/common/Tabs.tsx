@@ -53,7 +53,7 @@ export function Tabs<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        'flex w-full gap-1 overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-100 p-1 shadow-[inset_0_2px_4px_rgb(9_9_11/0.06),inset_0_-1px_0_rgb(255_255_255/0.7)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        'flex w-full gap-1 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 p-1 shadow-[inset_0_2px_4px_rgb(9_9_11/0.06),inset_0_-1px_0_rgb(255_255_255/0.7)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         className,
       )}
     >
@@ -71,11 +71,11 @@ export function Tabs<T extends string>({
             onClick={() => onChange(tab.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={cn(
-              'inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1 active:scale-[0.98]',
+              'inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 focus:ring-offset-1 active:scale-[0.98]',
               size === 'sm' ? 'px-2.5 py-1.5 text-[12px]' : 'px-3.5 py-2 text-[13px]',
               active
-                ? 'bg-white text-zinc-950 shadow-sm'
-                : 'text-zinc-500 hover:bg-white/60 hover:text-zinc-900',
+                ? 'bg-white dark:bg-zinc-700 text-zinc-950 dark:text-zinc-50 shadow-sm'
+                : 'text-zinc-500 dark:text-zinc-400 hover:bg-white/60 dark:hover:bg-zinc-900/60 hover:text-zinc-900 dark:hover:text-zinc-100',
             )}
           >
             {tab.icon}
@@ -86,7 +86,7 @@ export function Tabs<T extends string>({
                   'rounded-full px-1.5 py-px text-[10.5px] font-bold tabular-nums',
                   active
                     ? 'bg-zinc-900 text-white'
-                    : 'border border-zinc-200 bg-white text-zinc-600 shadow-2xs',
+                    : 'border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 shadow-2xs',
                 )}
               >
                 {tab.badge}

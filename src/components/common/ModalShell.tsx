@@ -54,21 +54,21 @@ export const ModalShell: React.FC<ModalShellProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-white rounded-2xl border border-zinc-300 shadow-pop ${maxWidthClass} w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto`}
+        className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-300 dark:border-zinc-600 shadow-pop ${maxWidthClass} w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto`}
       >
-        <div className="bg-[#09090b] text-white px-5 py-4 flex items-center justify-between gap-3">
+        <div className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 px-5 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             {icon}
             <div className="min-w-0">
               <h3 className="font-bold text-[16px] leading-tight truncate">{title}</h3>
-              {subtitle && <p className="text-[11.5px] text-zinc-400 truncate">{subtitle}</p>}
+              {subtitle && <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500 truncate">{subtitle}</p>}
             </div>
           </div>
           <button
             type="button"
             onClick={requestClose}
             aria-label="Fermer la fenêtre"
-            className="text-zinc-400 hover:text-white transition-colors shrink-0 p-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/60"
+            className="text-zinc-400 dark:text-zinc-500 hover:text-white transition-colors shrink-0 p-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/60"
           >
             <X className="w-5 h-5" />
           </button>
@@ -118,18 +118,18 @@ export const SlidePanel: React.FC<SlidePanelProps> = ({ title, subtitle, onClose
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="bg-white w-full max-w-lg h-full overflow-y-auto border-l border-zinc-300 shadow-pop animate-in slide-in-from-right duration-200 flex flex-col"
+        className="bg-white dark:bg-zinc-900 w-full max-w-lg h-full overflow-y-auto border-l border-zinc-300 dark:border-zinc-600 shadow-pop animate-in slide-in-from-right duration-200 flex flex-col"
       >
-        <div className="bg-[#09090b] text-white px-5 py-4 flex items-center justify-between gap-3 sticky top-0 z-10">
+        <div className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 px-5 py-4 flex items-center justify-between gap-3 sticky top-0 z-10">
           <div className="min-w-0">
             <h3 className="font-bold text-[16px] leading-tight truncate">{title}</h3>
-            {subtitle && <p className="text-[11.5px] text-zinc-400 truncate">{subtitle}</p>}
+            {subtitle && <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500 truncate">{subtitle}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fermer le détail"
-            className="text-zinc-400 hover:text-white transition-colors shrink-0 p-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/60"
+            className="text-zinc-400 dark:text-zinc-500 hover:text-white transition-colors shrink-0 p-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/60"
           >
             <X className="w-5 h-5" />
           </button>
@@ -176,19 +176,19 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
-        className="bg-white rounded-2xl border border-zinc-300 shadow-pop max-w-sm w-full p-5 space-y-3 animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-300 dark:border-zinc-600 shadow-pop max-w-sm w-full p-5 space-y-3 animate-in fade-in zoom-in-95 duration-200"
       >
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto ${danger ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto ${danger ? 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400' : 'bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400'}`}>
           <AlertTriangle className="w-5 h-5" />
         </div>
-        <h3 className="font-bold text-[16px] text-zinc-900 text-center">{title}</h3>
-        <div className="text-[12.5px] text-zinc-500 text-center">{description}</div>
+        <h3 className="font-bold text-[16px] text-zinc-900 dark:text-zinc-100 text-center">{title}</h3>
+        <div className="text-[12.5px] text-zinc-500 dark:text-zinc-400 text-center">{description}</div>
         {children}
         <div className="flex gap-2 pt-2">
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-semibold py-2.5 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="flex-1 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold py-2.5 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             {cancelLabel}
           </button>
@@ -196,7 +196,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             type="button"
             onClick={onConfirm}
             className={`flex-1 text-white font-bold py-2.5 rounded-xl text-[13px] shadow focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-              danger ? 'bg-red-600 hover:bg-red-700 focus:ring-red-600' : 'bg-[#09090b] hover:bg-zinc-800 focus:ring-zinc-900'
+              danger ? 'bg-red-600 hover:bg-red-700 focus:ring-red-600' : 'bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 focus:ring-zinc-900 dark:focus:ring-zinc-100'
             }`}
           >
             {confirmLabel}

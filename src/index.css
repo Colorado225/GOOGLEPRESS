@@ -1,6 +1,18 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ——— Thème sombre : variante `dark:` pilotée par la classe `dark` sur <html>
+   (bouton soleil/lune de l'en-tête, Alt+T, défaut = préférence système ;
+   src/lib/theme.ts). `@media not print` : à l'impression, tout repasse en
+   clair — ticket thermique et rapports restent fidèles au papier. ——— */
+@custom-variant dark {
+  @media not print {
+    &:where(.dark, .dark *) {
+      @slot;
+    }
+  }
+}
+
 /* ——— Design PressingPro : élévations & ombres prononcées ———
    Échelle d'ombres enrichie : toutes les cartes existantes (shadow-2xs/xs/sm/md)
    gagnent en profondeur. Jetons dédiés aux cadres 3D et aux fenêtres.
@@ -229,5 +241,62 @@
     border: 0 !important;
     box-shadow: none !important;
     border-radius: 0 !important;
+  }
+}
+
+/* ——— Thème sombre : ajustements globaux (la bascule des couleurs d'écran se
+   fait via la variante `dark:` dans les composants) ——— */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #09090b;
+  color: #f4f4f5;
+}
+
+/* Ombres renforcées en sombre : les voiles clairs deviennent des noirs profonds */
+.dark {
+  --shadow-2xs: 0 0 0 1px rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-xs: 0 0 0 1px rgb(255 255 255 / 0.04), 0 1px 3px rgb(0 0 0 / 0.5), 0 8px 20px -6px rgb(0 0 0 / 0.5);
+  --shadow-sm: 0 0 0 1px rgb(255 255 255 / 0.05), 0 2px 4px rgb(0 0 0 / 0.5), 0 12px 24px -8px rgb(0 0 0 / 0.55);
+  --shadow-md: 0 0 0 1px rgb(255 255 255 / 0.05), 0 4px 8px -2px rgb(0 0 0 / 0.55), 0 16px 32px -10px rgb(0 0 0 / 0.65);
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px rgb(255 255 255 / 0.05), 0 2px 4px rgb(0 0 0 / 0.5), 0 14px 30px -10px rgb(0 0 0 / 0.65);
+  --shadow-card-hover: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 0 0 1px rgb(255 255 255 / 0.07), 0 4px 8px rgb(0 0 0 / 0.55), 0 22px 40px -12px rgb(0 0 0 / 0.75);
+  --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.08), 0 12px 24px -8px rgb(0 0 0 / 0.6), 0 32px 64px -16px rgb(0 0 0 / 0.75);
+}
+
+/* Cadres 3D : dégradé et bordure adaptés au sombre */
+.dark .card-3d {
+  background: linear-gradient(180deg, #1d1d21 0%, #17171a 55%, #111113 100%);
+  border-color: #3f3f46;
+}
+
+/* Barres de défilement en sombre */
+html.dark::-webkit-scrollbar-thumb,
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3f3f46, #27272a);
+  border-color: rgb(255 255 255 / 0.08);
+}
+
+html.dark::-webkit-scrollbar-thumb:hover,
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Impression : toujours en clair, même si le thème sombre est actif */
+@media print {
+  html.dark {
+    color-scheme: light;
+  }
+
+  html.dark body {
+    background-color: #ffffff;
+    color: #09090b;
+  }
+
+  .dark .card-3d {
+    background: #ffffff;
+    border-color: #d4d4d8;
   }
 }

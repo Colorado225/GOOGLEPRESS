@@ -63,28 +63,28 @@ export const ReportsPage: React.FC = () => {
   const reportCards: { id: ReportId; icon: React.ReactNode; title: string; description: string; preview: string }[] = [
     {
       id: 'activity',
-      icon: <Activity className="w-5 h-5 text-blue-600" />,
+      icon: <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
       title: REPORT_TITLES.activity,
       description: 'Commandes reçues, terminées, livrées, en retard, délais et prestations.',
       preview: previews.activity,
     },
     {
       id: 'financial',
-      icon: <Wallet className="w-5 h-5 text-emerald-600" />,
+      icon: <Wallet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
       title: REPORT_TITLES.financial,
       description: 'Ventes, soldes dus et dépenses — mesures distinguées, sans encaissements inventés.',
       preview: previews.financial,
     },
     {
       id: 'employees',
-      icon: <Users className="w-5 h-5 text-amber-600" />,
+      icon: <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
       title: REPORT_TITLES.employees,
       description: 'Présences saisies et activité atelier connue, par employé et par poste.',
       preview: previews.employees,
     },
     {
       id: 'inventory',
-      icon: <Boxes className="w-5 h-5 text-purple-600" />,
+      icon: <Boxes className="w-5 h-5 text-purple-600 dark:text-purple-400" />,
       title: REPORT_TITLES.inventory,
       description: 'Quantités actuelles, alertes, entrées/sorties et valeur estimée du stock.',
       preview: previews.inventory,
@@ -107,7 +107,7 @@ export const ReportsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => printDocument('report')}
-                className="bg-[#09090b] text-white rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 title="Imprimer ce rapport (ou l’enregistrer en PDF via la boîte de dialogue)"
               >
                 <Printer className="w-3.5 h-3.5" />
@@ -118,7 +118,7 @@ export const ReportsPage: React.FC = () => {
         />
         <LocalDataNotice />
 
-        <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs mb-4">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3 shadow-2xs mb-4">
           <PeriodFilter
             preset={preset}
             onPresetChange={setPreset}
@@ -130,7 +130,7 @@ export const ReportsPage: React.FC = () => {
             }}
             rangeLabel={formatRangeLabel(range)}
           />
-          <p className="text-[11px] text-zinc-400 mt-1.5">
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5">
             La période s’applique à tous les rapports. Chaque rapport précise la date de référence
             utilisée (réception de commande, date de dépense, jour de présence…).
           </p>
@@ -144,15 +144,15 @@ export const ReportsPage: React.FC = () => {
               key={card.id}
               type="button"
               onClick={() => setActiveReport(card.id)}
-              className="bg-white border border-zinc-200/90 hover:border-zinc-400 rounded-xl p-5 shadow-2xs text-left transition-all hover:shadow-sm group focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 hover:border-zinc-400 rounded-xl p-5 shadow-2xs text-left transition-all hover:shadow-sm group focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
             >
               <span className="flex items-center justify-between">
-                <span className="w-10 h-10 rounded-xl bg-zinc-50 border border-zinc-200 flex items-center justify-center">{card.icon}</span>
-                <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-700 transition-colors" aria-hidden="true" />
+                <span className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center">{card.icon}</span>
+                <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 transition-colors" aria-hidden="true" />
               </span>
-              <span className="block font-bold text-[16px] text-zinc-900 mt-3">{card.title}</span>
-              <span className="block text-[12.5px] text-zinc-500 mt-1">{card.description}</span>
-              <span className="block text-[12px] font-semibold text-zinc-800 bg-zinc-50 border border-zinc-100 rounded-lg px-2.5 py-1.5 mt-3 tabular-nums">
+              <span className="block font-bold text-[16px] text-zinc-900 dark:text-zinc-100 mt-3">{card.title}</span>
+              <span className="block text-[12.5px] text-zinc-500 dark:text-zinc-400 mt-1">{card.description}</span>
+              <span className="block text-[12px] font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 mt-3 tabular-nums">
                 {card.preview}
               </span>
             </button>
@@ -164,7 +164,7 @@ export const ReportsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveReport(null)}
-              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-600 hover:text-black border border-zinc-200 bg-white hover:bg-zinc-50 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Centre des rapports
             </button>
@@ -185,13 +185,13 @@ export const ReportsPage: React.FC = () => {
 
           {/* Zone imprimable : en-tête de document + contenu du rapport */}
           <div id="report-print-area">
-            <div className="hidden print:block mb-4 border-b border-zinc-300 pb-3">
-              <p className="text-[18px] font-black text-zinc-900">Pressing Pro CI — Cocody, Abidjan</p>
+            <div className="hidden print:block mb-4 border-b border-zinc-300 dark:border-zinc-600 pb-3">
+              <p className="text-[18px] font-black text-zinc-900 dark:text-zinc-100">Pressing Pro CI — Cocody, Abidjan</p>
               <p className="text-[15px] font-bold mt-1">{REPORT_TITLES[activeReport]}</p>
-              <p className="text-[12px] text-zinc-600 tabular-nums mt-1">
+              <p className="text-[12px] text-zinc-600 dark:text-zinc-400 tabular-nums mt-1">
                 Période analysée : {formatRangeLabel(range)} · Généré le {formatLongDateTime(new Date())}
               </p>
-              <p className="text-[11px] text-zinc-500 mt-1">
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
                 Document généré depuis les données saisies/locales de ce navigateur (jeu de démonstration
                 inclus au premier lancement) — sans valeur comptable officielle.
               </p>

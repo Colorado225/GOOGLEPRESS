@@ -113,7 +113,7 @@ export const InventoryPage: React.FC = () => {
   };
 
   const inputClass =
-    'border border-zinc-200 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900';
+    'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100';
 
   const renderActions = (product: InventoryProduct) => (
     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -122,7 +122,7 @@ export const InventoryPage: React.FC = () => {
         onClick={() => setDetailProductId(product.id)}
         aria-label={`Voir le produit ${product.name}`}
         title="Voir"
-        className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
       >
         <Eye className="w-4 h-4" />
       </button>
@@ -131,7 +131,7 @@ export const InventoryPage: React.FC = () => {
         onClick={() => openEdit(product)}
         aria-label={`Modifier ${product.name}`}
         title="Modifier"
-        className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
       >
         <Pencil className="w-4 h-4" />
       </button>
@@ -141,7 +141,7 @@ export const InventoryPage: React.FC = () => {
         disabled={!product.isActive}
         aria-label={`Enregistrer un mouvement pour ${product.name}`}
         title={product.isActive ? 'Enregistrer un mouvement' : 'Produit désactivé'}
-        className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
       >
         <ArrowDownUp className="w-4 h-4" />
       </button>
@@ -152,8 +152,8 @@ export const InventoryPage: React.FC = () => {
         title={product.isActive ? 'Désactiver' : 'Réactiver'}
         className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 ${
           product.isActive
-            ? 'text-red-500 hover:bg-red-50 focus:ring-red-600'
-            : 'text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-600'
+            ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 focus:ring-red-600'
+            : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950 focus:ring-emerald-600'
         }`}
       >
         {product.isActive ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
@@ -172,7 +172,7 @@ export const InventoryPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setMovementModal({ type: 'in' })}
-              className="border border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-800 rounded-lg px-3.5 py-2 text-[13px] font-semibold transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              className="border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg px-3.5 py-2 text-[13px] font-semibold transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
             >
               <ArrowDownUp className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Enregistrer un mouvement</span>
@@ -181,7 +181,7 @@ export const InventoryPage: React.FC = () => {
             <button
               type="button"
               onClick={openCreate}
-              className="bg-[#09090b] text-white rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+              className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Ajouter un produit</span>
@@ -252,16 +252,16 @@ export const InventoryPage: React.FC = () => {
       {tab === 'history' && (
         <>
           {topOutputs.length > 0 && (
-            <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs mb-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-zinc-700">
-                <TrendingDown className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" /> Plus sortis (30 jours) :
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3 shadow-2xs mb-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-zinc-700 dark:text-zinc-300">
+                <TrendingDown className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" aria-hidden="true" /> Plus sortis (30 jours) :
               </span>
               {topOutputs.map(({ product, qty }) => (
                 <button
                   key={product.id}
                   type="button"
                   onClick={() => setDetailProductId(product.id)}
-                  className="text-[11.5px] font-semibold bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-full px-2.5 py-1 tabular-nums transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  className="text-[11.5px] font-semibold bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full px-2.5 py-1 tabular-nums transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 >
                   {product.name} · {formatQuantity(qty, product.unit)}
                 </button>
@@ -277,10 +277,10 @@ export const InventoryPage: React.FC = () => {
       )}
 
       {tab === 'catalog' && (
-        <div className="bg-white border border-zinc-200/90 rounded-xl overflow-hidden shadow-2xs">
-          <div className="p-3 border-b border-zinc-200 flex flex-wrap items-center gap-2">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl overflow-hidden shadow-2xs">
+          <div className="p-3 border-b border-zinc-200 dark:border-zinc-700 flex flex-wrap items-center gap-2">
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
               <label htmlFor="stock-search" className="sr-only">Rechercher un produit</label>
               <input
                 id="stock-search"
@@ -288,7 +288,7 @@ export const InventoryPage: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Nom ou référence…"
-                className="border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-64 max-w-full focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                className="border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-64 max-w-full focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               />
             </div>
 
@@ -323,7 +323,7 @@ export const InventoryPage: React.FC = () => {
             </select>
 
             {hasActiveFilters && <ResetFiltersButton onClick={resetFilters} />}
-            <span className="text-[12px] text-zinc-500 font-medium ml-auto tabular-nums">
+            <span className="text-[12px] text-zinc-500 dark:text-zinc-400 font-medium ml-auto tabular-nums">
               {filteredProducts.length} produit(s)
             </span>
           </div>
@@ -336,7 +336,7 @@ export const InventoryPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={openCreate}
-                  className="bg-[#09090b] text-white rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 transition-colors shadow focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 >
                   Ajouter un produit
                 </button>
@@ -372,21 +372,21 @@ export const InventoryPage: React.FC = () => {
                         <TableRow
                           key={product.id}
                           onClick={() => setDetailProductId(product.id)}
-                          className={`hover:bg-zinc-50/70 cursor-pointer transition-colors ${product.isActive ? '' : 'opacity-60'}`}
+                          className={`hover:bg-zinc-50/70 dark:hover:bg-zinc-800/70 cursor-pointer transition-colors ${product.isActive ? '' : 'opacity-60'}`}
                         >
                           <TableCell className="px-4">
-                            <span className="font-bold text-zinc-900">{product.name}</span>
-                            <span className="block text-[11.5px] text-zinc-400">{product.reference}{product.isActive ? '' : ' · désactivé'}</span>
+                            <span className="font-bold text-zinc-900 dark:text-zinc-100">{product.name}</span>
+                            <span className="block text-[11.5px] text-zinc-400 dark:text-zinc-500">{product.reference}{product.isActive ? '' : ' · désactivé'}</span>
                           </TableCell>
-                          <TableCell className="text-zinc-600">{product.category}</TableCell>
-                          <TableCell className="text-zinc-600">{product.unit}</TableCell>
-                          <TableCell className="text-right font-bold tabular-nums text-zinc-900">
+                          <TableCell className="text-zinc-600 dark:text-zinc-400">{product.category}</TableCell>
+                          <TableCell className="text-zinc-600 dark:text-zinc-400">{product.unit}</TableCell>
+                          <TableCell className="text-right font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
                             {formatQuantity(product.currentQuantity, product.unit)}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums text-zinc-500">
+                          <TableCell className="text-right tabular-nums text-zinc-500 dark:text-zinc-400">
                             {formatQuantity(product.alertThreshold, product.unit)}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums text-zinc-600">
+                          <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">
                             {product.unitCostXof !== undefined ? formatFCFA(product.unitCostXof) : 'Non renseigné'}
                           </TableCell>
                           <TableCell>
@@ -408,21 +408,21 @@ export const InventoryPage: React.FC = () => {
                     <div
                       key={product.id}
                       onClick={() => setDetailProductId(product.id)}
-                      className={`border border-zinc-200 rounded-xl p-3.5 bg-zinc-50/40 ${product.isActive ? '' : 'opacity-60'}`}
+                      className={`border border-zinc-200 dark:border-zinc-700 rounded-xl p-3.5 bg-zinc-50/40 dark:bg-zinc-800/40 ${product.isActive ? '' : 'opacity-60'}`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="font-bold text-[14px] text-zinc-900 truncate">{product.name}</p>
-                          <p className="text-[11.5px] text-zinc-400">{product.reference} · {product.category}</p>
+                          <p className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100 truncate">{product.name}</p>
+                          <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500">{product.reference} · {product.category}</p>
                         </div>
                         {renderActions(product)}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                        <span className="font-black tabular-nums text-zinc-950">{formatQuantity(product.currentQuantity, product.unit)}</span>
-                        <span className="text-[11.5px] text-zinc-500 tabular-nums">seuil {formatQuantity(product.alertThreshold, product.unit)}</span>
+                        <span className="font-black tabular-nums text-zinc-950 dark:text-zinc-50">{formatQuantity(product.currentQuantity, product.unit)}</span>
+                        <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400 tabular-nums">seuil {formatQuantity(product.alertThreshold, product.unit)}</span>
                         <Badge size="sm" className={`ml-auto ${STOCK_STATUS_BADGE[status]}`}>{STOCK_STATUS_LABELS[status]}</Badge>
                       </div>
-                      <p className="text-[11.5px] text-zinc-500 tabular-nums mt-1.5">
+                      <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 tabular-nums mt-1.5">
                         Dernier coût : {product.unitCostXof !== undefined ? `${formatFCFA(product.unitCostXof)} / ${product.unit}` : 'Non renseigné'}
                         {product.isActive ? '' : ' · désactivé'}
                       </p>

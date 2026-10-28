@@ -16,17 +16,17 @@ export const MetricCards: React.FC = () => {
       {/* KPI 1: CA du jour */}
       <div className="card-3d hover-lift rounded-xl p-4">
         <div className="flex justify-between items-start">
-          <p className="text-[11.5px] font-semibold text-zinc-500 uppercase tracking-wide">
+          <p className="text-[11.5px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
             CA du jour
           </p>
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 tabular-nums">
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 tabular-nums">
             +18 %
           </span>
         </div>
-        <p className="text-[24px] font-extrabold text-zinc-900 mt-1 tracking-tight tabular-nums">
+        <p className="text-[24px] font-extrabold text-zinc-900 dark:text-zinc-100 mt-1 tracking-tight tabular-nums">
           {formatFCFA(cashRegister.totalAmount)}
         </p>
-        <p className="text-[12px] text-zinc-500 mt-1 flex items-center gap-1.5">
+        <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1 flex items-center gap-1.5">
           <span>42 tickets</span>
           <span>•</span>
           <span>panier moyen 4 440 FCFA</span>
@@ -36,35 +36,35 @@ export const MetricCards: React.FC = () => {
       {/* KPI 2: Commandes en cours */}
       <div className="card-3d hover-lift rounded-xl p-4">
         <div className="flex justify-between items-start">
-          <p className="text-[11.5px] font-semibold text-zinc-500 uppercase tracking-wide">
+          <p className="text-[11.5px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
             Commandes en cours
           </p>
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
             {activeOrdersCount} actives
           </span>
         </div>
-        <p className="text-[24px] font-extrabold text-zinc-900 mt-1 tracking-tight tabular-nums">
-          127 <span className="text-[14px] font-semibold text-zinc-500">articles</span>
+        <p className="text-[24px] font-extrabold text-zinc-900 dark:text-zinc-100 mt-1 tracking-tight tabular-nums">
+          127 <span className="text-[14px] font-semibold text-zinc-500 dark:text-zinc-400">articles</span>
         </p>
-        <p className="text-[12px] text-zinc-500 mt-1">
-          dont <span className="font-semibold text-amber-600 tabular-nums">{lateOrdersCount || 6} en retard</span> à relancer
+        <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1">
+          dont <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">{lateOrdersCount || 6} en retard</span> à relancer
         </p>
       </div>
 
       {/* KPI 3: Prêts à remettre */}
       <div className="card-3d hover-lift rounded-xl p-4">
         <div className="flex justify-between items-start">
-          <p className="text-[11.5px] font-semibold text-zinc-500 uppercase tracking-wide">
+          <p className="text-[11.5px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
             Prêts à remettre
           </p>
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60">
             À encaisser
           </span>
         </div>
-        <p className="text-[24px] font-extrabold text-zinc-900 mt-1 tracking-tight tabular-nums">
+        <p className="text-[24px] font-extrabold text-zinc-900 dark:text-zinc-100 mt-1 tracking-tight tabular-nums">
           {formatFCFA(readyBalanceToCollect > 0 ? readyBalanceToCollect : 94000)}
         </p>
-        <p className="text-[12px] text-zinc-500 mt-1">
+        <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1">
           {readyOrders.length || 19} sacs prêts • 11 clients notifiés SMS
         </p>
       </div>
@@ -72,15 +72,15 @@ export const MetricCards: React.FC = () => {
       {/* KPI 4: Alertes */}
       <div className="card-3d hover-lift rounded-xl p-4 border-l-4 border-l-amber-500">
         <div className="flex items-center justify-between">
-          <p className="text-[11.5px] font-semibold text-zinc-500 uppercase tracking-wide">
+          <p className="text-[11.5px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
             Alertes
           </p>
           <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
         </div>
-        <p className="text-[14.5px] font-bold text-zinc-900 mt-1 leading-snug">
+        <p className="text-[14.5px] font-bold text-zinc-900 dark:text-zinc-100 mt-1 leading-snug">
           ⚠ 6 retards + stock détachant bas
         </p>
-        <p className="text-[12px] text-zinc-500 mt-1">
+        <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1">
           Machine L2 en maintenance 14h–16h
         </p>
       </div>

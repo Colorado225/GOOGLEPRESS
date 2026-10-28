@@ -56,7 +56,7 @@ const MainLayout: React.FC = () => {
   }, [showToast]);
 
   return (
-    <div className="min-h-screen bg-[#f4f4f5] text-zinc-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col">
+    <div className="min-h-screen bg-[#f4f4f5] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col">
       {/* Main Layout Header (contains Desktop Sidebar Toggle Trigger, Breadcrumbs, Shortcuts & Profile) */}
       <MainLayoutHeader />
 

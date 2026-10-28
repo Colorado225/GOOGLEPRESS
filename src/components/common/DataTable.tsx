@@ -24,7 +24,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const Frame: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, children, ...props }) => (
   <div
-    className={cn('ui-frame space-y-1.5 rounded-2xl border border-zinc-200 bg-zinc-100/70 p-1.5 shadow-card', className)}
+    className={cn('ui-frame space-y-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-100/70 dark:bg-zinc-800/70 p-1.5 shadow-card', className)}
     {...props}
   >
     {children}
@@ -33,7 +33,7 @@ export const Frame: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ classNam
 
 export const FramePanel: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, children, ...props }) => (
   <div
-    className={cn('ui-frame-panel overflow-hidden rounded-[10px] border border-zinc-200 bg-white shadow-2xs', className)}
+    className={cn('ui-frame-panel overflow-hidden rounded-[10px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs', className)}
     {...props}
   >
     {children}
@@ -56,26 +56,26 @@ export const Table: React.FC<TableProps> = ({ className, wrapperClassName, child
 );
 
 export const TableHeader: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = ({ className, children, ...props }) => (
-  <thead className={cn('bg-zinc-50/80 [&_tr]:border-b [&_tr]:border-zinc-200 [&_tr]:hover:bg-transparent', className)} {...props}>
+  <thead className={cn('bg-zinc-50/80 dark:bg-zinc-800/80 [&_tr]:border-b [&_tr]:border-zinc-200 [&_tr]:hover:bg-transparent', className)} {...props}>
     {children}
   </thead>
 );
 
 export const TableBody: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = ({ className, children, ...props }) => (
-  <tbody className={cn('divide-y divide-zinc-100', className)} {...props}>
+  <tbody className={cn('divide-y divide-zinc-100 dark:divide-zinc-800', className)} {...props}>
     {children}
   </tbody>
 );
 
 export const TableRow: React.FC<React.HTMLAttributes<HTMLTableRowElement>> = ({ className, children, ...props }) => (
-  <tr className={cn('transition-colors hover:bg-zinc-50/70', className)} {...props}>
+  <tr className={cn('transition-colors hover:bg-zinc-50/70 dark:hover:bg-zinc-800/70', className)} {...props}>
     {children}
   </tr>
 );
 
 export const TableHead: React.FC<React.ThHTMLAttributes<HTMLTableCellElement>> = ({ className, children, ...props }) => (
   <th
-    className={cn('px-3 py-2.5 align-middle text-[11px] font-bold uppercase tracking-wide whitespace-nowrap text-zinc-500', className)}
+    className={cn('px-3 py-2.5 align-middle text-[11px] font-bold uppercase tracking-wide whitespace-nowrap text-zinc-500 dark:text-zinc-400', className)}
     {...props}
   >
     {children}
@@ -102,15 +102,15 @@ export type BadgeVariant =
   | 'teal';
 
 const BADGE_VARIANTS: Record<BadgeVariant, string> = {
-  default: 'border-zinc-900 bg-zinc-900 text-white',
-  secondary: 'border-zinc-200 bg-zinc-200/80 text-zinc-700',
-  outline: 'border-zinc-300 bg-transparent text-zinc-700',
-  success: 'border-emerald-200 bg-emerald-100 text-emerald-700',
-  info: 'border-blue-200 bg-blue-100 text-blue-700',
-  warning: 'border-amber-200 bg-amber-100 text-amber-800',
-  destructive: 'border-red-200 bg-red-100 text-red-700',
-  purple: 'border-purple-200 bg-purple-100 text-purple-700',
-  teal: 'border-teal-200 bg-teal-100 text-teal-700',
+  default: 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950',
+  secondary: 'border-zinc-200 dark:border-zinc-700 bg-zinc-200/80 dark:bg-zinc-700/80 text-zinc-700 dark:text-zinc-300',
+  outline: 'border-zinc-300 dark:border-zinc-600 bg-transparent text-zinc-700 dark:text-zinc-300',
+  success: 'border-emerald-200 dark:border-emerald-800 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300',
+  info: 'border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300',
+  warning: 'border-amber-200 dark:border-amber-800 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200',
+  destructive: 'border-red-200 dark:border-red-800 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
+  purple: 'border-purple-200 dark:border-purple-800 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300',
+  teal: 'border-teal-200 dark:border-teal-800 bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300',
 };
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -194,13 +194,13 @@ function pageWindow(current: number, total: number): Array<number | '…'> {
 export const TablePagination: React.FC<TablePaginationProps> = ({ page, pageCount, onPageChange, className }) => {
   if (pageCount <= 1) return null;
   const segment =
-    'inline-flex items-center justify-center gap-1 rounded-md px-2.5 py-1.5 text-[12px] font-bold tabular-nums transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-zinc-900 disabled:pointer-events-none disabled:opacity-40';
-  const idle = 'text-zinc-600 hover:bg-white/70 hover:text-zinc-950';
+    'inline-flex items-center justify-center gap-1 rounded-md px-2.5 py-1.5 text-[12px] font-bold tabular-nums transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 disabled:pointer-events-none disabled:opacity-40';
+  const idle = 'text-zinc-600 dark:text-zinc-400 hover:bg-white/70 dark:hover:bg-zinc-900/70 hover:text-zinc-950 dark:hover:text-zinc-50';
   return (
     <nav
       aria-label="Pagination du tableau"
       className={cn(
-        'inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-100 p-0.5 shadow-[inset_0_1px_2px_rgb(9_9_11/0.05)]',
+        'inline-flex items-center gap-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 p-0.5 shadow-[inset_0_1px_2px_rgb(9_9_11/0.05)]',
         className,
       )}
     >
@@ -217,7 +217,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({ page, pageCoun
       </button>
       {pageWindow(page, pageCount).map((p, i) =>
         p === '…' ? (
-          <span key={`ellipsis-${i}`} className="px-1 text-[12px] text-zinc-400" aria-hidden="true">
+          <span key={`ellipsis-${i}`} className="px-1 text-[12px] text-zinc-400 dark:text-zinc-500" aria-hidden="true">
             …
           </span>
         ) : (
@@ -227,7 +227,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({ page, pageCoun
             aria-current={p === page ? 'page' : undefined}
             aria-label={`Page ${p}`}
             onClick={() => onPageChange(p)}
-            className={cn(segment, 'min-w-8', p === page ? 'bg-white text-zinc-950 shadow-sm' : idle)}
+            className={cn(segment, 'min-w-8', p === page ? 'bg-white dark:bg-zinc-700 text-zinc-950 dark:text-zinc-50 shadow-sm' : idle)}
           >
             {p}
           </button>

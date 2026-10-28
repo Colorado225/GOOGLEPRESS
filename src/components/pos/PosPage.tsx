@@ -45,12 +45,12 @@ export const PosPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveScreen('dashboard')}
-              className="p-1 hover:bg-zinc-200 rounded-lg text-zinc-500 hover:text-black transition-colors"
+              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
               title="Retour au tableau de bord (F1)"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-[22px] font-bold tracking-tight text-zinc-900">
+            <h1 className="text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {viewMode === 'stepper'
                 ? selectedServiceCategory
                   ? `Nouvelle commande • ${selectedServiceCategory === 'pressing' ? 'Pressing' : 'Blanchisserie'}`
@@ -58,7 +58,7 @@ export const PosPage: React.FC = () => {
                 : 'Réception comptoir classique'}
             </h1>
           </div>
-          <p className="text-[13px] text-zinc-500 ml-7">
+          <p className="text-[13px] text-zinc-500 dark:text-zinc-400 ml-7">
             {viewMode === 'stepper'
               ? 'Parcours de commande guidé • Choix du service → Client & Délais → Articles → Validation'
               : 'Dépôt client au comptoir • ticket imprimé + SMS automatique'}
@@ -67,18 +67,18 @@ export const PosPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {/* Mode toggle */}
-          <div className="bg-zinc-100 p-1 rounded-xl border border-zinc-200 flex items-center text-[11.5px] font-semibold">
+          <div className="bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center text-[11.5px] font-semibold">
             <button
               type="button"
               onClick={() => setViewMode('stepper')}
               className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all ${
                 viewMode === 'stepper'
-                  ? 'bg-white text-zinc-900 font-bold shadow-2xs'
-                  : 'text-zinc-500 hover:text-zinc-900'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold shadow-2xs'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
               }`}
               title="Nouveau parcours en 3 étapes"
             >
-              <Layers className="w-3.5 h-3.5 text-blue-600" />
+              <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>Parcours guidé</span>
             </button>
             <button
@@ -86,12 +86,12 @@ export const PosPage: React.FC = () => {
               onClick={() => setViewMode('classic')}
               className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all ${
                 viewMode === 'classic'
-                  ? 'bg-white text-zinc-900 font-bold shadow-2xs'
-                  : 'text-zinc-500 hover:text-zinc-900'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold shadow-2xs'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
               }`}
               title="Vue directe tout-en-un"
             >
-              <LayoutGrid className="w-3.5 h-3.5 text-zinc-600" />
+              <LayoutGrid className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
               <span>Vue directe</span>
             </button>
           </div>
@@ -99,7 +99,7 @@ export const PosPage: React.FC = () => {
           <button
             type="button"
             onClick={clearCart}
-            className="bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 px-3 py-1.5 text-[12.5px] font-semibold rounded-lg transition-colors shadow-2xs flex items-center gap-1.5"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 text-[12.5px] font-semibold rounded-lg transition-colors shadow-2xs flex items-center gap-1.5"
             title="Vider le panier"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -109,7 +109,7 @@ export const PosPage: React.FC = () => {
           <button
             type="button"
             onClick={handlePreviewCurrent}
-            className="bg-white border-2 border-dashed border-zinc-300 hover:border-zinc-500 text-zinc-700 px-3 py-1.5 text-[12.5px] font-semibold rounded-lg transition-colors flex items-center gap-1.5"
+            className="bg-white dark:bg-zinc-900 border-2 border-dashed border-zinc-300 dark:border-zinc-600 hover:border-zinc-500 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 text-[12.5px] font-semibold rounded-lg transition-colors flex items-center gap-1.5"
             title="Aperçu du dernier ticket généré"
           >
             <Eye className="w-3.5 h-3.5" />
@@ -184,11 +184,11 @@ export const PosPage: React.FC = () => {
       )}
 
       {/* Footer Info Banner */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl mt-4 px-4 py-2.5 text-[11.5px] text-zinc-500 shadow-2xs flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl mt-4 px-4 py-2.5 text-[11.5px] text-zinc-500 dark:text-zinc-400 shadow-2xs flex flex-wrap items-center justify-between gap-2">
         <p>
           PressingPro CI • Système d’encaissement & de gestion pressing conforme Côte d'Ivoire • Raccourcis : F1 Accueil, F2 Réception, F3 Atelier, F4 Caisse
         </p>
-        <span className="font-semibold text-zinc-700">Abidjan, Cocody • Devise FCFA</span>
+        <span className="font-semibold text-zinc-700 dark:text-zinc-300">Abidjan, Cocody • Devise FCFA</span>
       </div>
     </div>
   );

@@ -87,8 +87,8 @@ const SepDouble: React.FC = () => (
 
 const MetaRow: React.FC<{ label: string; value: React.ReactNode; bold?: boolean }> = ({ label, value, bold }) => (
   <div className="flex justify-between gap-3">
-    <span className="text-zinc-600 shrink-0">{label}</span>
-    <span className={`text-right ${bold ? 'font-bold text-zinc-950' : 'text-zinc-900'}`}>{value}</span>
+    <span className="text-zinc-600 dark:text-zinc-400 shrink-0">{label}</span>
+    <span className={`text-right ${bold ? 'font-bold text-zinc-950 dark:text-zinc-50' : 'text-zinc-900 dark:text-zinc-100'}`}>{value}</span>
   </div>
 );
 
@@ -126,16 +126,16 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
   return (
     <div className="w-[340px] max-w-full mx-auto">
       <ZigzagEdge flip />
-      <div className="bg-white text-zinc-900 font-mono text-[12px] leading-snug px-5 py-5 shadow-[0_18px_45px_-12px_rgba(0,0,0,0.45)] print:shadow-none">
+      <div className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-mono text-[12px] leading-snug px-5 py-5 shadow-[0_18px_45px_-12px_rgba(0,0,0,0.45)] print:shadow-none">
         {/* ─── En-tête boutique ─── */}
         <div className="text-center">
           <div className="w-9 h-9 bg-zinc-950 text-white flex items-center justify-center font-sans font-black text-[17px] rounded-md mx-auto">
             P
           </div>
           <h2 className="font-sans font-black text-[18px] tracking-tight mt-1.5">{SHOP_INFO.name}</h2>
-          <p className="text-[10.5px] text-zinc-600">{SHOP_INFO.tagline}</p>
-          <p className="text-[10.5px] text-zinc-600 mt-1">{SHOP_INFO.address}</p>
-          <p className="text-[10.5px] text-zinc-600">Tél : {SHOP_INFO.phone}</p>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">{SHOP_INFO.tagline}</p>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 mt-1">{SHOP_INFO.address}</p>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">Tél : {SHOP_INFO.phone}</p>
         </div>
 
         <div className="mt-3">
@@ -170,7 +170,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
         </div>
 
         <div className="border-2 border-zinc-950 rounded-sm text-center px-3 py-2 mt-3">
-          <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600">RETRAIT PRÉVU</p>
+          <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">RETRAIT PRÉVU</p>
           <p className="font-sans font-black text-[16px] leading-tight mt-0.5">{order.promisedAt}</p>
         </div>
 
@@ -179,13 +179,13 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <SepDashed />
         </div>
         <div className="mt-2.5 text-[11.5px]">
-          <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600">CLIENT</p>
+          <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">CLIENT</p>
           <p className="font-bold text-[13px] mt-0.5">
             {order.customerName}
             {customer?.isVip ? <span className="text-[11px]"> ★ VIP</span> : null}
           </p>
-          <p className="text-zinc-700">{order.customerPhone}</p>
-          {order.customerAddress && <p className="text-zinc-600 text-[11px]">{order.customerAddress}</p>}
+          <p className="text-zinc-700 dark:text-zinc-300">{order.customerPhone}</p>
+          {order.customerAddress && <p className="text-zinc-600 dark:text-zinc-400 text-[11px]">{order.customerAddress}</p>}
         </div>
 
         {/* ─── Articles ─── */}
@@ -193,11 +193,11 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <SepDashed />
         </div>
         <div className="mt-2.5">
-          <div className="flex justify-between text-[9.5px] font-bold tracking-[0.18em] text-zinc-600">
+          <div className="flex justify-between text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">
             <span>ARTICLES CONFIÉS</span>
             {isClient && <span>MONTANT</span>}
           </div>
-          <div className="divide-y divide-zinc-200 mt-1">
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-700 mt-1">
             {order.lines.map((line, idx) => {
               const isKilo = line.pricingType === 'kilo';
               const qtyLabel = isKilo
@@ -218,19 +218,19 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
                       <span className="font-bold tabular-nums shrink-0">{formatFCFA(line.subtotal)}</span>
                     )}
                   </div>
-                  <p className="text-[10.5px] text-zinc-600">
+                  <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">
                     {line.serviceType}
                     {isClient ? ` • ${priceDetail}` : ''}
                     {line.color ? ` • Couleur : ${line.color}` : ''}
                   </p>
                   {line.notes && (
-                    <p className="text-[10.5px] italic text-zinc-700">↳ {line.notes}</p>
+                    <p className="text-[10.5px] italic text-zinc-700 dark:text-zinc-300">↳ {line.notes}</p>
                   )}
                 </div>
               );
             })}
           </div>
-          <p className="text-[10.5px] text-zinc-600 mt-1">Total articles : {itemsSummary}</p>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 mt-1">Total articles : {itemsSummary}</p>
         </div>
 
         {/* ─── Totaux & paiement (exemplaire client) ─── */}
@@ -269,7 +269,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
 
             {isSettled ? (
               <div className="text-center mt-3">
-                <span className="inline-block border-[2.5px] border-emerald-700 text-emerald-700 font-sans font-black tracking-[0.14em] text-[13px] px-3 py-1 rounded-sm rotate-[-3deg]">
+                <span className="inline-block border-[2.5px] border-emerald-700 text-emerald-700 dark:text-emerald-300 font-sans font-black tracking-[0.14em] text-[13px] px-3 py-1 rounded-sm rotate-[-3deg]">
                   ✓ SOLDÉ — PAYÉ
                 </span>
               </div>
@@ -281,7 +281,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
                     {formatFCFA(order.remainingBalance)}
                   </span>
                 </div>
-                <p className="text-[10px] text-zinc-600 text-center mt-1">à régler au retrait du linge</p>
+                <p className="text-[10px] text-zinc-600 dark:text-zinc-400 text-center mt-1">à régler au retrait du linge</p>
               </>
             )}
           </>
@@ -294,17 +294,17 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
               <SepDashed />
             </div>
             <div className="mt-2.5 text-[11.5px] space-y-1">
-              <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600">PRODUCTION</p>
+              <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">PRODUCTION</p>
               <MetaRow label="Machine" value={order.machineAssigned ?? 'Non renseignée'} />
               <MetaRow label="Responsable" value={order.assignee ?? 'Non assigné'} />
               <MetaRow label="Casier" value={order.rackLocation ?? 'Non renseigné'} />
               {typeof order.progressPercent === 'number' && (
                 <div className="pt-1">
                   <div className="flex justify-between">
-                    <span className="text-zinc-600">Avancement</span>
+                    <span className="text-zinc-600 dark:text-zinc-400">Avancement</span>
                     <span className="font-bold tabular-nums">{order.progressPercent} %</span>
                   </div>
-                  <div className="h-2 bg-zinc-200 mt-1" aria-hidden="true">
+                  <div className="h-2 bg-zinc-200 dark:bg-zinc-700 mt-1" aria-hidden="true">
                     <div className="h-full bg-zinc-950" style={{ width: `${Math.min(100, Math.max(0, order.progressPercent))}%` }} />
                   </div>
                 </div>
@@ -320,7 +320,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
               <SepDashed />
             </div>
             <div className={`mt-2.5 text-[11px] ${isClient ? '' : 'border-2 border-zinc-950 rounded-sm px-2.5 py-2'}`}>
-              <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600">CONSIGNES</p>
+              <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">CONSIGNES</p>
               <p className="mt-0.5 whitespace-pre-line">{order.notes}</p>
             </div>
           </>
@@ -331,7 +331,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <SepDouble />
         </div>
         {isClient ? (
-          <div className="text-[9.5px] leading-[1.45] text-zinc-700 mt-2.5 space-y-1">
+          <div className="text-[9.5px] leading-[1.45] text-zinc-700 dark:text-zinc-300 mt-2.5 space-y-1">
             <p>• Retrait uniquement contre présentation de ce reçu ou du SMS de confirmation.</p>
             <p>• Merci de vérifier vos articles au comptoir lors du retrait.</p>
             <p>
@@ -340,7 +340,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
             </p>
           </div>
         ) : (
-          <p className="text-[9.5px] leading-[1.45] text-zinc-700 mt-2.5">
+          <p className="text-[9.5px] leading-[1.45] text-zinc-700 dark:text-zinc-300 mt-2.5">
             Fiche à joindre au linge pendant tout le traitement. Ne pas remettre au client.
           </p>
         )}
@@ -352,7 +352,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
         <div className="text-center mt-2 flex flex-col items-center">
           <TicketBarcode value={order.ticketNumber} />
           <p className="text-[10px] tracking-[0.3em] mt-1">{order.ticketNumber.replace('#', '')}</p>
-          <p className="text-[9px] text-zinc-500 mt-1.5">
+          <p className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-1.5">
             {isClient
               ? 'Exemplaire client — à conserver pour le retrait'
               : 'Exemplaire atelier — usage interne'}

@@ -98,18 +98,18 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
   };
 
   const inputClass =
-    'border border-zinc-200 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900';
+    'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100';
 
   return (
     <div className="space-y-3">
       {/* Sélecteur de date */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs flex flex-wrap items-center gap-2">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3 shadow-2xs flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setSelectedDate((d) => addDaysToISO(d, -1))}
             aria-label="Jour précédent"
-            className="p-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="p-2 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -125,7 +125,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
             type="button"
             onClick={() => setSelectedDate((d) => addDaysToISO(d, 1))}
             aria-label="Jour suivant"
-            className="p-2 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="p-2 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -133,13 +133,13 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
             <button
               type="button"
               onClick={() => setSelectedDate(todayISO())}
-              className="text-[12px] font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="text-[12px] font-semibold text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 px-2.5 py-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
             >
               Aujourd’hui
             </button>
           )}
         </div>
-        <p className="text-[13px] font-semibold text-zinc-800 first-letter:uppercase">
+        <p className="text-[13px] font-semibold text-zinc-800 dark:text-zinc-200 first-letter:uppercase">
           {capitalize(formatISODateLongFr(selectedDate))}
         </p>
         <div className="flex flex-wrap gap-1.5 ml-auto" aria-label="Résumé du jour">
@@ -158,8 +158,8 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
       </div>
 
       {/* Filtres */}
-      <div className="bg-white border border-zinc-200/90 rounded-xl shadow-2xs overflow-hidden">
-        <div className="p-3 border-b border-zinc-200 flex flex-wrap items-center gap-2">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl shadow-2xs overflow-hidden">
+        <div className="p-3 border-b border-zinc-200 dark:border-zinc-700 flex flex-wrap items-center gap-2">
           <label htmlFor="att-employee" className="sr-only">Filtrer par employé</label>
           <select
             id="att-employee"
@@ -200,7 +200,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
           </select>
 
           {hasActiveFilters && <ResetFiltersButton onClick={resetFilters} />}
-          <span className="text-[12px] text-zinc-500 font-medium ml-auto tabular-nums">
+          <span className="text-[12px] text-zinc-500 dark:text-zinc-400 font-medium ml-auto tabular-nums">
             {visibleEmployees.length} personne(s) affichée(s)
           </span>
         </div>
@@ -217,24 +217,24 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
             action={<ResetFiltersButton onClick={resetFilters} />}
           />
         ) : (
-          <ul className="divide-y divide-zinc-100">
+          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {visibleEmployees.map((employee) => {
               const record = getAttendanceRecord(attendanceRecords, employee.id, selectedDate);
               const status: AttendanceStatus = record?.status ?? 'unrecorded';
               return (
-                <li key={employee.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5 hover:bg-zinc-50/60 transition-colors">
+                <li key={employee.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/60 transition-colors">
                   <button
                     type="button"
                     onClick={() => onOpenEmployee(employee)}
-                    className="flex items-center gap-2.5 min-w-0 text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 px-1 py-0.5"
+                    className="flex items-center gap-2.5 min-w-0 text-left rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 px-1 py-0.5"
                     aria-label={`Ouvrir la fiche de ${employee.fullName}`}
                   >
                     <Avatar size="sm" aria-hidden="true">
                       <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                     </Avatar>
                     <span className="min-w-0">
-                      <span className="block font-bold text-[13px] text-zinc-900 truncate">{employee.fullName}</span>
-                      <span className="block text-[11.5px] text-zinc-500">{employee.position}</span>
+                      <span className="block font-bold text-[13px] text-zinc-900 dark:text-zinc-100 truncate">{employee.fullName}</span>
+                      <span className="block text-[11.5px] text-zinc-500 dark:text-zinc-400">{employee.position}</span>
                     </span>
                   </button>
 
@@ -243,7 +243,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                     {record?.arrivalTime ? ` · ${record.arrivalTime}` : ''}
                   </Badge>
                   {record?.reason && (
-                    <span className="text-[11.5px] text-zinc-500 italic truncate max-w-[220px]" title={record.reason}>
+                    <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400 italic truncate max-w-[220px]" title={record.reason}>
                       {record.reason}
                     </span>
                   )}
@@ -252,7 +252,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                     <button
                       type="button"
                       onClick={() => openEdit(employee)}
-                      className="inline-flex items-center gap-1.5 text-[12px] font-semibold border border-zinc-200 hover:bg-zinc-50 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                      className="inline-flex items-center gap-1.5 text-[12px] font-semibold border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg px-2.5 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                       {record ? 'Corriger' : 'Saisir'}
@@ -263,7 +263,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                         onClick={() => setConfirmClear(employee)}
                         aria-label={`Effacer la saisie du jour pour ${employee.fullName}`}
                         title="Effacer la saisie (retour à « Non renseigné »)"
-                        className="p-2 border border-zinc-200 rounded-lg text-zinc-500 hover:text-red-700 hover:bg-red-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-600"
+                        className="p-2 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950 transition-colors focus:outline-none focus:ring-2 focus:ring-red-600"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                       </button>
@@ -274,7 +274,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
             })}
           </ul>
         )}
-        <p className="px-3 py-2 border-t border-zinc-100 text-[11px] text-zinc-400">
+        <p className="px-3 py-2 border-t border-zinc-100 dark:border-zinc-800 text-[11px] text-zinc-400 dark:text-zinc-500">
           Les employés désactivés ne sont pas pointés. « Non renseigné » signifie qu’aucune saisie n’a été faite — ce n’est pas une absence.
         </p>
       </div>
@@ -288,7 +288,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
         >
           <div className="p-5 space-y-3.5 text-[13px]">
             {editingExisting && (
-              <p className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              <p className="text-[12px] text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-2.5">
                 Saisie existante : <strong>{ATTENDANCE_STATUS_LABELS[editingExisting.status]}</strong>
                 {editingExisting.arrivalTime ? ` à ${editingExisting.arrivalTime}` : ''}
                 {editingExisting.reason ? ` — ${editingExisting.reason}` : ''}. Enregistrer remplacera
@@ -297,7 +297,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
             )}
 
             <div>
-              <label htmlFor="att-edit-status" className="block text-[11.5px] font-bold text-zinc-600 uppercase mb-1">
+              <label htmlFor="att-edit-status" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
                 Statut *
               </label>
               <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Choisir le statut de présence">
@@ -307,10 +307,10 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                     type="button"
                     onClick={() => setEditStatus(s)}
                     aria-pressed={editStatus === s}
-                    className={`py-2 rounded-lg border text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
+                    className={`py-2 rounded-lg border text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
                       editStatus === s
-                        ? 'bg-[#09090b] text-white border-[#09090b]'
-                        : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50 bg-white'
+                        ? 'bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 border-[#09090b] dark:border-zinc-100'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 bg-white dark:bg-zinc-900'
                     }`}
                   >
                     {ATTENDANCE_STATUS_LABELS[s]}
@@ -321,7 +321,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
 
             {(editStatus === 'present' || editStatus === 'late') && (
               <div>
-                <label htmlFor="att-edit-arrival" className="block text-[11.5px] font-bold text-zinc-600 uppercase mb-1">
+                <label htmlFor="att-edit-arrival" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
                   Heure d’arrivée (optionnelle)
                 </label>
                 <input
@@ -336,7 +336,7 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
 
             {(editStatus === 'absent' || editStatus === 'leave') && (
               <div>
-                <label htmlFor="att-edit-reason" className="block text-[11.5px] font-bold text-zinc-600 uppercase mb-1">
+                <label htmlFor="att-edit-reason" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
                   Motif (optionnel)
                 </label>
                 <input
@@ -354,14 +354,14 @@ export const AttendanceSection: React.FC<AttendanceSectionProps> = ({
               <button
                 type="button"
                 onClick={() => setEditing(null)}
-                className="flex-1 border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                className="flex-1 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               >
                 Annuler
               </button>
               <button
                 type="button"
                 onClick={saveEdit}
-                className="flex-1 bg-[#09090b] hover:bg-zinc-800 text-white font-bold rounded-lg py-2.5 shadow transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                className="flex-1 bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold rounded-lg py-2.5 shadow transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               >
                 {isCorrection ? 'Confirmer la correction' : 'Enregistrer'}
               </button>

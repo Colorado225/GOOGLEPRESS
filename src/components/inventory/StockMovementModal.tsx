@@ -92,8 +92,8 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
   };
 
   const inputClass =
-    'w-full border border-zinc-300 rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900';
-  const labelClass = 'block text-[11.5px] font-bold text-zinc-600 uppercase mb-1';
+    'w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100';
+  const labelClass = 'block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1';
 
   return (
     <ModalShell
@@ -106,7 +106,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
     >
       <form onSubmit={handleSubmit} noValidate className="p-5 space-y-3.5 text-[13px]">
         {formError && (
-          <p role="alert" className="text-[12.5px] text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5">
+          <p role="alert" className="text-[12.5px] text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-2.5">
             {formError}
           </p>
         )}
@@ -126,7 +126,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
               </option>
             ))}
           </select>
-          <p className="text-[11px] text-zinc-400 mt-1">Seuls les produits actifs peuvent recevoir un mouvement.</p>
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">Seuls les produits actifs peuvent recevoir un mouvement.</p>
         </div>
 
         <fieldset>
@@ -138,10 +138,10 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
                 type="button"
                 onClick={() => setType(t)}
                 aria-pressed={type === t}
-                className={`py-2 rounded-lg border text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 ${
+                className={`py-2 rounded-lg border text-[12.5px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
                   type === t
-                    ? 'bg-[#09090b] text-white border-[#09090b]'
-                    : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50 bg-white'
+                    ? 'bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 border-[#09090b] dark:border-zinc-100'
+                    : 'border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 bg-white dark:bg-zinc-900'
                 }`}
               >
                 {MOVEMENT_TYPE_LABELS[t]}
@@ -165,7 +165,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
                 placeholder="Ex : 3 ou 2,5"
                 className={`${inputClass} tabular-nums pr-12`}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400 font-bold">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400 dark:text-zinc-500 font-bold">
                 {product?.unit ?? ''}
               </span>
             </div>
@@ -185,29 +185,29 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
 
         {/* Aperçu avant validation */}
         {product && (
-          <div aria-live="polite" className="bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-[12.5px] space-y-1">
-            <p className="font-bold text-zinc-900 text-[12px] uppercase tracking-wide">Aperçu du mouvement</p>
+          <div aria-live="polite" className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 text-[12.5px] space-y-1">
+            <p className="font-bold text-zinc-900 dark:text-zinc-100 text-[12px] uppercase tracking-wide">Aperçu du mouvement</p>
             <div className="flex justify-between tabular-nums">
-              <span className="text-zinc-500">Stock avant</span>
+              <span className="text-zinc-500 dark:text-zinc-400">Stock avant</span>
               <span className="font-semibold">{formatQuantity(product.currentQuantity, product.unit)}</span>
             </div>
             <div className="flex justify-between tabular-nums">
-              <span className="text-zinc-500">Variation</span>
-              <span className={`font-semibold ${variation !== null && variation < 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
+              <span className="text-zinc-500 dark:text-zinc-400">Variation</span>
+              <span className={`font-semibold ${variation !== null && variation < 0 ? 'text-orange-700 dark:text-orange-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
                 {variation === null
                   ? '—'
                   : `${variation > 0 ? '+' : ''}${formatQuantity(variation, product.unit)}`}
               </span>
             </div>
-            <div className="flex justify-between tabular-nums border-t border-zinc-200 pt-1">
-              <span className="text-zinc-500">Stock après</span>
-              <span className="font-black text-zinc-950">
+            <div className="flex justify-between tabular-nums border-t border-zinc-200 dark:border-zinc-700 pt-1">
+              <span className="text-zinc-500 dark:text-zinc-400">Stock après</span>
+              <span className="font-black text-zinc-950 dark:text-zinc-50">
                 {preview && !preview.error
                   ? `${formatQuantity(preview.quantityAfter, product.unit)} (${STOCK_STATUS_LABELS[getStockStatus(preview.quantityAfter, product.alertThreshold)]})`
                   : '—'}
               </span>
             </div>
-            {preview?.error && <p role="alert" className="text-red-700 font-medium pt-1">{preview.error}</p>}
+            {preview?.error && <p role="alert" className="text-red-700 dark:text-red-300 font-medium pt-1">{preview.error}</p>}
           </div>
         )}
 
@@ -228,7 +228,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
             ))}
           </datalist>
           {type === 'adjustment' && (
-            <p className="text-[11px] text-amber-700 mt-1">Un ajustement exige un motif explicite (inventaire, casse…).</p>
+            <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1">Un ajustement exige un motif explicite (inventaire, casse…).</p>
           )}
         </div>
 
@@ -244,7 +244,7 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
               placeholder={product?.unitCostXof !== undefined ? `Actuel : ${formatFCFA(product.unitCostXof)}` : 'Vide = inchangé / inconnu'}
               className={`${inputClass} tabular-nums`}
             />
-            <p className="text-[11px] text-zinc-400 mt-1">Si renseigné, devient le dernier coût d’achat du produit.</p>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">Si renseigné, devient le dernier coût d’achat du produit.</p>
           </div>
         )}
 
@@ -264,14 +264,14 @@ export const StockMovementModal: React.FC<StockMovementModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="flex-1 border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold rounded-lg py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={isSubmitting || activeProducts.length === 0}
-            className="flex-1 bg-[#09090b] hover:bg-zinc-800 disabled:opacity-60 text-white font-bold rounded-lg py-2.5 shadow transition-colors flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="flex-1 bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-60 text-white dark:text-zinc-950 font-bold rounded-lg py-2.5 shadow transition-colors flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSubmitting ? 'Enregistrement…' : 'Valider le mouvement'}</span>

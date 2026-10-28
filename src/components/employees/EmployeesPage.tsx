@@ -118,7 +118,7 @@ export const EmployeesPage: React.FC = () => {
   };
 
   const inputClass =
-    'border border-zinc-200 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white focus:outline-none focus:ring-1 focus:ring-zinc-900';
+    'border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 text-[12.5px] bg-white dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100';
 
   const renderActions = (employee: Employee) => (
     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -127,7 +127,7 @@ export const EmployeesPage: React.FC = () => {
         onClick={() => setDetailEmployeeId(employee.id)}
         aria-label={`Consulter la fiche de ${employee.fullName}`}
         title="Consulter"
-        className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
       >
         <Eye className="w-4 h-4" />
       </button>
@@ -136,7 +136,7 @@ export const EmployeesPage: React.FC = () => {
         onClick={() => openEdit(employee)}
         aria-label={`Modifier ${employee.fullName}`}
         title="Modifier"
-        className="p-2 text-zinc-500 hover:text-black hover:bg-zinc-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900"
+        className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
       >
         <Pencil className="w-4 h-4" />
       </button>
@@ -147,8 +147,8 @@ export const EmployeesPage: React.FC = () => {
         title={employee.status === 'inactive' ? 'Réactiver' : 'Désactiver'}
         className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 ${
           employee.status === 'inactive'
-            ? 'text-emerald-600 hover:bg-emerald-50 focus:ring-emerald-600'
-            : 'text-red-500 hover:bg-red-50 focus:ring-red-600'
+            ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950 focus:ring-emerald-600'
+            : 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 focus:ring-red-600'
         }`}
       >
         {employee.status === 'inactive' ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
@@ -166,7 +166,7 @@ export const EmployeesPage: React.FC = () => {
           <button
             type="button"
             onClick={openCreate}
-            className="bg-[#09090b] text-white rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Ajouter un employé</span>
@@ -227,11 +227,11 @@ export const EmployeesPage: React.FC = () => {
           onOpenEmployee={(e) => setDetailEmployeeId(e.id)}
         />
       ) : (
-        <div className="bg-white border border-zinc-200/90 rounded-xl overflow-hidden shadow-2xs">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl overflow-hidden shadow-2xs">
           {/* Recherche et filtres */}
-          <div className="p-3 border-b border-zinc-200 flex flex-wrap items-center gap-2">
+          <div className="p-3 border-b border-zinc-200 dark:border-zinc-700 flex flex-wrap items-center gap-2">
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
               <label htmlFor="emp-search" className="sr-only">Rechercher un employé</label>
               <input
                 id="emp-search"
@@ -239,7 +239,7 @@ export const EmployeesPage: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Rechercher nom, poste, téléphone…"
-                className="border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-72 max-w-full focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                className="border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-72 max-w-full focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               />
             </div>
 
@@ -278,7 +278,7 @@ export const EmployeesPage: React.FC = () => {
             </select>
 
             {hasActiveFilters && <ResetFiltersButton onClick={resetFilters} />}
-            <span className="text-[12px] text-zinc-500 font-medium ml-auto tabular-nums">
+            <span className="text-[12px] text-zinc-500 dark:text-zinc-400 font-medium ml-auto tabular-nums">
               {filteredEmployees.length} employé(s)
             </span>
           </div>
@@ -291,7 +291,7 @@ export const EmployeesPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={openCreate}
-                  className="bg-[#09090b] text-white rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 transition-colors shadow focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                  className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-lg px-4 py-2 text-[13px] font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors shadow focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 >
                   Ajouter un employé
                 </button>
@@ -328,23 +328,23 @@ export const EmployeesPage: React.FC = () => {
                         <TableRow
                           key={employee.id}
                           onClick={() => setDetailEmployeeId(employee.id)}
-                          className="hover:bg-zinc-50/70 cursor-pointer transition-colors"
+                          className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/70 cursor-pointer transition-colors"
                         >
                           <TableCell className="px-4">
                             <span className="flex items-center gap-2.5 min-w-0">
                               <Avatar size="sm" aria-hidden="true"><AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback></Avatar>
-                              <span className="font-bold text-zinc-900 truncate">{employee.fullName}</span>
+                              <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate">{employee.fullName}</span>
                             </span>
                           </TableCell>
-                          <TableCell className="text-zinc-600">{employee.position}</TableCell>
-                          <TableCell className="text-zinc-600 tabular-nums">{employee.phone ?? 'Non renseigné'}</TableCell>
+                          <TableCell className="text-zinc-600 dark:text-zinc-400">{employee.position}</TableCell>
+                          <TableCell className="text-zinc-600 dark:text-zinc-400 tabular-nums">{employee.phone ?? 'Non renseigné'}</TableCell>
                           <TableCell>
                             <Badge size="sm" className={EMPLOYEE_STATUS_BADGE[employee.status]}>{EMPLOYEE_STATUS_LABELS[employee.status]}</Badge>
                           </TableCell>
                           <TableCell>
                             <Badge size="sm" className={ATTENDANCE_STATUS_BADGE[presence]}>{ATTENDANCE_STATUS_LABELS[presence]}</Badge>
                           </TableCell>
-                          <TableCell className="text-zinc-600 tabular-nums">
+                          <TableCell className="text-zinc-600 dark:text-zinc-400 tabular-nums">
                             {activity.assigned === 0
                               ? 'Aucune commande connue'
                               : `${activity.assigned} affectée(s) · ${activity.finished} terminée(s)`}
@@ -367,24 +367,24 @@ export const EmployeesPage: React.FC = () => {
                     <div
                       key={employee.id}
                       onClick={() => setDetailEmployeeId(employee.id)}
-                      className="border border-zinc-200 rounded-xl p-3.5 bg-zinc-50/40"
+                      className="border border-zinc-200 dark:border-zinc-700 rounded-xl p-3.5 bg-zinc-50/40 dark:bg-zinc-800/40"
                     >
                       <div className="flex items-center gap-2.5">
                         <Avatar aria-hidden="true"><AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback></Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-[14px] text-zinc-900 truncate">{employee.fullName}</p>
-                          <p className="text-[12px] text-zinc-500">{employee.position}</p>
+                          <p className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100 truncate">{employee.fullName}</p>
+                          <p className="text-[12px] text-zinc-500 dark:text-zinc-400">{employee.position}</p>
                         </div>
                         {renderActions(employee)}
                       </div>
-                      <p className="flex items-center gap-1.5 text-[12px] text-zinc-600 mt-2">
-                        <Phone className="w-3 h-3 text-zinc-400" />
+                      <p className="flex items-center gap-1.5 text-[12px] text-zinc-600 dark:text-zinc-400 mt-2">
+                        <Phone className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
                         <span className="tabular-nums">{employee.phone ?? 'Non renseigné'}</span>
                       </p>
                       <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                         <Badge size="sm" className={EMPLOYEE_STATUS_BADGE[employee.status]}>{EMPLOYEE_STATUS_LABELS[employee.status]}</Badge>
                         <Badge size="sm" className={ATTENDANCE_STATUS_BADGE[presence]}>Auj. : {ATTENDANCE_STATUS_LABELS[presence]}</Badge>
-                        <span className="text-[11.5px] text-zinc-500 tabular-nums ml-auto">
+                        <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400 tabular-nums ml-auto">
                           {activity.assigned === 0 ? 'Aucune activité connue' : `${activity.assigned} cmd · ${activity.finished} terminée(s)`}
                         </span>
                       </div>

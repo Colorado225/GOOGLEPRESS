@@ -101,7 +101,7 @@ export const FinancialReport: React.FC<{ range: DateRange }> = ({ range }) => {
 
   return (
     <div className="space-y-3">
-      <p className="flex items-start gap-2 text-[11.5px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+      <p className="flex items-start gap-2 text-[11.5px] text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <span>
           <strong>Définitions :</strong> les ventes sont rattachées à la <strong>date de commande</strong> ;
@@ -135,20 +135,20 @@ export const FinancialReport: React.FC<{ range: DateRange }> = ({ range }) => {
 
         <ReportCard title="Caisse du jour et montants marqués payés" subtitle="Sans historique daté des règlements">
           <div className="space-y-2 text-[12.5px]">
-            <p className="text-zinc-600">
+            <p className="text-zinc-600 dark:text-zinc-400">
               Instantané caisse du <strong>{cashRegister.date}</strong> :{' '}
               <strong className="tabular-nums">{formatFCFA(cashRegister.totalAmount)}</strong>
             </p>
             <ul className="space-y-1 tabular-nums">
-              <li className="flex justify-between"><span className="text-zinc-500">Espèces</span><span className="font-semibold">{formatFCFA(cashRegister.cashAmount)}</span></li>
-              <li className="flex justify-between"><span className="text-zinc-500">Wave</span><span className="font-semibold">{formatFCFA(cashRegister.waveAmount)}</span></li>
-              <li className="flex justify-between"><span className="text-zinc-500">MTN / Orange</span><span className="font-semibold">{formatFCFA(cashRegister.momoAmount)}</span></li>
+              <li className="flex justify-between"><span className="text-zinc-500 dark:text-zinc-400">Espèces</span><span className="font-semibold">{formatFCFA(cashRegister.cashAmount)}</span></li>
+              <li className="flex justify-between"><span className="text-zinc-500 dark:text-zinc-400">Wave</span><span className="font-semibold">{formatFCFA(cashRegister.waveAmount)}</span></li>
+              <li className="flex justify-between"><span className="text-zinc-500 dark:text-zinc-400">MTN / Orange</span><span className="font-semibold">{formatFCFA(cashRegister.momoAmount)}</span></li>
             </ul>
-            <p className="border-t border-zinc-100 pt-2 text-zinc-600">
+            <p className="border-t border-zinc-100 dark:border-zinc-800 pt-2 text-zinc-600 dark:text-zinc-400">
               Montants marqués payés sur les commandes de la période :{' '}
-              <strong className="tabular-nums text-zinc-900">{formatFCFA(markedPaidTotal)}</strong>
+              <strong className="tabular-nums text-zinc-900 dark:text-zinc-100">{formatFCFA(markedPaidTotal)}</strong>
             </p>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
               La date de chaque règlement n’est pas suivie : ce montant est rattaché aux commandes,
               il ne mesure pas des encaissements quotidiens.
             </p>
@@ -165,20 +165,20 @@ export const FinancialReport: React.FC<{ range: DateRange }> = ({ range }) => {
         </ReportCard>
       </div>
 
-      <div className="bg-white border border-zinc-200/90 rounded-xl shadow-2xs overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl shadow-2xs overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 px-4 pt-3.5 pb-2">
-          <h3 className="font-bold text-[14px] text-zinc-900">Soldes dus des commandes de la période ({dueOrders.length})</h3>
+          <h3 className="font-bold text-[14px] text-zinc-900 dark:text-zinc-100">Soldes dus des commandes de la période ({dueOrders.length})</h3>
           <button
             type="button"
             onClick={exportCsv}
             disabled={periodOrders.length === 0}
-            className="ml-auto inline-flex items-center gap-1.5 border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-50 text-zinc-800 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors print:hidden focus:outline-none focus:ring-2 focus:ring-zinc-900"
+            className="ml-auto inline-flex items-center gap-1.5 border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 text-zinc-800 dark:text-zinc-200 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition-colors print:hidden focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <Download className="w-3.5 h-3.5" /> Export CSV (commandes)
           </button>
         </div>
         {dueOrders.length === 0 ? (
-          <p className="px-4 pb-4 text-[12.5px] text-zinc-500">Aucun solde dû : toutes les commandes de la période sont soldées.</p>
+          <p className="px-4 pb-4 text-[12.5px] text-zinc-500 dark:text-zinc-400">Aucun solde dû : toutes les commandes de la période sont soldées.</p>
         ) : (
           <Frame className="m-3 mt-1">
             <FramePanel className="p-0">
@@ -196,17 +196,17 @@ export const FinancialReport: React.FC<{ range: DateRange }> = ({ range }) => {
               </TableHeader>
               <TableBody>
                 {dueOrders.map((o) => (
-                  <TableRow key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 cursor-pointer transition-colors">
-                    <TableCell className="px-4 font-bold text-zinc-900">{o.ticketNumber}</TableCell>
-                    <TableCell className="text-zinc-700">{o.customerName}</TableCell>
-                    <TableCell className="tabular-nums text-zinc-600">{o.customerPhone}</TableCell>
-                    <TableCell className="text-zinc-600">{ORDER_STATUS_LABELS[o.status]}</TableCell>
+                  <TableRow key={o.id} onClick={() => setPreviewTicket(o)} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/70 cursor-pointer transition-colors">
+                    <TableCell className="px-4 font-bold text-zinc-900 dark:text-zinc-100">{o.ticketNumber}</TableCell>
+                    <TableCell className="text-zinc-700 dark:text-zinc-300">{o.customerName}</TableCell>
+                    <TableCell className="tabular-nums text-zinc-600 dark:text-zinc-400">{o.customerPhone}</TableCell>
+                    <TableCell className="text-zinc-600 dark:text-zinc-400">{ORDER_STATUS_LABELS[o.status]}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatFCFA(o.total)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-zinc-600">{formatFCFA(o.depositPaid)}</TableCell>
-                    <TableCell className="text-right font-bold tabular-nums text-amber-700">{formatFCFA(o.remainingBalance)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">{formatFCFA(o.depositPaid)}</TableCell>
+                    <TableCell className="text-right font-bold tabular-nums text-amber-700 dark:text-amber-300">{formatFCFA(o.remainingBalance)}</TableCell>
                   </TableRow>
                 ))}
-                <TableRow className="border-t border-zinc-200 font-bold">
+                <TableRow className="border-t border-zinc-200 dark:border-zinc-700 font-bold">
                   <TableCell className="px-4" colSpan={6}>Total des soldes dus</TableCell>
                   <TableCell className="text-right tabular-nums">{formatFCFA(dueTotal)}</TableCell>
                 </TableRow>
