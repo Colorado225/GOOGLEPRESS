@@ -4,12 +4,13 @@ import { getAlertProducts, getStockStatus } from '../../lib/inventory';
 import { getPeriodRange, isISOInRange } from '../../lib/periods';
 import { todayISO } from '../../lib/dates';
 import { formatFCFA } from '../../data/demoData';
+import { getPressingAlerts, getReadyOrdersToMarkNotified, type PressingAlert } from '../../lib/alerts';
 import { Tabs } from '../common/Tabs';
 import { Zap, Bell, Activity } from 'lucide-react';
 
 export const QuickActionsAndAlerts: React.FC = () => {
   const {
-    setActiveScreen, setClosingZModalOpen, notifyAllSms, setPreviewTicket, orders,
+    setActiveScreen, setClosingZModalOpen, markReadyOrdersAsNotifiedLocally, setPreviewTicket, orders,
     products, attendanceRecords, employees, expenses,
   } = useApp();
 
@@ -26,14 +27,20 @@ export const QuickActionsAndAlerts: React.FC = () => {
   const monthExpensesTotal = expenses
     .filter((e) => e.status === 'recorded' && isISOInRange(e.date, monthRange))
     .reduce((sum, e) => sum + e.amountXof, 0);
+  const alerts = getPressingAlerts(orders, products);
+  const readyToNotifyCount = getReadyOrdersToMarkNotified(orders).length;
 
   const [panel, setPanel] = useState<'actions' | 'alertes' | 'signaux'>('actions');
 
-  const handleTicketClick = (ticketNum: string) => {
-    const found = orders.find((o) => o.ticketNumber === ticketNum);
-    if (found) {
-      setPreviewTicket(found);
+  const handleAlertClick = (alert: PressingAlert) => {
+    if (alert.orderId) {
+      const found = orders.find((o) => o.id === alert.orderId);
+      if (found) {
+        setPreviewTicket(found);
+        return;
+      }
     }
+    setActiveScreen(alert.screen);
   };
 
   return (
@@ -47,7 +54,12 @@ export const QuickActionsAndAlerts: React.FC = () => {
         onChange={setPanel}
         tabs={[
           { id: 'actions', label: 'Actions', icon: <Zap className="w-3.5 h-3.5" aria-hidden="true" /> },
-          { id: 'alertes', label: 'Alertes', icon: <Bell className="w-3.5 h-3.5" aria-hidden="true" /> },
+          {
+            id: 'alertes',
+            label: 'Alertes',
+            icon: <Bell className="w-3.5 h-3.5" aria-hidden="true" />,
+            badge: alerts.length > 0 ? alerts.length : undefined,
+          },
           {
             id: 'signaux',
             label: 'Signaux',
@@ -72,10 +84,13 @@ export const QuickActionsAndAlerts: React.FC = () => {
             <span>💰</span> <span>Encaisser</span>
           </button>
           <button
-            onClick={notifyAllSms}
-            className="border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg py-2.5 px-2 transition-all flex items-center justify-center gap-1.5 shadow-2xs"
+            type="button"
+            onClick={markReadyOrdersAsNotifiedLocally}
+            disabled={readyToNotifyCount === 0}
+            title="Marque les commandes prêtes comme notifiées dans l’application. Aucun SMS externe n’est envoyé."
+            className="border border-zinc-200 dark:border-zinc-700 hover:border-zinc-400 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg py-2.5 px-2 transition-all flex items-center justify-center gap-1.5 shadow-2xs disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span>📲</span> <span>Relance SMS</span>
+            <span>✓</span> <span>Marquer prêtes ({readyToNotifyCount})</span>
           </button>
           <button
             onClick={() => setClosingZModalOpen(true)}
@@ -88,47 +103,39 @@ export const QuickActionsAndAlerts: React.FC = () => {
 
       {panel === 'alertes' && (
         <div className="space-y-2 text-[12.5px]">
-          {/* Item 1 */}
-          <div
-            onClick={() => handleTicketClick('#TK-2841')}
-            className="flex justify-between items-center border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 rounded-lg px-2.5 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <div>
-              <p className="font-bold text-zinc-900 dark:text-zinc-100">#TK-2841 • Yao Kouassi</p>
-              <p className="text-zinc-500 dark:text-zinc-400 text-[11.5px]">2 costumes • promis hier 17h</p>
+          {alerts.length === 0 ? (
+            <div className="border border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/40 rounded-lg px-2.5 py-2">
+              <p className="font-bold text-emerald-900 dark:text-emerald-100">Aucune alerte active</p>
+              <p className="text-emerald-700 dark:text-emerald-300 text-[11.5px]">
+                Retards, stock et notifications locales sont à jour.
+              </p>
             </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white">
-              J+1
-            </span>
-          </div>
-
-          {/* Item 2 */}
-          <div
-            onClick={() => handleTicketClick('#TK-2836')}
-            className="flex justify-between items-center border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 rounded-lg px-2.5 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <div>
-              <p className="font-bold text-zinc-900 dark:text-zinc-100">#TK-2836 • Aïcha Koné</p>
-              <p className="text-zinc-500 dark:text-zinc-400 text-[11.5px]">Boubou bazin • 4 500 FCFA</p>
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
-              Jour J
-            </span>
-          </div>
-
-          {/* Item 3 */}
-          <div
-            onClick={() => handleTicketClick('#TK-2831')}
-            className="flex justify-between items-center border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 rounded-lg px-2.5 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-          >
-            <div>
-              <p className="font-bold text-zinc-900 dark:text-zinc-100">#TK-2831 • Marc Yao</p>
-              <p className="text-zinc-500 dark:text-zinc-400 text-[11.5px]">Hôtel — 35 draps / housses</p>
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
-              Jour J
-            </span>
-          </div>
+          ) : (
+            alerts.map((alert) => (
+              <button
+                key={alert.id}
+                type="button"
+                onClick={() => handleAlertClick(alert)}
+                className="w-full flex justify-between items-center gap-2 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 rounded-lg px-2.5 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              >
+                <span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100 block">{alert.title}</span>
+                  <span className="text-zinc-500 dark:text-zinc-400 text-[11.5px] block">{alert.detail}</span>
+                </span>
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                    alert.severity === 'critical'
+                      ? 'bg-red-600 text-white'
+                      : alert.severity === 'warning'
+                        ? 'bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200'
+                        : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                  }`}
+                >
+                  {alert.severity === 'critical' ? 'Critique' : alert.severity === 'warning' ? 'À suivre' : 'Info'}
+                </span>
+              </button>
+            ))
+          )}
         </div>
       )}
 

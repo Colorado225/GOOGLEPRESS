@@ -58,6 +58,9 @@ npm run dev        # serveur de développement → http://localhost:3000
 npm run build      # build de production dans dist/
 npm run preview    # prévisualiser le build de production
 npm run lint       # vérification TypeScript (tsc --noEmit)
+npm run test:unit  # tests unitaires des cœurs métier (Vitest)
+npm run test:phase0 # tests d’isolation Supabase Phase 0 (PGlite)
+npm run test:e2e   # smoke tests navigateur (Playwright)
 ```
 
 Aucune variable d'environnement n'est requise (voir `.env.example`).
@@ -128,6 +131,12 @@ sont chargées (dates relatives, voir `src/data/demoData.ts`). Sur un
 navigateur contenant déjà des commandes, seuls deux exemples de ramassage
 non convertis sont ajoutés au premier affichage des Tournées ; aucun total
 de commande existante n'est modifié.
+
+**Sauvegarde avant migration ou changement d’appareil** : Paramètres →
+Sauvegarde permet d’exporter ces données dans un JSON chiffré AES-GCM protégé
+par une phrase secrète, puis d’analyser et restaurer ce fichier dans un autre
+navigateur. L’export reste manuel : conservez le fichier hors de l’appareil et
+ne perdez pas la phrase secrète, irrécupérable.
 
 > **Réinitialiser la démo** : vider les clés `pressingpro_*` du
 > localStorage (console du navigateur :

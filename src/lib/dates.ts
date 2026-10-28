@@ -46,6 +46,29 @@ export function nowDateTime(): string {
   return formatDateTime(new Date());
 }
 
+/**
+ * Parse un horodatage stocké ("27/10/2026 10:15") ou ISO.
+ * Retourne null si la valeur est absente ou illisible, au lieu d'inventer une date.
+ */
+export function parseStoredDateTime(value: string | undefined | null): Date | null {
+  if (!value) return null;
+  const fr = value.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (fr) {
+    const d = new Date(
+      Number(fr[3]),
+      Number(fr[2]) - 1,
+      Number(fr[1]),
+      Number(fr[4] ?? 12),
+      Number(fr[5] ?? 0),
+      0,
+      0
+    );
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const iso = new Date(value);
+  return isNaN(iso.getTime()) ? null : iso;
+}
+
 /** "27 oct. 2026" */
 export function formatShortDate(date: Date): string {
   return new Intl.DateTimeFormat('fr-FR', {

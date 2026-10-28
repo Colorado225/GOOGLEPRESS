@@ -66,7 +66,7 @@ export type WorkshopTab = 'production' | 'storage' | 'logistics' | 'handover' | 
 export type StoragePanelView = 'orders' | 'locations';
 
 /** Onglets de l’écran Paramètres. */
-export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices' | 'backend';
+export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices' | 'backend' | 'backup';
 
 /** Chargement localStorage avec repli sur les données initiales (même convention que commandes/clients/caisse). */
 function loadPersistedState<T>(key: string, fallback: T): T {
@@ -190,7 +190,7 @@ interface AppContextType {
   requestSettingsTab: (tab: SettingsTab) => void;
   clearSettingsTabRequest: () => void;
   addNewCustomer: (cust: Omit<Customer, 'id' | 'depositsCount' | 'balance'>) => Customer;
-  notifyAllSms: () => void;
+  markReadyOrdersAsNotifiedLocally: () => void;
   selectedServiceCategory: ServiceCategory | null;
   setSelectedServiceCategory: (cat: ServiceCategory | null) => void;
   orderStep: 1 | 2 | 3;
@@ -804,7 +804,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       receivedAt: nowDateTime(),
       promisedAt: promised,
       notes: orderNotes,
-      smsSent: true,
+      smsSent: false,
       origin: sourcePickupTask ? 'home_pickup' : 'counter',
       fulfillmentMethod: orderFulfillmentMethod,
       collectionTaskId: sourcePickupTask?.id,
@@ -937,6 +937,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...ord,
             status: newStatus,
             readyAt: newStatus === 'ready' ? now : leavingReady ? undefined : ord.readyAt,
+            // Entrée en « Prêt » : la commande n'est pas encore marquée comme
+            // notifiée localement (le champ historique ne prouve aucun SMS).
+            smsSent: newStatus === 'ready' && ord.status !== 'ready' ? false : ord.smsSent,
             deliveredAt: ord.deliveredAt,
             // Une commande qui repart en production n'occupe plus le rayon des
             // prêts ; une nouvelle arrivée en « Prêt » repart non rangée.
@@ -1220,6 +1223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ...item,
               status: 'ready',
               readyAt: now,
+              smsSent: false,
               ...(location
                 ? {
                     rackLocation: formatStorageLocation(location),
@@ -1748,15 +1752,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newCust;
   };
 
-  const notifyAllSms = () => {
-    const readyCount = orders.filter((o) => o.status === 'ready').length;
-    setOrders((prev) =>
-      prev.map((o) => (o.status === 'ready' ? { ...o, smsSent: true } : o))
-    );
+  const markReadyOrdersAsNotifiedLocally = () => {
+    const readyOrders = orders.filter((o) => o.status === 'ready');
+    const toMarkCount = readyOrders.filter((o) => !o.smsSent).length;
+
+    if (toMarkCount > 0) {
+      setOrders((prev) =>
+        prev.map((o) => (o.status === 'ready' && !o.smsSent ? { ...o, smsSent: true } : o))
+      );
+      showToast(
+        `✓ ${toMarkCount} commande(s) prête(s) marquée(s) comme notifiée(s) dans l’application — aucun SMS externe envoyé.`
+      );
+      return;
+    }
+
     showToast(
-      readyCount > 0
-        ? `📲 ${readyCount} SMS de notification envoyés aux clients de commandes prêtes !`
-        : 'Aucune commande prête à notifier pour le moment.'
+      readyOrders.length > 0
+        ? 'Toutes les commandes prêtes sont déjà marquées comme notifiées dans l’application.'
+        : 'Aucune commande prête à marquer pour le moment.'
     );
   };
 
@@ -2230,7 +2243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         requestSettingsTab,
         clearSettingsTabRequest,
         addNewCustomer,
-        notifyAllSms,
+        markReadyOrdersAsNotifiedLocally,
         selectedServiceCategory,
         setSelectedServiceCategory,
         orderStep,

@@ -620,7 +620,8 @@ succès.
 
 1. Créer l’organisation et l’agence du pressing pilote dans l’environnement
    validé.
-2. Ajouter au front un export JSON des 13 clés métier actuelles.
+2. Utiliser l’export JSON chiffré du front (Paramètres → Sauvegarde) pour
+   extraire les clés métier actuelles et vérifier son résumé avant import.
 3. Importer avec des scripts serveur contrôlés en conservant les
    identifiants utiles et les instantanés de commandes.
 4. Initialiser le compteur de tickets à `max(ticket) + 1` pour l’agence.

@@ -30,6 +30,7 @@ import { AppTheme } from '../../lib/theme';
 import { Badge } from '../common/DataTable';
 import { canPromptInstall, isRunningStandalone, promptInstall, PWA_INSTALLABLE_EVENT } from '../../lib/pwa';
 import { SupabaseBackendSection } from './SupabaseBackendSection';
+import { BackupSection } from './BackupSection';
 
 /**
  * Carte « Apparence » : thème clair/sombre de l'interface. Le choix est appliqué
@@ -308,7 +309,7 @@ export const SettingsPage: React.FC = () => {
               Paramètres du pressing
             </h1>
             <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
-              Établissement, rangement atelier, périphériques et backend Supabase
+              Établissement, rangement atelier, périphériques, backend Supabase et sauvegarde
             </p>
           </div>
         </div>
@@ -331,6 +332,7 @@ export const SettingsPage: React.FC = () => {
             },
             { id: 'devices', label: 'Périphériques & passerelles', icon: <Sliders className="w-4 h-4" aria-hidden="true" /> },
             { id: 'backend', label: 'Backend Supabase', icon: <Database className="w-4 h-4" aria-hidden="true" /> },
+            { id: 'backup', label: 'Sauvegarde', icon: <Download className="w-4 h-4" aria-hidden="true" /> },
           ]}
         />
 
@@ -710,8 +712,8 @@ export const SettingsPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Smartphone className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
                 <div>
-                  <p className="font-bold text-zinc-900 dark:text-zinc-100">Passerelle SMS & WhatsApp (Côte d'Ivoire)</p>
-                  <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">Envoi du ticket de dépôt et notification dès que prêt</p>
+                  <p className="font-bold text-zinc-900 dark:text-zinc-100">Notifications externes (non connectées)</p>
+                  <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">Aucun SMS/WhatsApp n’est envoyé pour le moment ; les notifications sont marquées localement.</p>
                 </div>
               </div>
               <input
@@ -727,7 +729,9 @@ export const SettingsPage: React.FC = () => {
 
         {tab === 'backend' && <SupabaseBackendSection />}
 
-        {tab !== 'backend' && (
+        {tab === 'backup' && <BackupSection />}
+
+        {tab !== 'backend' && tab !== 'backup' && (
           <>
             <button
               type="submit"

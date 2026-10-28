@@ -72,7 +72,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
 
         {isLate ? (
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white whitespace-nowrap">
-            {order.ticketNumber === '#TK-2841' ? 'J+1 ⚠' : 'Retard'}
+            Retard
           </span>
         ) : order.isUrgent ? (
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white whitespace-nowrap">
@@ -83,9 +83,18 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
             {order.machineAssigned}
           </span>
         ) : isReady ? (
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 whitespace-nowrap flex items-center gap-0.5">
-            <Smartphone className="w-2.5 h-2.5" /> SMS ✓
-          </span>
+          order.smsSent ? (
+            <span
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 whitespace-nowrap flex items-center gap-0.5"
+              title="Notification marquée dans l’application — aucun SMS externe confirmé"
+            >
+              <Smartphone className="w-2.5 h-2.5" aria-hidden="true" /> Notif. locale ✓
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 whitespace-nowrap flex items-center gap-0.5">
+              <Smartphone className="w-2.5 h-2.5" aria-hidden="true" /> À notifier
+            </span>
+          )
         ) : null}
       </div>
 

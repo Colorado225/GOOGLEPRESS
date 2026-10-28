@@ -17,7 +17,8 @@ import {
   hasStructuredStorage,
 } from '../../lib/storage';
 import { normalizeText } from '../../lib/utils';
-import { Search, Settings, Smartphone, ArrowLeft, WashingMachine, PackageCheck, Wallet, Truck, Archive } from 'lucide-react';
+import { getReadyOrdersToMarkNotified } from '../../lib/alerts';
+import { Search, Smartphone, ArrowLeft, WashingMachine, PackageCheck, Wallet, Truck, Archive } from 'lucide-react';
 
 export const WorkshopPage: React.FC = () => {
   const {
@@ -25,7 +26,7 @@ export const WorkshopPage: React.FC = () => {
     moveOrderStatus,
     activeHandoverOrder,
     setActiveHandoverOrder,
-    notifyAllSms,
+    markReadyOrdersAsNotifiedLocally,
     setActiveScreen,
     showToast,
     logisticsTasks,
@@ -37,7 +38,6 @@ export const WorkshopPage: React.FC = () => {
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [machineStatusModal, setMachineStatusModal] = useState(false);
   const [tab, setTab] = useState<WorkshopTab>('production');
   const [storageRequest, setStorageRequest] = useState<{
     order: LaundryOrder;
@@ -79,6 +79,7 @@ export const WorkshopPage: React.FC = () => {
   const washingOrders = filteredOrders.filter((o) => o.status === 'washing');
   const ironingOrders = filteredOrders.filter((o) => o.status === 'ironing');
   const readyOrders = filteredOrders.filter((o) => o.status === 'ready');
+  const readyToNotifyCount = getReadyOrdersToMarkNotified(orders).length;
   const counterReadyOrders = readyOrders.filter((o) => !isHomeDeliveryOrder(o));
   const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
   const readyToStoreCount = orders.filter(
@@ -143,23 +144,13 @@ export const WorkshopPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => {
-              setMachineStatusModal(!machineStatusModal);
-              showToast('État des machines : L1 (12kg) en service • L2 (25kg) maintenance 14h');
-            }}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-700 dark:text-zinc-300 transition-colors shadow-2xs flex items-center gap-1.5"
+            onClick={markReadyOrdersAsNotifiedLocally}
+            disabled={readyToNotifyCount === 0}
+            title="Marque les commandes prêtes comme notifiées dans l’application. Aucun SMS externe n’est envoyé."
+            className="px-4 py-1.5 rounded-lg bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-colors shadow-sm flex items-center gap-1.5 whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Settings className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
-            <span>Machines : L1 ● L2 ◐</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={notifyAllSms}
-            className="px-4 py-1.5 rounded-lg bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-colors shadow-sm flex items-center gap-1.5 whitespace-nowrap"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-            <span>Tout notifier (11 SMS)</span>
+            <Smartphone className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
+            <span>Marquer {readyToNotifyCount} prête(s) comme notifiée(s)</span>
           </button>
         </div>
       </div>
