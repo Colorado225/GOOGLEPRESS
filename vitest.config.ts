@@ -18,6 +18,7 @@ export default defineConfig({
         'src/lib/customerAuth.ts',
         'src/lib/staffAccess.ts',
         'src/lib/staffAuth.ts',
+        'src/lib/routes.ts',
       ],
       thresholds: {
         statements: 70,

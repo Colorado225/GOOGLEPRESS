@@ -58,6 +58,58 @@
     {
       "source": "/bienvenue",
       "destination": "/index.html"
+    },
+    {
+      "source": "/conditions",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/confidentialite",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tableau-de-bord",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/reception",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/atelier",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/commandes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/clients",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/personnel",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/stocks",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/depenses",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/rapports",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/parametres",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
