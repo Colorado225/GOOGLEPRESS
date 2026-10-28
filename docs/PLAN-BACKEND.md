@@ -1,8 +1,15 @@
 # Plan backend multi-tenant, espace client et messagerie — PressingPro CI
 
 > **Statut : document de cadrage mis à jour le 28 octobre 2026.
-> Aucun code backend n’a été écrit, aucune table n’a été créée et aucun
-> paramètre Supabase n’a été modifié.**
+> Aucun code backend n’a été écrit dans ce dépôt, aucune table n’a été créée
+> et aucun paramètre Supabase n’a été modifié dans le cadre de ce plan.**
+>
+> **Phase 0 commencée le 28 octobre 2026 : inventaire en lecture seule
+> terminé.** Pressing_Pro contient les traces d’un backend préexistant
+> désynchronisé (historique et fonctions présents, tables `public` absentes).
+> Voir [`backend/phase-0/01-inventaire-et-porte-de-decision.md`](backend/phase-0/01-inventaire-et-porte-de-decision.md).
+> Aucun schéma ne doit être appliqué avant décision sur le sort de cet
+> existant.
 >
 > **Cible retenue : projet Supabase `Pressing_Pro`, Project ID
 > `phjstsydxvggtduohfrl`, région `eu-west-1` (Irlande).**
@@ -142,14 +149,20 @@ Limites à lever :
 | Projet | `Pressing_Pro` |
 | Project ID | `phjstsydxvggtduohfrl` |
 | Région | `eu-west-1` — Irlande |
-| Rôle dans ce plan | cible backend de production à vérifier en phase 0 |
+| Rôle dans ce plan | cible backend envisagée ; inventaire phase 0 terminé, décision d’usage en attente |
 | Ancien projet `waalxvtncxcpbyozhhhp` | abandonné comme cible ; aucune opération effectuée |
 
-Avant toute écriture en phase 0, il faudra vérifier sur Pressing_Pro :
+L’inventaire en lecture seule du 28 octobre 2026 a confirmé un projet
+`ACTIVE_HEALTHY` sous PostgreSQL 17.11. Il a aussi révélé un existant
+important : 32 migrations et 65 fonctions `public`, trois Edge Functions
+CinetPay et un compte Auth, mais aucune table métier `public` au moment du
+contrôle. Le rapport complet est dans
+[`backend/phase-0/01-inventaire-et-porte-de-decision.md`](backend/phase-0/01-inventaire-et-porte-de-decision.md).
+
+Avant toute écriture, il reste notamment à décider du sort de cet existant et
+à confirmer :
 
 - le propriétaire du projet et l’organisation Supabase ;
-- l’état du projet, son contenu actuel et sa version PostgreSQL ;
-- les extensions disponibles et les paramètres Auth/Realtime/Storage ;
 - la formule souscrite, les quotas et les sauvegardes ;
 - la stratégie d’environnements : production, préproduction et développement
   ne doivent pas être confondus ;
@@ -744,17 +757,20 @@ Contrôles minimums :
 
 ## 18. Prochaine étape
 
-La prochaine étape n’est pas encore du code : relire et valider ce plan,
-trancher les décisions du §17, puis seulement donner un feu vert séparé pour
-la **phase 0** sur Pressing_Pro.
+La phase 0 a commencé par l’inventaire en lecture seule de Pressing_Pro,
+terminé le 28 octobre 2026. Son rapport et sa porte de décision sont dans
+[`backend/phase-0/01-inventaire-et-porte-de-decision.md`](backend/phase-0/01-inventaire-et-porte-de-decision.md).
 
-À la phase 0, les livrables attendus seront :
+La prochaine étape est de décider du sort du backend préexistant découvert
+dans le projet : l’auditer/restaurer dans un environnement isolé, repartir
+proprement, ou réaligner Pressing_Pro après sauvegarde et autorisation
+explicite. Ensuite seulement :
 
-- inventaire vérifié du projet Pressing_Pro ;
-- schéma SQL v1 et politiques RLS proposés, sans données réelles ;
-- matrice des rôles et menaces d’accès croisé ;
-- choix d’environnement de validation ;
-- prototype technique minimal prouvant l’isolation de deux tenants fictifs.
+- choix de l’environnement de validation ;
+- schéma SQL v1 et politiques RLS versionnés dans le dépôt, sans données
+  réelles ;
+- prototype technique minimal prouvant l’isolation de deux tenants fictifs ;
+- validation de fin de phase 0 avant tout branchement de l’application.
 
 ---
 
