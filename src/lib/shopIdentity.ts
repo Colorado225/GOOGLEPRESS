@@ -28,10 +28,10 @@ export const MAX_LOGO_DATA_URL_LENGTH = 350_000;
 type LogoFileMeta = Pick<File, 'name' | 'type' | 'size'>;
 
 /**
- * Valide un fichier de logo avant lecture. Retourne un message en français ou
- * `null` si le fichier est acceptable.
+ * Règles communes à toutes les images téléversées (logo, photo de vêtement).
+ * Le libellé ne sert qu'au message d'erreur.
  */
-export const validateLogoFile = (file: LogoFileMeta): string | null => {
+const validateImageBasics = (file: LogoFileMeta, noun: 'logo' | 'image'): string | null => {
   if (!file || typeof file.size !== 'number') {
     return 'Choisissez un fichier image.';
   }
@@ -39,7 +39,7 @@ export const validateLogoFile = (file: LogoFileMeta): string | null => {
     return 'Ce fichier est vide.';
   }
   if (file.size > MAX_LOGO_FILE_BYTES) {
-    return 'Le logo ne doit pas dépasser 2 Mo.';
+    return `Le ${noun} ne doit pas dépasser 2 Mo.`;
   }
   if (!file.type) {
     return 'Impossible de déterminer le format de cette image.';
@@ -54,16 +54,30 @@ export const validateLogoFile = (file: LogoFileMeta): string | null => {
 };
 
 /**
+ * Valide un fichier de logo avant lecture. Retourne un message en français ou
+ * `null` si le fichier est acceptable.
+ */
+export const validateLogoFile = (file: LogoFileMeta): string | null =>
+  validateImageBasics(file, 'logo');
+
+/** Mêmes règles, message neutre, pour la photo d'un vêtement du catalogue. */
+export const validateImageFile = (file: LogoFileMeta): string | null =>
+  validateImageBasics(file, 'image');
+
+/**
  * Vérifie qu'une valeur stockée est bien un logo utilisable.
  *
  * Une sauvegarde locale peut être corrompue ou contenir une URL distante
  * (bloquée par la CSP) : dans ce cas le logo est simplement ignoré.
  */
-export const isValidLogoDataUrl = (value: unknown): value is string => {
+export const isValidImageDataUrl = (value: unknown): value is string => {
   if (typeof value !== 'string') return false;
   if (value.length > MAX_LOGO_DATA_URL_LENGTH) return false;
   return /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value);
 };
+
+/** Alias historique conservé pour le logo de l'établissement. */
+export const isValidLogoDataUrl = isValidImageDataUrl;
 
 /** Initiales de secours quand aucun logo n'est défini : « Éclat Cocody » → « ÉC ». */
 export const getBrandInitials = (name: string): string => {

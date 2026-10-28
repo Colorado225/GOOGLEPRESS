@@ -379,6 +379,25 @@ export interface PressingSettings {
   prices: Record<string, number>;
 }
 
+/**
+ * Vêtement ajouté par le pressing depuis les Paramètres.
+ *
+ * Il rejoint le catalogue du comptoir avec sa photo (data URL) et son prix de
+ * base ; ses prix par prestation se règlent dans la même grille que les
+ * vêtements fournis.
+ */
+export interface CustomGarment {
+  id: string;
+  name: string;
+  category: 'all' | 'men' | 'women' | 'home' | 'pro';
+  unitPrice: number;
+  unitLabel: string;
+  emoji: string;
+  /** Photo descriptive (data URL), ou `null` si aucune image n'a été fournie. */
+  imageDataUrl: string | null;
+  description?: string;
+}
+
 export interface ShopSettings {
   name: string;
   /** Logo de l'établissement en data URL (PNG/WebP 256 px), `null` = aucun. */
@@ -401,6 +420,8 @@ export interface ShopSettings {
   blanchisserie: BlanchisserieSettings;
   /** Prestations du pressing et prix par vêtement. */
   pressing: PressingSettings;
+  /** Vêtements créés par le pressing, affichés dans le catalogue. */
+  customGarments: CustomGarment[];
 }
 
 export interface CashRegisterData {

@@ -294,6 +294,7 @@ export const SettingsPage: React.FC = () => {
       storageDefaultCapacityPackages,
       blanchisserie: shopSettings.blanchisserie,
       pressing: shopSettings.pressing,
+      customGarments: shopSettings.customGarments,
     });
     setPickupFeeInput(String(Math.round(pickupFee)));
     setDeliveryFeeInput(String(Math.round(deliveryFee)));

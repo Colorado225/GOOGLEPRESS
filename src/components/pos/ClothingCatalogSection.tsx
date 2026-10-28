@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
+import { formatFCFA } from '../../data/demoData';
+import { getGarmentCatalog } from '../../lib/garmentCatalog';
 import { ClothingItem } from '../../types';
 import { CurrentColorSelector } from './ColorPicker';
 import { Reveal } from '../common/Reveal';
@@ -36,7 +37,7 @@ export const ClothingCatalogSection: React.FC = () => {
   // forfaits au nombre de vêtements.
   if (selectedServiceCategory === 'blanchisserie') return <BlanchisserieCounter />;
 
-  const filteredItems = INITIAL_CLOTHING_ITEMS.filter((item) => {
+  const filteredItems = getGarmentCatalog(shopSettings).filter((item) => {
     const matchesCat = selectedCategory === 'all' || item.category === selectedCategory || item.category === 'all';
     const matchesSearch = item.name.toLowerCase().includes(itemSearch.toLowerCase());
     return matchesCat && matchesSearch;

@@ -1,7 +1,17 @@
-import React, { useMemo, useState } from 'react';
-import { AlertTriangle, Info, Plus, Save, Trash2 } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { AlertTriangle, ImagePlus, Info, Plus, Save, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
+import { formatFCFA } from '../../data/demoData';
+import { fileToGarmentImageDataUrl } from '../../lib/imageDownscale';
+import {
+  GARMENT_CATEGORIES,
+  MAX_GARMENT_NAME_LENGTH,
+  MAX_GARMENT_PRICE_XOF,
+  buildGarmentId,
+  getGarmentCatalog,
+  validateCustomGarment,
+} from '../../lib/garmentCatalog';
+import { MAX_LOGO_FILE_BYTES } from '../../lib/shopIdentity';
 import {
   MAX_PRESSING_SERVICES,
   MAX_PRESSING_PRICE_XOF,
@@ -9,7 +19,7 @@ import {
   pressingPriceKey,
   validatePressingSettings,
 } from '../../lib/pressing';
-import type { PressingSettings } from '../../types';
+import type { CustomGarment, PressingSettings } from '../../types';
 
 /**
  * Réglage des prestations du pressing.
@@ -29,13 +39,24 @@ export const PressingSettingsSection: React.FC = () => {
   const [draft, setDraft] = useState<PressingSettings>(shopSettings.pressing);
   const [error, setError] = useState<string | null>(null);
 
+  // Catalogue réel : vêtements créés ici + catalogue fourni.
   const items = useMemo(
     () =>
-      INITIAL_CLOTHING_ITEMS.filter(
+      getGarmentCatalog(shopSettings).filter(
         (item) => item.serviceCategory === 'pressing' || item.serviceCategory === 'both'
       ),
-    []
+    [shopSettings]
   );
+
+  // --- Création d'un vêtement (nom, catégorie, prix de base, photo) ---
+  const [garmentName, setGarmentName] = useState('');
+  const [garmentCategory, setGarmentCategory] = useState<CustomGarment['category']>('all');
+  const [garmentPrice, setGarmentPrice] = useState('');
+  const [garmentImage, setGarmentImage] = useState<string | null>(null);
+  const [garmentImageError, setGarmentImageError] = useState<string | null>(null);
+  const [garmentImageBusy, setGarmentImageBusy] = useState(false);
+  const [garmentError, setGarmentError] = useState<string | null>(null);
+  const garmentImageRef = useRef<HTMLInputElement>(null);
 
   const patch = (updater: (current: PressingSettings) => PressingSettings) => {
     setError(null);
@@ -73,6 +94,77 @@ export const PressingSettingsSection: React.FC = () => {
       ...current,
       services: current.services.filter((service) => service.id !== serviceId),
     }));
+  };
+
+  const handleGarmentImage = async (file: File | null) => {
+    if (!file) return;
+    setGarmentImageError(null);
+    setGarmentImageBusy(true);
+    try {
+      setGarmentImage(await fileToGarmentImageDataUrl(file));
+    } catch (error) {
+      setGarmentImageError(
+        error instanceof Error ? error.message : 'Cette image n’a pas pu être lue.'
+      );
+    } finally {
+      setGarmentImageBusy(false);
+      if (garmentImageRef.current) garmentImageRef.current.value = '';
+    }
+  };
+
+  const addGarment = () => {
+    if (!garmentPrice.trim()) {
+      setGarmentError('Indiquez le prix de base du vêtement.');
+      return;
+    }
+    const price = Math.round(Number(garmentPrice.replace(/[\s\u00a0]/g, '')));
+    const validationError = validateCustomGarment({
+      name: garmentName,
+      unitPrice: price,
+      category: garmentCategory,
+    });
+    if (validationError) {
+      setGarmentError(validationError);
+      return;
+    }
+
+    const garment: CustomGarment = {
+      id: buildGarmentId(garmentName, shopSettings.customGarments),
+      name: garmentName.trim().replace(/\s+/g, ' '),
+      category: garmentCategory,
+      unitPrice: price,
+      unitLabel: 'pièce',
+      emoji: '👕',
+      imageDataUrl: garmentImage,
+    };
+
+    updateShopSettings({
+      ...shopSettings,
+      customGarments: [garment, ...shopSettings.customGarments],
+    });
+    setGarmentName('');
+    setGarmentPrice('');
+    setGarmentImage(null);
+    setGarmentCategory('all');
+    setGarmentError(null);
+    setGarmentImageError(null);
+    showToast(`✓ ${garment.name} ajouté au catalogue`);
+  };
+
+  const removeGarment = (garment: CustomGarment) => {
+    // Les prix saisis pour ce vêtement partent avec lui.
+    const prices = { ...draft.prices };
+    for (const key of Object.keys(prices)) {
+      if (key.startsWith(`${garment.id}:`)) delete prices[key];
+    }
+    const nextDraft = { ...draft, prices };
+    setDraft(nextDraft);
+    updateShopSettings({
+      ...shopSettings,
+      customGarments: shopSettings.customGarments.filter((item) => item.id !== garment.id),
+      pressing: nextDraft,
+    });
+    showToast(`${garment.name} retiré du catalogue`);
   };
 
   const setPrice = (itemId: string, serviceId: string, rawValue: string) => {
@@ -173,6 +265,192 @@ export const PressingSettingsSection: React.FC = () => {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Création d'un vêtement */}
+      <section className="space-y-2">
+        <h3 className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
+          Ajouter un vêtement au catalogue
+        </h3>
+        <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+          Nom, catégorie, prix de base et photo : le vêtement apparaît aussitôt au comptoir,
+          avec sa vignette, et son prix peut être affiné par prestation dans le tableau
+          ci-dessous.
+        </p>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label
+              htmlFor="new-garment-name"
+              className="block text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+            >
+              Nom du vêtement
+            </label>
+            <input
+              id="new-garment-name"
+              type="text"
+              maxLength={MAX_GARMENT_NAME_LENGTH}
+              value={garmentName}
+              placeholder="Ex. Chemise en lin"
+              onChange={(event) => {
+                setGarmentName(event.target.value);
+                setGarmentError(null);
+              }}
+              className={`${inputClass} mt-1`}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="new-garment-category"
+              className="block text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+            >
+              Catégorie
+            </label>
+            <select
+              id="new-garment-category"
+              value={garmentCategory}
+              onChange={(event) =>
+                setGarmentCategory(event.target.value as CustomGarment['category'])
+              }
+              className={`${inputClass} mt-1`}
+            >
+              {GARMENT_CATEGORIES.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="new-garment-price"
+              className="block text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+            >
+              Prix de base (FCFA)
+            </label>
+            <input
+              id="new-garment-price"
+              type="number"
+              min={0}
+              max={MAX_GARMENT_PRICE_XOF}
+              step={50}
+              value={garmentPrice}
+              placeholder="1500"
+              onChange={(event) => {
+                setGarmentPrice(event.target.value);
+                setGarmentError(null);
+              }}
+              className={`${inputClass} mt-1`}
+            />
+          </div>
+
+          <div>
+            <span className="block text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Photo (facultatif)
+            </span>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
+                {garmentImage ? (
+                  <img src={garmentImage} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span aria-hidden="true">👕</span>
+                )}
+              </span>
+              <input
+                ref={garmentImageRef}
+                id="new-garment-image"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                onChange={(event) => void handleGarmentImage(event.target.files?.[0] ?? null)}
+              />
+              <label
+                htmlFor="new-garment-image"
+                aria-disabled={garmentImageBusy}
+                className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border border-zinc-200 px-2 py-1.5 text-[11.5px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800 ${
+                  garmentImageBusy ? 'pointer-events-none opacity-60' : ''
+                }`}
+              >
+                <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
+                {garmentImageBusy ? 'Traitement…' : garmentImage ? 'Changer' : 'Choisir'}
+              </label>
+              {garmentImage && (
+                <button
+                  type="button"
+                  onClick={() => setGarmentImage(null)}
+                  className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
+                  aria-label="Retirer la photo"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-[10.5px] text-zinc-500 dark:text-zinc-400">
+              PNG, JPEG ou WebP — {Math.round(MAX_LOGO_FILE_BYTES / (1024 * 1024))} Mo maximum.
+            </p>
+          </div>
+        </div>
+
+        {garmentImageError && (
+          <p role="alert" className="text-[11.5px] font-semibold text-red-600 dark:text-red-400">
+            {garmentImageError}
+          </p>
+        )}
+        {garmentError && (
+          <p role="alert" className="text-[11.5px] font-semibold text-red-600 dark:text-red-400">
+            {garmentError}
+          </p>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={addGarment}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-950"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            Ajouter au catalogue
+          </button>
+        </div>
+
+        {shopSettings.customGarments.length > 0 && (
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {shopSettings.customGarments.map((garment) => (
+              <li
+                key={garment.id}
+                className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-700"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
+                  {garment.imageDataUrl ? (
+                    <img src={garment.imageDataUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span aria-hidden="true">{garment.emoji}</span>
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-semibold text-zinc-900 dark:text-zinc-100">
+                    {garment.name}
+                  </span>
+                  <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {formatFCFA(garment.unitPrice)} •{' '}
+                    {GARMENT_CATEGORIES.find((category) => category.id === garment.category)?.label}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeGarment(garment)}
+                  aria-label={`Retirer ${garment.name} du catalogue`}
+                  title="Retirer du catalogue"
+                  className="shrink-0 rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* Prix par vêtement */}

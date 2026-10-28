@@ -38,6 +38,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   // Prestations pressing et prix par vêtement : liste de départ, tarifs
   // laissés au catalogue tant que le propriétaire ne saisit rien.
   pressing: EMPTY_PRESSING_SETTINGS,
+  // Aucun vêtement créé au départ : le catalogue fourni suffit.
+  customGarments: [],
 };
 
 /**
@@ -69,5 +71,6 @@ export const resolveDefaultShopSettings = (
     // Prestations avant la première commande de blanchisserie.
     blanchisserie: EMPTY_BLANCHISSERIE_SETTINGS,
     pressing: EMPTY_PRESSING_SETTINGS,
+    customGarments: [],
   };
 };

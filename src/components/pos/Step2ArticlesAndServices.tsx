@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { CurrentColorSelector, LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
-import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
+import { formatFCFA } from '../../data/demoData';
+import { getGarmentCatalog } from '../../lib/garmentCatalog';
 import { calculateOrderTotals } from '../../lib/pricing';
 import { resolvePressingPrice } from '../../lib/pressing';
 import { ClothingItem, OrderLine } from '../../types';
@@ -64,7 +65,8 @@ export const Step2ArticlesAndServices: React.FC = () => {
     resolvePressingPrice(item, shopSettings.pressing, activePressingService?.id ?? '');
 
   // Filter catalog items by service category (pressing vs blanchisserie)
-  const catalogItems = INITIAL_CLOTHING_ITEMS.filter((item) => {
+  // Catalogue réel : vêtements créés dans les Paramètres + catalogue fourni.
+  const catalogItems = getGarmentCatalog(shopSettings).filter((item) => {
     const matchesCategory =
       item.serviceCategory === selectedServiceCategory || item.serviceCategory === 'both';
     const matchesTab =
