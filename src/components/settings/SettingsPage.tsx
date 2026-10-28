@@ -204,6 +204,17 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
     shopSettings.deliveryProof.requireSignature
   );
   const [requireProofCode, setRequireProofCode] = useState(shopSettings.deliveryProof.requireCode);
+  // Suivi GPS : la carte et le partage de position. Le partage reste au choix
+  // du coursier ; ce réglage se contente de l'autoriser.
+  const [gpsEnabled, setGpsEnabled] = useState(shopSettings.deliveryGps.enabled);
+  const [gpsTrackPositions, setGpsTrackPositions] = useState(
+    shopSettings.deliveryGps.trackPositions
+  );
+  const [gpsSpeedInput, setGpsSpeedInput] = useState(String(shopSettings.deliveryGps.avgSpeedKmh));
+  const [gpsDetourInput, setGpsDetourInput] = useState(String(shopSettings.deliveryGps.detourFactor));
+  const [gpsMaxAgeInput, setGpsMaxAgeInput] = useState(
+    String(shopSettings.deliveryGps.maxAgeSeconds)
+  );
   const [storageAssignmentRequired, setStorageAssignmentRequired] = useState(
     shopSettings.storageAssignmentRequired
   );
@@ -279,6 +290,30 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
       return false;
     }
 
+    const gpsSpeed = Number(gpsSpeedInput.replace(',', '.'));
+    const gpsDetour = Number(gpsDetourInput.replace(',', '.'));
+    const gpsMaxAge = Number(gpsMaxAgeInput);
+    if (
+      gpsSpeedInput.trim() === '' ||
+      gpsDetourInput.trim() === '' ||
+      gpsMaxAgeInput.trim() === '' ||
+      !Number.isFinite(gpsSpeed) ||
+      gpsSpeed < 5 ||
+      gpsSpeed > 60 ||
+      !Number.isFinite(gpsDetour) ||
+      gpsDetour < 1 ||
+      gpsDetour > 2.5 ||
+      !Number.isInteger(gpsMaxAge) ||
+      gpsMaxAge < 30 ||
+      gpsMaxAge > 3600
+    ) {
+      showToast(
+        'Suivi GPS : vitesse entre 5 et 60 km/h, détour entre 1 et 2,5, fraîcheur entre 30 et 3600 secondes.'
+      );
+      setTab('logistics');
+      return false;
+    }
+
     const storageDefaultCapacityPackages = Number(storageDefaultCapacityInput);
     if (
       storageDefaultCapacityInput.trim() === '' ||
@@ -307,6 +342,13 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
         requireSignature: requireProofSignature,
         requireCode: requireProofCode,
       },
+      deliveryGps: {
+        enabled: gpsEnabled,
+        trackPositions: gpsTrackPositions,
+        avgSpeedKmh: gpsSpeed,
+        detourFactor: gpsDetour,
+        maxAgeSeconds: gpsMaxAge,
+      },
       storageAssignmentRequired,
       storageAllowCapacityOverflow: storageCapacityMode === 'flexible',
       storageSuggestionsEnabled,
@@ -318,6 +360,9 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
     });
     setPickupFeeInput(String(Math.round(pickupFee)));
     setDeliveryFeeInput(String(Math.round(deliveryFee)));
+    setGpsSpeedInput(String(gpsSpeed));
+    setGpsDetourInput(String(gpsDetour));
+    setGpsMaxAgeInput(String(gpsMaxAge));
     setStorageDefaultCapacityInput(String(storageDefaultCapacityPackages));
 
     if (openStorageManager) {
@@ -703,6 +748,120 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
               livraison sans photo. La fiche de remise indique alors clairement qu’aucune preuve
               n’a été enregistrée.
             </p>
+          </div>
+
+          {/* Carte et suivi GPS */}
+          <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2.5">
+            <h3 className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">
+              Carte et suivi des tournées
+            </h3>
+            <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Carte Leaflet avec tuiles OpenStreetMap : <strong className="text-zinc-900 dark:text-zinc-100">gratuite</strong>,
+              sans clé ni compte. Les tuiles se chargent depuis internet ; hors connexion, la liste
+              des tournées reste utilisable.
+            </p>
+
+            <label
+              htmlFor="settings-gps-enabled"
+              className="flex items-start gap-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+            >
+              <input
+                id="settings-gps-enabled"
+                type="checkbox"
+                checked={gpsEnabled}
+                onChange={(e) => setGpsEnabled(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-black rounded cursor-pointer"
+              />
+              <span>
+                <span className="block text-[12.5px] font-bold text-zinc-900 dark:text-zinc-100">
+                  Afficher la carte et l’heure d’arrivée estimée
+                </span>
+                <span className="block text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                  Vue Liste / Carte dans les tournées, point de livraison et fourchette d’arrivée.
+                </span>
+              </span>
+            </label>
+
+            <label
+              htmlFor="settings-gps-tracking"
+              className="flex items-start gap-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+            >
+              <input
+                id="settings-gps-tracking"
+                type="checkbox"
+                checked={gpsTrackPositions}
+                onChange={(e) => setGpsTrackPositions(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-black rounded cursor-pointer"
+              />
+              <span>
+                <span className="block text-[12.5px] font-bold text-zinc-900 dark:text-zinc-100">
+                  Autoriser le partage de position
+                </span>
+                <span className="block text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                  Le coursier appuie lui-même sur « Partager ma position ». Aucun suivi en
+                  arrière-plan : l’envoi s’arrête quand il quitte l’écran ou coupe le partage.
+                </span>
+              </span>
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label htmlFor="settings-gps-speed" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
+                  Vitesse moyenne
+                </label>
+                <div className="relative">
+                  <input
+                    id="settings-gps-speed"
+                    type="number"
+                    min={5}
+                    max={60}
+                    step={1}
+                    inputMode="numeric"
+                    value={gpsSpeedInput}
+                    onChange={(e) => setGpsSpeedInput(e.target.value)}
+                    className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 pr-14 text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-zinc-400 dark:text-zinc-500">km/h</span>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="settings-gps-detour" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
+                  Détour routier
+                </label>
+                <input
+                  id="settings-gps-detour"
+                  type="number"
+                  min={1}
+                  max={2.5}
+                  step={0.1}
+                  inputMode="decimal"
+                  value={gpsDetourInput}
+                  onChange={(e) => setGpsDetourInput(e.target.value)}
+                  className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                />
+                <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">1,3 = +30 % par rapport au vol d’oiseau.</p>
+              </div>
+              <div>
+                <label htmlFor="settings-gps-max-age" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
+                  Position valable
+                </label>
+                <div className="relative">
+                  <input
+                    id="settings-gps-max-age"
+                    type="number"
+                    min={30}
+                    max={3600}
+                    step={30}
+                    inputMode="numeric"
+                    value={gpsMaxAgeInput}
+                    onChange={(e) => setGpsMaxAgeInput(e.target.value)}
+                    className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 pr-14 text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-zinc-400 dark:text-zinc-500">sec.</span>
+                </div>
+                <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">Au-delà, aucune heure d’arrivée.</p>
+              </div>
+            </div>
           </div>
         </div>
         )}

@@ -4,7 +4,7 @@ import {
   Employee, EmployeeStatus, EmployeeFormData, AttendanceRecord,
   InventoryProduct, ProductFormData, StockMovement, StockMovementInput,
   Expense, ExpenseFormData, ExpenseCategory, ActionResult,
-  FulfillmentMethod, LogisticsIssueReason, LogisticsTask, LogisticsTaskScheduleFormData,
+  FulfillmentMethod, GeoPoint, LogisticsIssueReason, LogisticsTask, LogisticsTaskScheduleFormData,
   LogisticsTimeSlot, PaymentMethod, PickupTaskFormData,
   StorageAssignmentInput, StorageLocation, StorageLocationFormData,
   StorageLocationSeriesInput,
@@ -36,6 +36,11 @@ import {
   buildDeliveryProof, generateDeliveryCode, normalizeDeliveryProofSettings,
   validateDeliveryProofDraft, type DeliveryProofDraft,
 } from '../lib/deliveryProof';
+import { normalizeDeliveryGpsSettings, normalizeGeoPoint } from '../lib/geo';
+import {
+  COURIER_POSITIONS_STORAGE_KEY, normalizeCourierPositions, pruneCourierPositions,
+  type CourierPositions,
+} from '../lib/courierPositions';
 import {
   STORAGE_LOCATIONS_STORAGE_KEY, buildStorageLocationSeries,
   calculateStorageOccupancy, formatStorageLocation, getOrderPackageCount,
@@ -202,6 +207,11 @@ interface AppContextType {
   ) => ActionResult;
   /** Jalon « arrivé chez le client », entre le départ et la confirmation. */
   markLogisticsTaskArrived: (taskId: string) => ActionResult;
+  /** Point de livraison choisi sur la carte (null = point retiré). */
+  setLogisticsTaskDestination: (taskId: string, point: GeoPoint | null) => ActionResult;
+  /** Dernière position connue par tournée (jamais inventée). */
+  courierPositions: CourierPositions;
+  recordCourierPosition: (taskId: string, point: GeoPoint) => ActionResult;
   failLogisticsTask: (taskId: string, reason: LogisticsIssueReason, notes?: string) => ActionResult;
   cancelLogisticsTask: (taskId: string, reason: LogisticsIssueReason, notes?: string) => ActionResult;
   startOrderFromPickupTask: (taskId: string) => boolean;
@@ -474,6 +484,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         persisted.deliveryProof === undefined
           ? base.deliveryProof
           : normalizeDeliveryProofSettings(persisted.deliveryProof),
+      deliveryGps:
+        persisted.deliveryGps === undefined
+          ? base.deliveryGps
+          : normalizeDeliveryGpsSettings(persisted.deliveryGps),
     };
     return {
       ...merged,
@@ -496,6 +510,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pickupFee: normalizeLogisticsFee(next.pickupFee),
       deliveryFee: normalizeLogisticsFee(next.deliveryFee),
       deliveryProof: normalizeDeliveryProofSettings(next.deliveryProof),
+      deliveryGps: normalizeDeliveryGpsSettings(next.deliveryGps),
       storageAssignmentRequired: next.storageAssignmentRequired === true,
       storageAllowCapacityOverflow: next.storageAllowCapacityOverflow === true,
       storageSuggestionsEnabled: next.storageSuggestionsEnabled === true,
@@ -504,9 +519,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
     });
 
+  const [courierPositions, setCourierPositions] = useState<CourierPositions>(() =>
+    pruneCourierPositions(
+      normalizeCourierPositions(
+        loadPersistedState<CourierPositions | null>(
+          storageKey(COURIER_POSITIONS_STORAGE_KEY),
+          null
+        )
+      ),
+      new Date()
+    )
+  );
+
   useEffect(() => {
     persistState(storageKey(LOGISTICS_TASKS_STORAGE_KEY), logisticsTasks);
   }, [logisticsTasks]);
+  useEffect(() => {
+    persistState(storageKey(COURIER_POSITIONS_STORAGE_KEY), courierPositions);
+  }, [courierPositions]);
   useEffect(() => {
     persistState(storageKey(STORAGE_LOCATIONS_STORAGE_KEY), storageLocations);
   }, [storageLocations]);
@@ -1711,6 +1741,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  /** Point de livraison placé sur la carte, ou retiré (retour au texte seul). */
+  const setLogisticsTaskDestination = (taskId: string, point: GeoPoint | null): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (point) {
+      const normalized = normalizeGeoPoint(point);
+      if (!normalized) {
+        return { ok: false, error: 'Ce point est inutilisable : choisissez-en un autre sur la carte.' };
+      }
+      patchLogisticsTask(taskId, { destination: normalized });
+      showToast('✓ Point de livraison enregistré.');
+      return { ok: true };
+    }
+    patchLogisticsTask(taskId, { destination: undefined });
+    showToast('Point de livraison retiré : l’itinéraire repartira de l’adresse.');
+    return { ok: true };
+  };
+
+  /**
+   * Enregistre une position envoyée par le téléphone du coursier. Refusée hors
+   * tournée en route : une position ne doit pas être collectée pour une course
+   * qui n'a pas commencé.
+   */
+  const recordCourierPosition = (taskId: string, point: GeoPoint): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status !== 'en_route') {
+      return { ok: false, error: 'La position ne peut être partagée que pendant une tournée en route.' };
+    }
+    const normalized = normalizeGeoPoint(point);
+    if (!normalized) return { ok: false, error: 'Position inutilisable : mesure ignorée.' };
+    setCourierPositions((prev) => ({ ...prev, [taskId]: { ...normalized, taskId } }));
+    return { ok: true };
+  };
+
   const completeDeliveryTask = (
     taskId: string,
     paymentMethodForBalance: PaymentMethod,
@@ -2388,6 +2453,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         completePickupTask,
         completeDeliveryTask,
         markLogisticsTaskArrived,
+        setLogisticsTaskDestination,
+        courierPositions,
+        recordCourierPosition,
         failLogisticsTask,
         cancelLogisticsTask,
         startOrderFromPickupTask,

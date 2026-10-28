@@ -21,6 +21,8 @@ export default defineConfig({
         'src/lib/routes.ts',
         'src/lib/deliveryProof.ts',
         'src/lib/deliveryRoute.ts',
+        'src/lib/geo.ts',
+        'src/lib/courierPositions.ts',
       ],
       thresholds: {
         statements: 70,

@@ -1,4 +1,5 @@
 import type { LogisticsTask } from '../types';
+import { isValidLatLng } from './geo';
 
 /**
  * Liens de navigation vers une adresse de tournée.
@@ -35,13 +36,23 @@ export const sanitizeItineraryAddress = (
 /**
  * Deux liens équivalents : Google Maps pour l'itinéraire, Waze pour les
  * coursiers qui l'utilisent. Aucune clé d'API n'est nécessaire.
+ *
+ * Le point choisi sur la carte est prioritaire sur le texte : une adresse
+ * ivoirienne libre est souvent ambiguë (« Rue des Jardins, Cocody »), alors
+ * qu'une coordonnée place le coursier au bon portail.
  */
 export const buildDeliveryItinerary = (
-  task: Pick<LogisticsTask, 'address' | 'addressDetails'>
+  task: Pick<LogisticsTask, 'address' | 'addressDetails' | 'destination'>
 ): DeliveryItineraryLinks | null => {
-  const address = sanitizeItineraryAddress(task);
-  if (!address) return null;
-  const query = encodeURIComponent(address);
+  const destination = task.destination;
+  const coordinates =
+    destination && isValidLatLng(destination.lat, destination.lng)
+      ? `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}`
+      : null;
+
+  const target = coordinates ?? sanitizeItineraryAddress(task);
+  if (!target) return null;
+  const query = encodeURIComponent(target);
   return {
     googleMaps: `https://www.google.com/maps/dir/?api=1&destination=${query}`,
     waze: `https://waze.com/ul?q=${query}&navigate=yes`,

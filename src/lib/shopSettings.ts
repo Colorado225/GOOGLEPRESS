@@ -6,6 +6,7 @@ import {
 } from './blanchisserie';
 import { EMPTY_PRESSING_SETTINGS } from './pressing';
 import { DEFAULT_DELIVERY_PROOF_SETTINGS } from './deliveryProof';
+import { DEFAULT_DELIVERY_GPS_SETTINGS } from './geo';
 
 /** Clé localStorage des paramètres de la boutique (écran Paramètres). */
 export const SHOP_SETTINGS_STORAGE_KEY = 'pressingpro_shop_settings';
@@ -29,6 +30,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   deliveryFee: 1000,
   // Aucune preuve exigée au départ : le pressing l'active dans Paramètres.
   deliveryProof: DEFAULT_DELIVERY_PROOF_SETTINGS,
+  // Carte disponible, mais le partage de position reste au choix du coursier.
+  deliveryGps: DEFAULT_DELIVERY_GPS_SETTINGS,
   // Rangement : souple au démarrage (file « À ranger » et dépassement
   // signalé mais autorisé), durcissable par le propriétaire.
   storageAssignmentRequired: false,

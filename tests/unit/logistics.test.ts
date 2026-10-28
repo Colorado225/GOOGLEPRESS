@@ -124,6 +124,27 @@ describe('logistics', () => {
     expect(empty.proof).toBeUndefined();
   });
 
+  it('conserve un point de livraison valide et écarte un point impossible', () => {
+    const withPoint = normalizeStoredLogisticsTask(
+      makeTask({
+        destination: {
+          lat: 5.36,
+          lng: -4.0083,
+          source: 'manual',
+          recordedAt: '2026-10-28T09:00:00.000Z',
+        },
+      })
+    );
+    expect(withPoint.destination?.lat).toBe(5.36);
+
+    const broken = normalizeStoredLogisticsTask(
+      makeTask({
+        destination: { lat: 0, lng: 0, source: 'manual', recordedAt: '2026-10-28T09:00:00.000Z' },
+      })
+    );
+    expect(broken.destination).toBeUndefined();
+  });
+
   it('place les livreurs actifs avant les autres employés actifs', () => {
     const employees = [
       makeEmployee({ id: 'atelier', fullName: 'Awa Atelier', position: 'Lavage' }),

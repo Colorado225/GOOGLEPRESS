@@ -21,6 +21,25 @@ describe('deliveryRoute — itinéraire vers une tournée', () => {
     );
   });
 
+  it('privilégie le point enregistré sur la carte', () => {
+    const links = buildDeliveryItinerary({
+      address: 'Rue des Jardins, Cocody',
+      destination: { lat: 5.36, lng: -4.0083, source: 'manual', recordedAt: '2026-10-28T10:00:00.000Z' },
+    });
+    expect(links?.googleMaps).toBe(
+      'https://www.google.com/maps/dir/?api=1&destination=5.360000%2C-4.008300'
+    );
+    expect(links?.waze).toBe('https://waze.com/ul?q=5.360000%2C-4.008300&navigate=yes');
+  });
+
+  it('retombe sur l’adresse quand le point est inutilisable', () => {
+    const links = buildDeliveryItinerary({
+      address: 'Cocody',
+      destination: { lat: 0, lng: 0, source: 'manual', recordedAt: '2026-10-28T10:00:00.000Z' },
+    });
+    expect(decodeURIComponent(links?.googleMaps ?? '')).toContain('destination=Cocody');
+  });
+
   it('n’émet aucun lien sans adresse', () => {
     expect(buildDeliveryItinerary({ address: '   ' })).toBeNull();
     expect(buildDeliveryItinerary({ address: '', addressDetails: '  ' })).toBeNull();

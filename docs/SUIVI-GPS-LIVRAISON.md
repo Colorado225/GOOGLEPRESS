@@ -1,9 +1,10 @@
 # Suivi GPS des tournées et preuve de remise — note de conception
 
 **Date :** 28 octobre 2026 · **Branche :** `arena/7aed267c-googlepress`
-**Statut :** **phase 0 livrée** le 28 octobre 2026 — voir
-[`docs/PREUVE-DE-REMISE.md`](PREUVE-DE-REMISE.md). Les phases 1 à 3 restent des
-propositions à valider. Ce document décrit
+**Statut :** **phases 0 et 1 livrées** (28 octobre 2026) — voir
+[`docs/PREUVE-DE-REMISE.md`](PREUVE-DE-REMISE.md) et
+[`docs/CARTE-ET-SUIVI-GPS.md`](CARTE-ET-SUIVI-GPS.md). L'écran coursier dédié
+reste à faire ; les phases 2 et 3 restent des propositions. Ce document décrit
 ce qui existe déjà, ce que « GPS » peut raisonnablement vouloir dire dans une
 application web, le modèle de données proposé, les écrans, les cas limites et
 un découpage en phases. Il se valide ou se corrige avant la première ligne de
@@ -315,7 +316,7 @@ sur téléphone réel.
 | Phase | Contenu | Dépendance externe | Estimation |
 | --- | --- | --- | --- |
 | **0 — Preuve + jalons** ✅ **livrée** | preuve photo/signature/code, nom du réceptionnaire, jalons *parti / arrivé / livré*, bloc preuve dans Remises comptoir, bouton *Itinéraire* (lien profond Maps/Waze) — [`docs/PREUVE-DE-REMISE.md`](PREUVE-DE-REMISE.md) | aucune | livrée |
-| **1 — Positions + carte + ETA** | point de destination, page *Ma tournée*, envoi de positions, carte Leaflet, fraîcheur, fourchette d'arrivée, réglages GPS | tuiles OSM (gratuit) | 2 à 3 jours |
+| **1 — Positions + carte + ETA** ✅ **livrée (sauf écran coursier)** | point de destination, envoi de positions depuis la fiche, carte Leaflet, fraîcheur, fourchette d'arrivée, réglages GPS — [`docs/CARTE-ET-SUIVI-GPS.md`](CARTE-ET-SUIVI-GPS.md) | tuiles OSM (gratuit) | livrée |
 | **2 — Client + zones** | lien de suivi à jeton, position arrondie, frais par quartier, `district` client | optionnelle | 2 jours |
 | **3 — Backend** | tables Supabase, RLS, temps réel multi-appareils, PWA hors-ligne complète, optimisation de tournée | Supabase | à planifier séparément |
 
@@ -363,8 +364,8 @@ vous**, et je le dirai tel quel.
 
 ## 12. Décisions à prendre
 
-1. **Carte** : Leaflet/OSM (gratuit, recommandé) ou Google Maps (clé et
-   facturation) ?
+1. **Carte** : ✅ **Leaflet + tuiles OpenStreetMap** (gratuit, sans clé) —
+   tranché et implémenté.
 2. **Point de destination** : saisi sur carte au moment de la tournée
    (recommandé), géocodé automatiquement, ou les deux ?
 3. **Preuve exigée** : photo, signature, code à 4 chiffres — ou plusieurs ?

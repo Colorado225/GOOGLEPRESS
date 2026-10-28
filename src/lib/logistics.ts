@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { addDaysToISO, formatDateTime, formatISODateFr, todayISO } from './dates';
 import { isDeliveryCode, normalizeDeliveryProof } from './deliveryProof';
+import { normalizeGeoPoint } from './geo';
 
 /**
  * Règles et libellés du service ramassage & livraison.
@@ -159,4 +160,5 @@ export const normalizeStoredLogisticsTask = (task: LogisticsTask): LogisticsTask
   ...task,
   deliveryCode: isDeliveryCode(task.deliveryCode) ? task.deliveryCode : undefined,
   proof: normalizeDeliveryProof(task.proof),
+  destination: normalizeGeoPoint(task.destination),
 });

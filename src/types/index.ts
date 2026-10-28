@@ -49,6 +49,30 @@ export type LogisticsIssueReason =
  * déjà promise. Une livraison est toujours rattachée à une commande ; un
  * ramassage ne l'est qu'après comptage et conversion au POS.
  */
+/** Coordonnées géographiques d'un point de tournée. */
+export interface GeoPoint {
+  lat: number;
+  lng: number;
+  /** Précision annoncée par l'appareil, en mètres (absente si saisie manuelle). */
+  accuracyM?: number;
+  /** `device` = GPS du téléphone, `manual` = point placé sur la carte. */
+  source: 'device' | 'manual';
+  /** Horodatage de la mesure (ISO). */
+  recordedAt: string;
+}
+
+/** Réglages du suivi GPS des tournées (phase 1). */
+export interface DeliveryGpsSettings {
+  /** Affiche la carte et les positions. */
+  enabled: boolean;
+  /** Autorise l'envoi de la position du téléphone pendant une tournée. */
+  trackPositions: boolean;
+  avgSpeedKmh: number;
+  detourFactor: number;
+  /** Au-delà, la position est dite « non actualisée » et aucune heure n'est annoncée. */
+  maxAgeSeconds: number;
+}
+
 /**
  * Preuve de remise enregistrée à la confirmation d'une livraison.
  *
@@ -114,6 +138,8 @@ export interface LogisticsTask {
   arrivedAt?: string;
   /** Preuve de remise, enregistrée à la confirmation de la livraison. */
   proof?: DeliveryProof;
+  /** Point géographique de la livraison, choisi sur la carte. */
+  destination?: GeoPoint;
   /** Solde réellement encaissé par le coursier lors d'une livraison. */
   collectedAmount?: number;
   collectedPaymentMethod?: PaymentMethod;
@@ -471,6 +497,8 @@ export interface ShopSettings {
   deliveryFee: number;
   /** Ce qui doit être fourni pour confirmer une livraison (photo, signature, code). */
   deliveryProof: DeliveryProofSettings;
+  /** Suivi GPS des tournées : carte, positions, heure d'arrivée. */
+  deliveryGps: DeliveryGpsSettings;
   /** Règles du propriétaire pour le rangement des commandes terminées. */
   storageAssignmentRequired: boolean;
   storageAllowCapacityOverflow: boolean;

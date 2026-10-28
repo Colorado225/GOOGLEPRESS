@@ -6,6 +6,7 @@ import {
   Hourglass,
   KeyRound,
   MapPin,
+  MapPinned,
   Navigation,
   PackageCheck,
   Pencil,
@@ -20,6 +21,15 @@ import {
 import { useApp } from '../../context/AppContext';
 import { ModalShell } from '../common/ModalShell';
 import { DeliveryProofPanel } from './DeliveryProofPanel';
+import { DestinationPickerModal } from './DestinationPickerModal';
+import { CourierTrackingControl } from './CourierTrackingControl';
+import {
+  estimateArrival,
+  formatDistanceKm,
+  formatEtaWindow,
+  formatPositionAge,
+  isPositionFresh,
+} from '../../lib/geo';
 import { formatFCFA } from '../../data/demoData';
 import {
   LOGISTICS_ISSUE_REASON_LABELS,
@@ -77,6 +87,8 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
     assignLogisticsTask,
     startLogisticsTask,
     markLogisticsTaskArrived,
+    shopSettings,
+    courierPositions,
     startOrderFromPickupTask,
     setPreviewTicket,
     focusedLogisticsTaskId,
@@ -84,6 +96,7 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
   } = useApp();
 
   const [proofOpen, setProofOpen] = useState(false);
+  const [destinationOpen, setDestinationOpen] = useState(false);
   const order = useMemo(
     () => (task.orderId ? orders.find((o) => o.id === task.orderId) : undefined),
     [orders, task.orderId]
@@ -120,6 +133,19 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
   const showItineraryLinks =
     Boolean(itinerary) && task.status !== 'completed' && task.status !== 'cancelled';
   const showDeliveryCode = !isPickup && Boolean(task.deliveryCode) && task.status !== 'completed';
+
+  // Suivi GPS : uniquement pour une tournée réellement en route, et seulement
+  // si l'établissement a activé le suivi.
+  const gps = shopSettings.deliveryGps;
+  const position = courierPositions[task.id];
+  const now = new Date();
+  const gpsActive = gps.enabled && task.status === 'en_route';
+  const positionStale =
+    gpsActive && position ? !isPositionFresh(position, now, gps.maxAgeSeconds) : false;
+  const eta =
+    gpsActive && task.destination && position
+      ? estimateArrival({ position, destination: task.destination, now, settings: gps })
+      : null;
 
   const feeLabel = task.fee > 0 ? formatFCFA(task.fee) : 'Offerte';
 
@@ -280,6 +306,44 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
             </span>
           )}
         </div>
+      )}
+
+      {!isPickup && task.status !== 'completed' && task.status !== 'cancelled' && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setDestinationOpen(true)}
+            className="inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[12px] font-bold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+          >
+            <MapPinned className="h-3.5 w-3.5" aria-hidden="true" />
+            {task.destination ? 'Modifier le point' : 'Placer le point'}
+          </button>
+          {task.destination && (
+            <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+              Point enregistré sur la carte
+            </span>
+          )}
+          {gpsActive && gps.trackPositions && (
+            <CourierTrackingControl taskId={task.id} allowed={gps.trackPositions} />
+          )}
+        </div>
+      )}
+
+      {eta && (
+        <p className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-[12px] text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100">
+          Arrivée estimée <strong>{formatEtaWindow(eta.earliest, eta.latest)}</strong> ·{' '}
+          {formatDistanceKm(eta.distanceKm)}
+          {position ? ` · position ${formatPositionAge(position, now)}` : ''}
+          {eta.approximate && ' · position approximative'}
+        </p>
+      )}
+
+      {gpsActive && task.destination && positionStale && (
+        <p className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-2 text-[12px] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+          Position non actualisée
+          {position ? ` (${formatPositionAge(position, now)})` : ''} : aucune heure d’arrivée n’est
+          annoncée.
+        </p>
       )}
 
       {task.arrivedAt && (
@@ -468,6 +532,10 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
           )}
         </div>
       </div>
+
+      {destinationOpen && (
+        <DestinationPickerModal task={task} onClose={() => setDestinationOpen(false)} />
+      )}
 
       {proofOpen && (
         <ModalShell

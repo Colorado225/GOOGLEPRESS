@@ -292,6 +292,8 @@ routes par contexte (client, personnel, ERP) dans
 tournées et de la preuve de remise dans
 [`docs/SUIVI-GPS-LIVRAISON.md`](docs/SUIVI-GPS-LIVRAISON.md), dont la phase 0
 (preuve de remise, jalons, itinéraire) est documentée dans
-[`docs/PREUVE-DE-REMISE.md`](docs/PREUVE-DE-REMISE.md).
+[`docs/PREUVE-DE-REMISE.md`](docs/PREUVE-DE-REMISE.md) et la phase 1 (carte
+Leaflet/OpenStreetMap, point de livraison, partage de position, heure
+d'arrivée) dans [`docs/CARTE-ET-SUIVI-GPS.md`](docs/CARTE-ET-SUIVI-GPS.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.
