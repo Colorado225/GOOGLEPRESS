@@ -5,31 +5,37 @@ import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react'
  * Habillage commun des pages d'accès du personnel (connexion, inscription,
  * onboarding) et des écrans de la garde `StaffAccessGate`. Une seule source
  * visuelle pour éviter que les copies ne divergent.
+ *
+ * La composition deux panneaux des pages de connexion/inscription vit dans
+ * `StaffAuthLayout.tsx` (chargée en lazy uniquement par ces pages) ; ce
+ * module ne contient que le socle partagé avec la garde et l'onboarding.
  */
 
 export const staffShellClassName =
-  'flex min-h-screen items-center justify-center bg-[#f4f4f5] px-4 py-8 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50';
+  'flex min-h-screen items-center justify-center bg-[#F8FAFC] px-4 py-8 text-[#171923] dark:bg-zinc-950 dark:text-zinc-50';
 
 export const staffPanelClassName =
-  'w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl shadow-zinc-950/5 dark:border-zinc-800 dark:bg-zinc-900';
+  'w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-zinc-800 dark:bg-zinc-900';
 
 export const staffWidePanelClassName =
-  'w-full max-w-xl rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl shadow-zinc-950/5 dark:border-zinc-800 dark:bg-zinc-900';
+  'w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-zinc-800 dark:bg-zinc-900';
 
 export const staffLabelClassName =
-  'mb-1.5 block text-[12px] font-black uppercase tracking-wide text-zinc-600 dark:text-zinc-300';
+  'mb-1.5 block text-[12px] font-black uppercase tracking-wide text-slate-600 dark:text-zinc-300';
 
 export const StaffAuthHeader: React.FC<{ title: string; description: string }> = ({
   title,
   description,
 }) => (
   <header>
-    <p className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.16em] text-teal-700 dark:text-teal-300">
+    <p className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.16em] text-[#C2410C] dark:text-orange-300">
       <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-      PressingPro CI — accès personnel
+      Accès personnel
     </p>
-    <h1 className="mt-3 text-2xl font-black tracking-tight">{title}</h1>
-    <p className="mt-2 text-[13.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+    <h1 className="mt-3 text-2xl font-black tracking-tight text-[#24113D] dark:text-zinc-50">
+      {title}
+    </h1>
+    <p className="mt-2 text-[13.5px] leading-relaxed text-[#64748B] dark:text-zinc-400">
       {description}
     </p>
   </header>

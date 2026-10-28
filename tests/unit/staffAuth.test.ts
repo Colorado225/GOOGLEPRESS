@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   STAFF_ONBOARDING_PATH,
+  getPasswordStrength,
   mapStaffAuthError,
   parseFeeInput,
+  parseLegalRoute,
   parseStaffRoute,
   resolveStaffPostAuthPath,
   validateOnboardingInput,
@@ -71,6 +73,7 @@ describe('validateStaffRegistration', () => {
     email: 'awa@exemple.ci',
     password: 'mot-de-passe-solide',
     confirmPassword: 'mot-de-passe-solide',
+    acceptTerms: true,
   };
 
   it('accepte une inscription complète', () => {
@@ -90,6 +93,44 @@ describe('validateStaffRegistration', () => {
     expect(
       validateStaffRegistration({ ...valid, confirmPassword: 'autre-mot-de-passe' })
     ).toMatch(/ne correspondent pas/i);
+  });
+
+  it('exige l’acceptation des conditions d’utilisation', () => {
+    expect(validateStaffRegistration({ ...valid, acceptTerms: false })).toMatch(
+      /accepter les conditions d’utilisation/i
+    );
+  });
+});
+
+describe('getPasswordStrength', () => {
+  it('classe le vide et les mots de passe courts comme très faibles à faibles', () => {
+    expect(getPasswordStrength('')).toEqual({ score: 0, label: 'Très faible' });
+    // Même varié, un mot de passe de moins de 8 caractères reste « Faible ».
+    expect(getPasswordStrength('Ab1!xyz').score).toBe(1);
+    expect(getPasswordStrength('abcdefgh')).toEqual({ score: 1, label: 'Faible' });
+  });
+
+  it('récompense longueur et variété des caractères', () => {
+    expect(getPasswordStrength('Motdepasse1')).toEqual({ score: 3, label: 'Fort' });
+    expect(getPasswordStrength('Motdepasse1!solide')).toEqual({
+      score: 4,
+      label: 'Très fort',
+    });
+    expect(getPasswordStrength('motdepasse-solide').label).toBe('Fort');
+  });
+});
+
+describe('parseLegalRoute', () => {
+  it('reconnaît les deux pages légales publiques', () => {
+    expect(parseLegalRoute('/conditions')).toBe('terms');
+    expect(parseLegalRoute('/confidentialite')).toBe('privacy');
+    expect(parseLegalRoute('/conditions/')).toBe('terms');
+  });
+
+  it('ignore les autres chemins', () => {
+    expect(parseLegalRoute('/connexion')).toBeNull();
+    expect(parseLegalRoute('/')).toBeNull();
+    expect(parseLegalRoute('/conditions/generales')).toBeNull();
   });
 });
 

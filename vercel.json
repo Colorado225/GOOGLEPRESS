@@ -58,6 +58,14 @@
     {
       "source": "/bienvenue",
       "destination": "/index.html"
+    },
+    {
+      "source": "/conditions",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/confidentialite",
+      "destination": "/index.html"
     }
   ]
 }

@@ -5,8 +5,11 @@ import type { RemoteMembership } from './supabaseOrders';
 export const STAFF_LOGIN_PATH = '/connexion';
 export const STAFF_REGISTER_PATH = '/inscription';
 export const STAFF_ONBOARDING_PATH = '/bienvenue';
+export const TERMS_OF_USE_PATH = '/conditions';
+export const PRIVACY_POLICY_PATH = '/confidentialite';
 
 export type StaffRoute = 'login' | 'register' | 'onboarding';
+export type LegalRoute = 'terms' | 'privacy';
 
 const normalizePathname = (pathname: string): string => {
   if (pathname.length > 1 && pathname.endsWith('/')) {
@@ -33,6 +36,18 @@ export const parseStaffRoute = (pathname: string): StaffRoute | null => {
   }
 };
 
+/** Pages d'information légale publiques, liées depuis l'inscription. */
+export const parseLegalRoute = (pathname: string): LegalRoute | null => {
+  switch (normalizePathname(pathname)) {
+    case TERMS_OF_USE_PATH:
+      return 'terms';
+    case PRIVACY_POLICY_PATH:
+      return 'privacy';
+    default:
+      return null;
+  }
+};
+
 /**
  * Destination après une connexion réussie : l'ERP si le compte possède au
  * moins un rôle actif, sinon l'onboarding qui permet à un propriétaire de
@@ -49,6 +64,7 @@ export interface StaffRegistrationInput {
   email: string;
   password: string;
   confirmPassword: string;
+  acceptTerms: boolean;
 }
 
 export const validateStaffRegistration = (
@@ -67,7 +83,46 @@ export const validateStaffRegistration = (
   if (input.password !== input.confirmPassword) {
     return 'Les deux mots de passe ne correspondent pas.';
   }
+  if (!input.acceptTerms) {
+    return 'Vous devez accepter les conditions d’utilisation et la politique de confidentialité pour créer votre compte.';
+  }
   return null;
+};
+
+export interface PasswordStrength {
+  /** 0 (vide/très faible) à 4 (très fort) ; alimente une jauge à 4 segments. */
+  score: number;
+  label: string;
+}
+
+const PASSWORD_STRENGTH_LABELS = [
+  'Très faible',
+  'Faible',
+  'Moyen',
+  'Fort',
+  'Très fort',
+] as const;
+
+/**
+ * Estimation d'affichage de la robustesse d'un mot de passe. Elle guide
+ * l'utilisateur pendant la saisie ; la règle contraignante reste la longueur
+ * minimale validée ici et côté Supabase Auth.
+ */
+export const getPasswordStrength = (password: string): PasswordStrength => {
+  if (!password) return { score: 0, label: PASSWORD_STRENGTH_LABELS[0] };
+
+  let points = 0;
+  if (password.length >= 8) points += 1;
+  if (password.length >= 12) points += 1;
+  if (/[a-zà-ÿ]/.test(password) && /[A-ZÀ-Ÿ]/.test(password)) points += 1;
+  if (/\d/.test(password)) points += 1;
+  if (/[^A-Za-zÀ-ÿ0-9]/.test(password)) points += 1;
+
+  let score = points <= 1 ? 1 : points === 2 ? 2 : points === 3 ? 3 : 4;
+  // Un mot de passe court reste faible, même s'il mélange les caractères.
+  if (password.length < 8) score = Math.min(score, 1);
+
+  return { score, label: PASSWORD_STRENGTH_LABELS[score] };
 };
 
 /**

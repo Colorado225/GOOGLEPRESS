@@ -27,12 +27,17 @@ const StaffOnboardingPage = lazy(() =>
     default: module.StaffOnboardingPage,
   }))
 );
+const LegalPage = lazy(() =>
+  import('./components/auth/LegalPage').then((module) => ({
+    default: module.LegalPage,
+  }))
+);
 import {
   getCanonicalCustomerPath,
   isCustomerPath,
   parseCustomerRoute,
 } from './lib/customerAuth';
-import { parseStaffRoute } from './lib/staffAuth';
+import { parseLegalRoute, parseStaffRoute } from './lib/staffAuth';
 import { AppSidebar } from './components/layout/AppSidebar';
 
 // Les écrans métier sont chargés à la demande : ouvrir le tableau de bord ne
@@ -231,6 +236,17 @@ export default function App() {
           route={parseCustomerRoute(pathname)}
           onNavigate={navigate}
         />
+      </Suspense>
+    );
+  }
+
+  // Pages d'information légale : publiques et statiques, liées depuis
+  // l'inscription sans charger l'état métier.
+  const legalRoute = parseLegalRoute(pathname);
+  if (legalRoute) {
+    return (
+      <Suspense fallback={<ScreenLoadingFallback />}>
+        <LegalPage kind={legalRoute} onNavigate={navigate} />
       </Suspense>
     );
   }

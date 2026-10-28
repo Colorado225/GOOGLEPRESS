@@ -82,7 +82,7 @@ test.describe('PressingPro — parcours critiques', () => {
 
     await expect(page).toHaveURL(/\/connexion$/);
     await expect(
-      page.getByRole('heading', { name: 'Connexion du personnel' })
+      page.getByRole('heading', { name: 'Heureux de vous retrouver' })
     ).toBeVisible();
     await expect(
       page.getByText('Le service de connexion n’est pas configuré')
@@ -94,10 +94,11 @@ test.describe('PressingPro — parcours critiques', () => {
 
     await expect(page).toHaveURL(/\/inscription$/);
     await expect(
-      page.getByRole('heading', { name: 'Créer un compte propriétaire' })
+      page.getByRole('heading', { name: 'Créez votre espace professionnel' })
     ).toBeVisible();
     await expect(page.getByLabel('Nom complet')).toBeVisible();
     await expect(page.getByLabel('Adresse e-mail')).toBeVisible();
+    await expect(page.getByLabel(/J’accepte les/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Créer mon compte' })).toBeDisabled();
 
     await page.goto('/bienvenue');
@@ -106,6 +107,22 @@ test.describe('PressingPro — parcours critiques', () => {
       page.getByRole('heading', { name: 'Bienvenue — créons votre pressing' })
     ).toBeVisible();
     await expect(page.getByText('impossible de créer un pressing ici')).toBeVisible();
+  });
+
+  test('les pages légales publiques sont accessibles sans configuration', async ({ page }) => {
+    await page.goto('/conditions');
+
+    await expect(page).toHaveURL(/\/conditions$/);
+    await expect(
+      page.getByRole('heading', { name: 'Conditions d’utilisation' })
+    ).toBeVisible();
+
+    await page.getByRole('link', { name: 'Politique de confidentialité' }).click();
+
+    await expect(page).toHaveURL(/\/confidentialite$/);
+    await expect(
+      page.getByRole('heading', { name: 'Politique de confidentialité' })
+    ).toBeVisible();
   });
 
   test('l’onglet Sauvegarde affiche l’export chiffré local', async ({ page }) => {
