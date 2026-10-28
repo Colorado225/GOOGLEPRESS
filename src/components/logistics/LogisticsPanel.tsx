@@ -34,6 +34,7 @@ export const LogisticsPanel: React.FC = () => {
     orders,
     employees,
     shopSettings,
+    setActiveScreen,
     focusedLogisticsTaskId,
     setFocusedLogisticsTaskId,
   } = useApp();
@@ -256,7 +257,17 @@ export const LogisticsPanel: React.FC = () => {
             prête avec encaissement du solde sur place si nécessaire.
           </p>
         </div>
-        {newPickupButton}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveScreen('courier')}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-[13px] font-bold text-zinc-700 shadow-2xs transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+          >
+            <Truck className="h-4 w-4" aria-hidden="true" />
+            Ma tournée
+          </button>
+          {newPickupButton}
+        </div>
       </div>
 
       <p className="flex items-start gap-2 rounded-lg border border-blue-100 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/70 px-3 py-2 text-[11.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">

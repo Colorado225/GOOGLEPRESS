@@ -78,6 +78,7 @@ export type ScreenId =
   | 'dashboard'
   | 'pos'
   | 'workshop'
+  | 'courier'
   | 'orders'
   | 'clients'
   | 'employees'

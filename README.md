@@ -23,7 +23,10 @@ clôture journalière Z.
   configurable par le propriétaire : codes libres, duplication, séries
   numérotées type B-01 → B-12, capacités et règles de travail), onglet **Tournées** pour les
   ramassages/livraisons (programmation, coursier, départ,
-  échec/reprogrammation, encaissement du solde à la livraison), remise au
+  échec/reprogrammation, encaissement du solde à la livraison), écran
+  **Ma tournée** plein écran pour le coursier sur téléphone (`/tournee` :
+  arrêts du jour dans l'ordre, Démarrer / Arrivé / Confirmer, itinéraire,
+  appel, fin de tournée), remise au
   comptoir et clôture de caisse Z. Un onglet séparé **Suivi distant** lit les
   commandes déjà présentes dans Supabase, s’abonne à Realtime et fait passer
   leurs étapes par une RPC qui journalise l’historique ; il ne remplace pas
@@ -294,6 +297,7 @@ tournées et de la preuve de remise dans
 (preuve de remise, jalons, itinéraire) est documentée dans
 [`docs/PREUVE-DE-REMISE.md`](docs/PREUVE-DE-REMISE.md) et la phase 1 (carte
 Leaflet/OpenStreetMap, point de livraison, partage de position, heure
-d'arrivée) dans [`docs/CARTE-ET-SUIVI-GPS.md`](docs/CARTE-ET-SUIVI-GPS.md).
+d'arrivée, écran coursier `/tournee`) dans
+[`docs/CARTE-ET-SUIVI-GPS.md`](docs/CARTE-ET-SUIVI-GPS.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.

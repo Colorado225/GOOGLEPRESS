@@ -277,6 +277,12 @@ export const AppSidebar: React.FC = () => {
       })),
     },
     {
+      key: 'courier',
+      label: 'Ma tournée',
+      icon: <Truck className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'courier',
+    },
+    {
       key: 'clients',
       label: 'Clients',
       icon: <Users className="w-[18px] h-[18px] shrink-0" />,

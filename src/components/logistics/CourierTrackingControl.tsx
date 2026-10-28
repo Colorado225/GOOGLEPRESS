@@ -17,12 +17,27 @@ import { formatPositionAge } from '../../lib/geo';
 /** Un seul partage actif à la fois, même si plusieurs tournées sont en route. */
 let activeWatch: { taskId: string; watchId: number } | null = null;
 
+/** Événement écouté par les contrôles montés pour remettre leur état à zéro. */
+const WATCH_STOPPED_EVENT = 'pressingpro:courier-watch-stopped';
+
 const stopWatch = () => {
   if (!activeWatch) return;
   if (typeof navigator !== 'undefined' && navigator.geolocation) {
     navigator.geolocation.clearWatch(activeWatch.watchId);
   }
   activeWatch = null;
+};
+
+/**
+ * Coupe le partage en cours, où qu'il soit monté.
+ * Utilisé par « Terminer la tournée » : la fin de service doit arrêter l'envoi
+ * de position même si la fiche de la course est encore affichée ailleurs.
+ */
+export const stopActiveCourierWatch = (): void => {
+  stopWatch();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(WATCH_STOPPED_EVENT));
+  }
 };
 
 interface CourierTrackingControlProps {
@@ -41,13 +56,15 @@ export const CourierTrackingControl: React.FC<CourierTrackingControlProps> = ({ 
 
   const position = courierPositions[taskId];
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const onStopped = () => setActive(false);
+    window.addEventListener(WATCH_STOPPED_EVENT, onStopped);
+    return () => {
+      window.removeEventListener(WATCH_STOPPED_EVENT, onStopped);
       // Quitter l'écran coupe le partage : aucun suivi résiduel.
       if (activeWatch?.taskId === taskId) stopWatch();
-    },
-    [taskId]
-  );
+    };
+  }, [taskId]);
 
   const stop = () => {
     if (activeWatch?.taskId === taskId) stopWatch();

@@ -23,6 +23,7 @@ export default defineConfig({
         'src/lib/deliveryRoute.ts',
         'src/lib/geo.ts',
         'src/lib/courierPositions.ts',
+        'src/lib/courierTour.ts',
       ],
       thresholds: {
         statements: 70,

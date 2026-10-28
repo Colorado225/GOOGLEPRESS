@@ -29,6 +29,13 @@ describe('parseErpRoute', () => {
     expect(parseErpRoute('')).toBe('dashboard');
   });
 
+  it('ouvre l’écran coursier par son URL et son alias', () => {
+    expect(parseErpRoute('/tournee')).toBe('courier');
+    expect(parseErpRoute('/ma-tournee')).toBe('courier');
+    expect(parseErpRoute('/tournee/')).toBe('courier');
+    expect(erpPathForScreen('courier')).toBe('/tournee');
+  });
+
   it('rejette les chemins hors ERP et les sous-vues internes', () => {
     expect(parseErpRoute('/connexion')).toBeNull();
     expect(parseErpRoute('/client/connexion')).toBeNull();
@@ -40,7 +47,7 @@ describe('parseErpRoute', () => {
 
 describe('erpPathForScreen', () => {
   it('fournit un chemin canonique unique et réversible par écran', () => {
-    expect(ERP_ROUTES).toHaveLength(10);
+    expect(ERP_ROUTES).toHaveLength(11);
     const paths = new Set<string>();
     for (const route of ERP_ROUTES) {
       const canonical = erpPathForScreen(route.screen);
@@ -58,6 +65,8 @@ describe('erpPathForScreen', () => {
     expect(getErpScreenTitle('pos', 'Pressing Éclat')).toBe('Réception (POS) — Pressing Éclat');
     expect(getErpScreenTitle('pos', '   ')).toBe('Réception (POS) — PressingPro CI');
     expect(getErpScreenTitle('workshop')).toBe('Production & Remise — PressingPro CI');
+    expect(getErpScreenTitle('courier')).toBe('Ma tournée — PressingPro CI');
+    expect(getErpScreenTitle('courier', 'Pressing Éclat')).toBe('Ma tournée — Pressing Éclat');
   });
 });
 

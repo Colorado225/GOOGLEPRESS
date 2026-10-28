@@ -1,7 +1,8 @@
 # Carte et suivi GPS des tournées — phase 1
 
 **Date :** 28 octobre 2026 · **Branche :** `arena/7aed267c-googlepress`
-**Statut :** livrée, sauf l'écran coursier dédié (voir § 7).
+**Statut :** **livrée en entier**, écran coursier `/tournee` compris
+(voir § 8).
 **Fournisseur de carte :** **Leaflet + tuiles OpenStreetMap**, gratuit, sans clé
 ni compte — choix retenu après la phase 0.
 
@@ -17,6 +18,9 @@ ni compte — choix retenu après la phase 0.
   la précision annoncée. Aucune heure si la position est périmée.
 - Des **réglages** clairs : carte activée ou non, partage autorisé ou non,
   vitesse moyenne, détour routier, durée de validité d'une position.
+- Un **écran coursier** plein écran, pensé pour une main : les arrêts du jour
+  dans l'ordre, un gros bouton par étape, l'itinéraire et l'appel à portée de
+  pouce.
 
 ## 2. Parcours concret
 
@@ -31,6 +35,10 @@ ni compte — choix retenu après la phase 0.
    y a 40 s**. Au-delà de la validité (3 min par défaut), le message devient
    « Position non actualisée… aucune heure d'arrivée n'est annoncée ».
 5. La vue **Carte** rassemble les arrêts et les coursiers du jour.
+6. Sur le téléphone, le coursier ouvre **Ma tournée** (barre latérale, ou le
+   bouton du panneau Tournées). Il choisit son nom une fois — le choix est
+   retenu sur l'appareil — puis enchaîne Démarrer → Arrivé sur place →
+   Confirmer. Le partage de position n'apparaît que sur la course en route.
 
 ## 3. Choix techniques et pourquoi
 
@@ -104,22 +112,57 @@ Les points `0,0`, les coordonnées hors bornes et les horodatages invalides sont
 
 ## 7. Ce qui n'est pas encore là
 
-- **Écran coursier dédié** (`/logistique/tournee`) : le partage et les jalons
-  sont aujourd'hui sur la fiche de tournée, utilisable sur téléphone, mais pas
-  encore une page mobile dédiée avec gros boutons et itinéraire ordonné.
 - **Lien de suivi client** à jeton, position arrondie : phase 2.
 - **Zones tarifaires** par quartier : phase 2.
 - **Optimisation d'itinéraire** et géocodage automatique : hors périmètre.
 - **Synchronisation Supabase** des positions : phase 3.
 
-## 8. Vérifications réellement effectuées
+## 8. Écran coursier — `/tournee`
+
+Une page à part, pas un onglet de plus dans l'atelier : le coursier est debout,
+dehors, souvent en plein soleil, avec une main libre.
+
+- **Route stable** `/tournee` (alias `/ma-tournee`) : le titre du document
+  devient « Ma tournée — <nom du pressing> ».
+- **Choix du coursier local.** Les comptes de connexion ne sont pas encore
+  reliés aux fiches employés ; l'écran retient le dernier nom choisi dans
+  `localStorage` (clé `pressingpro_active_courier`). Le choix mémorisé est
+  ignoré s'il a été désactivé, et le personnel dont le poste contient
+  « livraison » est proposé en tête. Avec un seul employé actif, pas de
+  sélecteur : juste son nom.
+- **Ordre réel** : créneaux de `LOGISTICS_TIME_SLOTS` d'abord, puis date de
+  création ; les tournées terminées descendent en fin de liste ; les
+  annulations disparaissent ; les échecs restent visibles avec leur badge.
+- **Une action principale par état** : `Démarrer` (programmée) puis `Arrivé
+  sur place`, `Confirmer la collecte` ou `Confirmer la livraison`, et
+  `Signaler un échec`. Les modales sont celles du panneau Tournées — même
+  code, mêmes règles (encaissement du solde, code de remise, preuve).
+- **Sur place** : `Itinéraire` (Google Maps, depuis le point de livraison)
+  et `Appeler` (`tel:`) toujours visibles, plus `Placer` / `Modifier le point
+  de livraison`.
+- **Position** : le contrôle de partage n'apparaît que si une course est *en
+  route* **et** que le partage est autorisé dans les paramètres. Sinon, une
+  phrase dit pourquoi (carte désactivée, partage désactivé, aucune course en
+  cours) — jamais un bouton mort.
+- **Fin de tournée** : quand tous les arrêts sont traités, le récapitulatif
+  s'affiche (arrêts traités, encaissé, preuves, échecs à reprogrammer) et
+  « Terminer la tournée » coupe le partage de position, où qu'il soit monté.
+
+Fonctions pures associées, testées sans navigateur : `resolveActiveCourierId`,
+`getCourierStops`, `summarizeCourierTour`, `getNextCourierStop`
+(`src/lib/courierTour.ts`).
+
+## 9. Vérifications réellement effectuées
 
 - `npx tsc --noEmit`, `npm run lint` : propres.
-- **252 tests / 23 fichiers** (+20) : géographie (haversine, bornes, fraîcheur,
+- **260 tests / 24 fichiers** : géographie (haversine, bornes, fraîcheur,
   fourchette, précision), positions (relecture, purge, fréquence), itinéraire
-  (coordonnées prioritaires, repli sur l'adresse), tournée stockée.
+  (coordonnées prioritaires, repli sur l'adresse), tournée stockée, et côté
+  écran coursier : choix du coursier, filtrage par coursier et par jour,
+  ordre des créneaux, terminées en fin, annulations exclues, récapitulatif
+  encaissé/reste/preuves, prochain arrêt.
 - Couverture : `geo.ts` 96,5 %, `deliveryRoute.ts` 100 %, `courierPositions.ts`
-  couverte par ses 6 cas ; seuils globaux respectés.
+  couverte par ses 6 cas, `courierTour.ts` 83,6 % ; seuils globaux respectés.
 - **Rendu serveur** avec tournées seedées : bascule Liste/Carte, « Modifier le
   point » / « Placer le point », « Arrivée estimée » et fourchette `14 h 32 –
   14 h 55`, distance, « Position non actualisée », « Partager ma position »,
@@ -128,7 +171,7 @@ Les points `0,0`, les coordonnées hors bornes et les horodatages invalides sont
   **43,3 kB gzip**, chargé seulement à l'ouverture d'une carte.
 - CI : voir le run associé au commit.
 
-## 9. Limites, dites franchement
+## 10. Limites, dites franchement
 
 - **Aucun navigateur ni téléphone dans mon environnement** : les tuiles OSM,
   l'autorisation de géolocalisation, la précision réelle en rue et le
@@ -139,18 +182,25 @@ Les points `0,0`, les coordonnées hors bornes et les horodatages invalides sont
 - L'heure d'arrivée reste une **estimation** : fourchette, âge de la position et
   mention « approximative » sont là pour que personne ne la prenne pour une
   promesse.
+- L'écran coursier est **responsive et vérifié au rendu**, pas au doigt : la
+  taille réelle des boutons, le soleil sur l'écran et le port d'un gant ne se
+  testent pas ici. Aucun parcours mobile réel n'a été enregistré.
 
-## 10. Fichiers
+## 11. Fichiers
 
 - `src/lib/geo.ts` — haversine, validation, fraîcheur, estimation, formats.
 - `src/lib/courierPositions.ts` — stockage local, purge, fréquence d'envoi.
 - `src/components/logistics/TourMap.tsx` — carte Leaflet (import dynamique).
 - `src/components/logistics/TourMapPanel.tsx` — vue Carte des tournées.
 - `src/components/logistics/DestinationPickerModal.tsx` — choix du point.
-- `src/components/logistics/CourierTrackingControl.tsx` — partage de position.
+- `src/components/logistics/CourierTrackingControl.tsx` — partage de position,
+  et `stopActiveCourierWatch()` pour couper net en fin de tournée.
+- `src/components/courier/CourierPage.tsx` — écran coursier `/tournee`.
+- `src/lib/courierTour.ts` — filtres, ordre des arrêts, récapitulatif.
 - `LogisticsTaskCard.tsx`, `LogisticsPanel.tsx`,
   `src/components/settings/SettingsPage.tsx` — intégration.
 - `src/context/AppContext.tsx`, `src/lib/shopSettings.ts`, `src/types/index.ts`.
 - `vercel.json` — CSP tuiles + autorisation de géolocalisation.
 - `tests/unit/geo.test.ts`, `tests/unit/courierPositions.test.ts`,
-  `tests/unit/deliveryRoute.test.ts`, `tests/unit/logistics.test.ts`.
+  `tests/unit/deliveryRoute.test.ts`, `tests/unit/logistics.test.ts`,
+  `tests/unit/courierTour.test.ts`.

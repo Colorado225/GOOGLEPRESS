@@ -54,6 +54,7 @@ production → suivi des commandes → gestion.
 | `/` (alias `/tableau-de-bord`) | `dashboard` | Tableau de bord |
 | `/reception` | `pos` | Réception (POS) |
 | `/atelier` | `workshop` | Production & Remise |
+| `/tournee` (alias `/ma-tournee`) | `courier` | Ma tournée |
 | `/commandes` | `orders` | Commandes |
 | `/clients` | `clients` | Clients |
 | `/personnel` | `employees` | Personnel |

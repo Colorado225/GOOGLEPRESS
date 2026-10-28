@@ -13,6 +13,7 @@ export const DEFAULT_SIDEBAR_ORDER = [
   'dashboard',
   'pos',
   'workshop',
+  'courier',
   'clients',
   'employees',
   'inventory',

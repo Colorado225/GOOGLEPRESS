@@ -79,6 +79,8 @@ describe('sidebarLayout — groupes et migration', () => {
       'expenses',
       'reports',
       'settings',
+      // Clé inconnue de la sauvegarde : ajoutée en fin de liste, jamais perdue.
+      'courier',
     ]);
   });
 
