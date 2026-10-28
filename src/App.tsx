@@ -160,7 +160,7 @@ export default function App() {
     );
   }
 
-  const staffPath = pathname.replace(/\\/+$/, '') || '/';
+  const staffPath = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, pathname.lastIndexOf('/')) || '/' : pathname;
   if (staffPath === '/connexion' || staffPath === '/inscription') {
     return (
       <StaffAuthPage
