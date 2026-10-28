@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp, type ScreenId } from '../../context/AppContext';
 import {
-  ERP_NOT_FOUND_TITLE,
   erpPathForScreen,
+  getErpNotFoundTitle,
   getErpScreenTitle,
   parseErpRoute,
 } from '../../lib/routes';
+import { resolveShopDisplayName } from '../../lib/shopIdentity';
 
 export interface ErpRouteSync {
   /** Chemin demandé qui ne correspond à aucun écran (afficher « Page introuvable »). */
@@ -29,7 +30,8 @@ export interface ErpRouteSync {
  * Le titre du document suit l'écran affiché.
  */
 export const useErpRouteSync = (): ErpRouteSync => {
-  const { activeScreen, setActiveScreen } = useApp();
+  const { activeScreen, setActiveScreen, shopSettings, workspace } = useApp();
+  const brandName = resolveShopDisplayName(shopSettings, workspace);
   const [unknownPath, setUnknownPath] = useState<string | null>(() =>
     parseErpRoute(window.location.pathname) === null
       ? window.location.pathname
@@ -78,9 +80,9 @@ export const useErpRouteSync = (): ErpRouteSync => {
 
   useEffect(() => {
     document.title = unknownPath
-      ? ERP_NOT_FOUND_TITLE
-      : getErpScreenTitle(activeScreen);
-  }, [activeScreen, unknownPath]);
+      ? getErpNotFoundTitle(brandName)
+      : getErpScreenTitle(activeScreen, brandName);
+  }, [activeScreen, unknownPath, brandName]);
 
   const goToScreen = (screen: ScreenId) => {
     setUnknownPath(null);

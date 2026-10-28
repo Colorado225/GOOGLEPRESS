@@ -41,7 +41,12 @@ import {
 } from '../lib/storage';
 
 import { AppTheme, applyTheme, getInitialTheme, persistTheme } from '../lib/theme';
-import { DEFAULT_SHOP_SETTINGS, SHOP_SETTINGS_STORAGE_KEY } from '../lib/shopSettings';
+import {
+  DEFAULT_SHOP_SETTINGS,
+  SHOP_SETTINGS_STORAGE_KEY,
+  resolveDefaultShopSettings,
+} from '../lib/shopSettings';
+import { isValidLogoDataUrl } from '../lib/shopIdentity';
 import { ShopSettings } from '../types';
 import {
   TICKET_COUNTER_STORAGE_KEY as TICKET_COUNTER_KEY,
@@ -404,10 +409,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Paramètres de la boutique (écran Paramètres) : fusionnés aux valeurs par
   // défaut pour rester complets même si une ancienne version est en mémoire.
+  // Sur un espace réel, la base porte le nom du pressing effectivement créé :
+  // le nom de l'application n'apparaît jamais comme enseigne.
   const [shopSettings, setShopSettings] = useState<ShopSettings>(() => {
+    const base = resolveDefaultShopSettings(workspace);
+    const persisted = loadPersistedState<Partial<ShopSettings>>(
+      storageKey(SHOP_SETTINGS_STORAGE_KEY),
+      {}
+    );
+    // Un nom vide côté sauvegarde ne doit pas écraser celui du serveur.
     const merged = {
-      ...DEFAULT_SHOP_SETTINGS,
-      ...loadPersistedState<Partial<ShopSettings>>(storageKey(SHOP_SETTINGS_STORAGE_KEY), {}),
+      ...base,
+      ...persisted,
+      name: persisted.name?.trim() ? persisted.name : base.name,
+      logoDataUrl: isValidLogoDataUrl(persisted.logoDataUrl) ? persisted.logoDataUrl : null,
     };
     return {
       ...merged,
@@ -422,6 +437,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateShopSettings = (next: ShopSettings) =>
     setShopSettings({
       ...next,
+      logoDataUrl: isValidLogoDataUrl(next.logoDataUrl) ? next.logoDataUrl : null,
       pickupFee: normalizeLogisticsFee(next.pickupFee),
       deliveryFee: normalizeLogisticsFee(next.deliveryFee),
       storageAssignmentRequired: next.storageAssignmentRequired === true,

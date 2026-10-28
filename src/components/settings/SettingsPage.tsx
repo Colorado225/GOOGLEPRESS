@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp, type SettingsTab } from '../../context/AppContext';
 import {
   AlertTriangle,
@@ -17,6 +17,8 @@ import {
   PackageCheck,
   Sun,
   Truck,
+  ImagePlus,
+  Trash2,
 } from 'lucide-react';
 import {
   calculateStorageOccupancy,
@@ -31,6 +33,12 @@ import { Badge } from '../common/DataTable';
 import { canPromptInstall, isRunningStandalone, promptInstall, PWA_INSTALLABLE_EVENT } from '../../lib/pwa';
 import { SupabaseBackendSection } from './SupabaseBackendSection';
 import { BackupSection } from './BackupSection';
+import { fileToLogoDataUrl } from '../../lib/imageDownscale';
+import {
+  MAX_LOGO_FILE_BYTES,
+  getBrandInitials,
+  resolveShopDisplayName,
+} from '../../lib/shopIdentity';
 
 /**
  * Carte « Apparence » : thème clair/sombre de l'interface. Le choix est appliqué
@@ -157,6 +165,7 @@ export const SettingsPage: React.FC = () => {
     showToast,
     shopSettings,
     updateShopSettings,
+    workspace,
     orders,
     storageLocations,
     logisticsTasks,
@@ -167,6 +176,10 @@ export const SettingsPage: React.FC = () => {
 
   // Le formulaire démarre depuis les paramètres persistés (contexte).
   const [shopName, setShopName] = useState(shopSettings.name);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(shopSettings.logoDataUrl);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [shopTagline, setShopTagline] = useState(shopSettings.tagline);
   const [shopAddress, setShopAddress] = useState(shopSettings.address);
   const [shopPhone, setShopPhone] = useState(shopSettings.phone);
@@ -264,6 +277,7 @@ export const SettingsPage: React.FC = () => {
 
     updateShopSettings({
       name: shopName.trim(),
+      logoDataUrl,
       tagline: shopTagline.trim(),
       address: shopAddress.trim(),
       phone: shopPhone.trim(),
@@ -292,6 +306,38 @@ export const SettingsPage: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     saveSettings(false);
+  };
+
+  /**
+   * Téléversement du logo : l'image est redimensionnée dans le navigateur puis
+   * appliquée immédiatement (c'est une donnée d'identité, pas un réglage à
+   * valider avec le reste du formulaire).
+   */
+  const handleLogoSelected = async (file: File | null) => {
+    if (!file) return;
+    setLogoError(null);
+    setLogoBusy(true);
+    try {
+      const dataUrl = await fileToLogoDataUrl(file);
+      setLogoDataUrl(dataUrl);
+      updateShopSettings({ ...shopSettings, logoDataUrl: dataUrl });
+      showToast('✓ Logo du pressing mis à jour');
+    } catch (error) {
+      setLogoError(
+        error instanceof Error ? error.message : 'Le logo n’a pas pu être enregistré.'
+      );
+    } finally {
+      setLogoBusy(false);
+      // Permet de re-sélectionner le même fichier après une erreur.
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const removeLogo = () => {
+    setLogoError(null);
+    setLogoDataUrl(null);
+    updateShopSettings({ ...shopSettings, logoDataUrl: null });
+    showToast('Logo retiré : les initiales du pressing sont affichées à la place.');
   };
 
   return (
@@ -342,6 +388,75 @@ export const SettingsPage: React.FC = () => {
           <div className="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
             <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <h2 className="font-bold text-[14.5px] text-zinc-900 dark:text-zinc-100">Identité de l'établissement</h2>
+          </div>
+
+          {/* Logo du pressing : il remplace le monogramme « P » dans toute
+              l'application et sur les tickets. */}
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-800/40 p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xs dark:border-zinc-700 dark:bg-zinc-900">
+                {logoDataUrl ? (
+                  <img
+                    src={logoDataUrl}
+                    alt={`Logo de ${shopName.trim() || 'votre pressing'}`}
+                    className="h-full w-full object-contain p-1"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center rounded-xl bg-blue-600 text-[19px] font-black text-white">
+                    {getBrandInitials(resolveShopDisplayName(shopSettings, workspace))}
+                  </span>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-bold text-zinc-900 dark:text-zinc-100">
+                  Logo du pressing
+                </p>
+                <p className="mt-0.5 text-[11.5px] leading-snug text-zinc-500 dark:text-zinc-400">
+                  PNG, JPEG ou WebP — {Math.round(MAX_LOGO_FILE_BYTES / (1024 * 1024))} Mo
+                  maximum. L’image est recadrée en carré 256 px et affichée à la place
+                  du monogramme.
+                </p>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    ref={logoInputRef}
+                    id="shop-logo-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="sr-only"
+                    onChange={(event) => void handleLogoSelected(event.target.files?.[0] ?? null)}
+                  />
+                  <label
+                    htmlFor="shop-logo-input"
+                    aria-disabled={logoBusy}
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#09090b] px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 ${
+                      logoBusy ? 'pointer-events-none opacity-60' : ''
+                    }`}
+                  >
+                    <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
+                    {logoBusy ? 'Traitement…' : logoDataUrl ? 'Changer le logo' : 'Téléverser un logo'}
+                  </label>
+
+                  {logoDataUrl && !logoBusy && (
+                    <button
+                      type="button"
+                      onClick={removeLogo}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Retirer
+                    </button>
+                  )}
+                </div>
+
+                {logoError && (
+                  <p role="alert" className="mt-2 text-[11.5px] font-semibold text-red-600 dark:text-red-400">
+                    {logoError}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -52,7 +52,11 @@ describe('erpPathForScreen', () => {
   });
 
   it('intitule les écrans avec leur libellé métier', () => {
+    // Sans nom de pressing connu, le nom du produit sert de repli.
     expect(getErpScreenTitle('pos')).toBe('Réception (POS) — PressingPro CI');
+    // Sur un espace réel, le titre porte le nom du pressing.
+    expect(getErpScreenTitle('pos', 'Pressing Éclat')).toBe('Réception (POS) — Pressing Éclat');
+    expect(getErpScreenTitle('pos', '   ')).toBe('Réception (POS) — PressingPro CI');
     expect(getErpScreenTitle('workshop')).toBe('Production & Remise — PressingPro CI');
   });
 });

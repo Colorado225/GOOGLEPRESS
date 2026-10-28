@@ -278,8 +278,10 @@ la reprise des pages de connexion et d’inscription dans
 « aucune donnée de démonstration sur un compte réel » dans
 [`docs/DONNEES-DEMO-ET-ESPACE-REEL.md`](docs/DONNEES-DEMO-ET-ESPACE-REEL.md),
 la barre latérale personnalisable et la carte d'abonnement dans
-[`docs/BARRE-LATERALE.md`](docs/BARRE-LATERALE.md) et la carte des routes par
-contexte (client, personnel, ERP) dans
+[`docs/BARRE-LATERALE.md`](docs/BARRE-LATERALE.md), le nom et le logo propres à
+chaque pressing dans
+[`docs/IDENTITE-ETABLISSEMENT.md`](docs/IDENTITE-ETABLISSEMENT.md) et la carte
+des routes par contexte (client, personnel, ERP) dans
 [`docs/ROUTES.md`](docs/ROUTES.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.

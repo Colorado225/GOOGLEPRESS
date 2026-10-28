@@ -318,6 +318,8 @@ export interface LaundryOrder {
  */
 export interface ShopSettings {
   name: string;
+  /** Logo de l'établissement en data URL (PNG/WebP 256 px), `null` = aucun. */
+  logoDataUrl: string | null;
   tagline: string;
   address: string;
   phone: string;

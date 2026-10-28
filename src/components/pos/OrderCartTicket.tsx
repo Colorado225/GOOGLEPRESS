@@ -5,6 +5,7 @@ import { formatFCFA } from '../../data/demoData';
 import { calculateOrderTotals } from '../../lib/pricing';
 import { formatPromised, getPromisedDate, isValidISODate, nowDateTime, todayISO } from '../../lib/dates';
 import { formatLogisticsSchedule } from '../../lib/logistics';
+import { resolveShopDisplayName } from '../../lib/shopIdentity';
 import { Trash2, Plus, Minus, Printer, MessageSquare, Check, ShieldAlert, Sparkles } from 'lucide-react';
 import { ConfettiButton } from '../../registry/magicui/confetti';
 
@@ -23,6 +24,7 @@ export const OrderCartTicket: React.FC = () => {
     nextTicketNumber,
     pendingPickupTask,
     shopSettings,
+    workspace,
     orderFulfillmentMethod,
     deliveryAddress,
     deliveryDateISO,
@@ -339,7 +341,7 @@ export const OrderCartTicket: React.FC = () => {
           {wantsHomeDelivery
             ? `Livraison ${formatLogisticsSchedule(deliveryDateISO, deliveryTimeSlot).toLowerCase()}`
             : `Retrait ${formatPromised(getPromisedDate(pickupOption)).toLowerCase()}`}
-          . {shopSettings.name} »
+          . {resolveShopDisplayName(shopSettings, workspace)} »
         </p>
       </div>
     </div>

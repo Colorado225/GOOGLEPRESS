@@ -22,6 +22,7 @@ import { formatFCFA } from '../../data/demoData';
 import { formatShortDate } from '../../lib/dates';
 import { PressingAlertsButton } from './PressingAlertsButton';
 import { getUserDisplayName, getUserInitials, getUserRoleLabel } from '../../lib/workspaceScope';
+import { getBrandInitials, resolveShopDisplayName } from '../../lib/shopIdentity';
 
 export const MainLayoutHeader: React.FC = () => {
   const {
@@ -40,7 +41,10 @@ export const MainLayoutHeader: React.FC = () => {
     setSelectedCustomer,
     showToast,
     workspace,
+    shopSettings,
   } = useApp();
+
+  const brandName = resolveShopDisplayName(shopSettings, workspace);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
@@ -185,11 +189,22 @@ export const MainLayoutHeader: React.FC = () => {
           {/* Collapsed Brand Mark */}
           {isSidebarCollapsed && (
             <div className="hidden md:flex items-center gap-2 pl-1 border-l border-zinc-200 dark:border-zinc-700 animate-in fade-in slide-in-from-left-2 duration-200">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-black text-xs text-white shadow-xs">
-                P
-              </div>
-              <span className="font-bold text-[13.5px] text-zinc-900 dark:text-zinc-100 tracking-tight">
-                PressingPro CI
+              {shopSettings.logoDataUrl ? (
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+                  <img
+                    src={shopSettings.logoDataUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-full w-full object-contain p-0.5"
+                  />
+                </div>
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-black text-[10px] text-white shadow-xs">
+                  {getBrandInitials(brandName)}
+                </div>
+              )}
+              <span className="max-w-[180px] truncate font-bold text-[13.5px] text-zinc-900 dark:text-zinc-100 tracking-tight">
+                {brandName}
               </span>
             </div>
           )}
@@ -199,8 +214,9 @@ export const MainLayoutHeader: React.FC = () => {
             <span
               className="hidden sm:inline hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer transition-colors"
               onClick={() => setActiveScreen('dashboard')}
+              title={brandName}
             >
-              Pressing
+              {brandName}
             </span>
             <ChevronRight className="hidden sm:inline w-3 h-3 text-zinc-400 dark:text-zinc-500" />
             <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[140px] sm:max-w-none">

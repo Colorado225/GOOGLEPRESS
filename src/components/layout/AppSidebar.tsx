@@ -50,6 +50,7 @@ import {
   normalizeSubscription,
   resolveDefaultSubscription,
 } from '../../lib/subscription';
+import { getBrandInitials, resolveShopDisplayName } from '../../lib/shopIdentity';
 import { SubscriptionPlanCard } from './SubscriptionPlanCard';
 import {
   WORKSHOP_GROUP_LABEL,
@@ -123,6 +124,10 @@ export const AppSidebar: React.FC = () => {
 
   // En tiroir mobile, la barre est toujours rendue déployée (le repli ne concerne que le bureau)
   const collapsed = isSidebarCollapsed && !isMobileMenuOpen;
+
+  // Nom réel du pressing (Paramètres → agence → organisation). Jamais le nom
+  // de l'application sur l'espace d'un pressing inscrit.
+  const brandName = resolveShopDisplayName(shopSettings, workspace);
 
   // --- Ordre personnalisable des entrées -----------------------------------
   // Chaque entrée porte un identifiant stable ; l'ordre choisi est mémorisé
@@ -419,15 +424,32 @@ export const AppSidebar: React.FC = () => {
       {/* Brand Header with Collapse Sliding Button */}
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-lg text-white shadow-md shadow-blue-500/30 shrink-0">
-            P
-          </div>
+          {shopSettings.logoDataUrl ? (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-md shadow-blue-500/10">
+              <img
+                src={shopSettings.logoDataUrl}
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full object-contain p-0.5"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-[15px] text-white shadow-md shadow-blue-500/30 shrink-0">
+              {getBrandInitials(brandName)}
+            </div>
+          )}
           <div className="overflow-hidden">
-            <p className="font-bold text-[15px] leading-tight text-white tracking-tight truncate">
-              {shopSettings.name}
+            <p
+              className="font-bold text-[15px] leading-tight text-white tracking-tight truncate"
+              title={brandName}
+            >
+              {brandName}
             </p>
-            <p className="text-[11px] text-zinc-400 font-medium truncate" title={shopSettings.address}>
-              {shopSettings.address}
+            <p
+              className="text-[11px] text-zinc-400 font-medium truncate"
+              title={shopSettings.address || getWorkspaceLabel(workspace)}
+            >
+              {shopSettings.address || getWorkspaceLabel(workspace)}
             </p>
           </div>
         </div>
