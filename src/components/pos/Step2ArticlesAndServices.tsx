@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CurrentColorSelector, LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
 import { calculateOrderTotals } from '../../lib/pricing';
+import { resolvePressingPrice } from '../../lib/pressing';
 import { ClothingItem, OrderLine } from '../../types';
 import {
   ArrowLeft,
@@ -42,17 +43,25 @@ export const Step2ArticlesAndServices: React.FC = () => {
 
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
 
-  // Prestations du catalogue pressing. La blanchisserie ne passe plus par le
-  // catalogue : elle a son propre comptoir, facturé au forfait de vêtements.
-  const pressingServices = [
-    'Lavage + Repassage',
-    'Pressing à sec',
-    'Repassage seul',
-    'Teinture',
-    'Express 24h',
-  ];
+  // Prestations du pressing : liste et prix réglés dans Paramètres →
+  // Prestations. « Express 24h » n'en fait pas partie : c'est un type de
+  // service (normal / express) qui double le montant, pas un traitement.
+  const pressingServiceDefs = shopSettings.pressing.services;
+  const currentServicesList = pressingServiceDefs.map((service) => service.label);
+  const activePressingService =
+    pressingServiceDefs.find((service) => service.label === selectedServiceFilter) ??
+    pressingServiceDefs[0];
 
-  const currentServicesList = pressingServices;
+  // Une prestation renommée ou supprimée dans les Paramètres ne doit pas
+  // laisser le comptoir sur un libellé fantôme.
+  useEffect(() => {
+    if (!pressingServiceDefs.some((service) => service.label === selectedServiceFilter)) {
+      setSelectedServiceFilter(pressingServiceDefs[0]?.label ?? '');
+    }
+  }, [pressingServiceDefs, selectedServiceFilter, setSelectedServiceFilter]);
+
+  const priceFor = (item: ClothingItem) =>
+    resolvePressingPrice(item, shopSettings.pressing, activePressingService?.id ?? '');
 
   // Filter catalog items by service category (pressing vs blanchisserie)
   const catalogItems = INITIAL_CLOTHING_ITEMS.filter((item) => {
@@ -184,7 +193,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
                       {item.name}
                     </p>
                     <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 font-semibold tabular-nums mt-0.5">
-                      {formatFCFA(item.unitPrice)}{' '}
+                      {formatFCFA(priceFor(item))}{' '}
                       <span className="font-normal text-zinc-400 dark:text-zinc-500">/ {item.unitLabel || 'pièce'}</span>
                     </p>
                     {item.description && (
@@ -196,7 +205,9 @@ export const Step2ArticlesAndServices: React.FC = () => {
 
                   <button
                     type="button"
-                    onClick={() => addCartItem(item)}
+                    onClick={() =>
+                      addCartItem({ ...item, unitPrice: priceFor(item) })
+                    }
                     className={`w-full font-bold text-[12px] py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-2xs mt-1 ${
                       count > 0
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
@@ -304,7 +315,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
                 </div>
                 {expressFee > 0 && (
                   <div className="flex justify-between text-amber-800 dark:text-amber-200">
-                    <span>Supplément express</span>
+                    <span>Type express 24h (×2)</span>
                     <span className="font-bold tabular-nums">+{formatFCFA(expressFee)}</span>
                   </div>
                 )}

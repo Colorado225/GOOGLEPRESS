@@ -282,8 +282,10 @@ la barre latérale personnalisable et la carte d'abonnement dans
 chaque pressing dans
 [`docs/IDENTITE-ETABLISSEMENT.md`](docs/IDENTITE-ETABLISSEMENT.md), la
 blanchisserie au forfait par nombre de vêtements dans
-[`docs/BLANCHISSERIE-FORFAITS.md`](docs/BLANCHISSERIE-FORFAITS.md) et la carte
-des routes par contexte (client, personnel, ERP) dans
+[`docs/BLANCHISSERIE-FORFAITS.md`](docs/BLANCHISSERIE-FORFAITS.md), les
+prestations du pressing et le type de service express dans
+[`docs/PRESTATIONS-PRESSING.md`](docs/PRESTATIONS-PRESSING.md) et la carte des
+routes par contexte (client, personnel, ERP) dans
 [`docs/ROUTES.md`](docs/ROUTES.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.

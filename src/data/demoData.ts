@@ -282,7 +282,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '05 66 20 91 34',
     customerAddress: 'Plateau',
     lines: [
-      { id: 'l3', clothingItemId: 'c4', name: 'Costume 3 pièces', quantity: 1, unitPrice: 5000, subtotal: 5000, serviceType: 'Pressing à sec', color: 'Noir' },
+      { id: 'l3', clothingItemId: 'c4', name: 'Costume 3 pièces', quantity: 1, unitPrice: 5000, subtotal: 5000, serviceType: 'Nettoyage à sec', color: 'Noir' },
     ],
     subtotal: 5000,
     serviceFees: 0,
@@ -371,7 +371,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 77 12 34 56',
     customerAddress: 'Cocody',
     lines: [
-      { id: 'l7', clothingItemId: 'c4', name: 'Costume 2 pièces', quantity: 2, unitPrice: 5000, subtotal: 10000, serviceType: 'Pressing à sec' },
+      { id: 'l7', clothingItemId: 'c4', name: 'Costume 2 pièces', quantity: 2, unitPrice: 5000, subtotal: 10000, serviceType: 'Nettoyage à sec' },
     ],
     subtotal: 10000,
     serviceFees: 0,
@@ -421,7 +421,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '01 44 55 66 77',
     customerAddress: 'Cocody, Danga',
     lines: [
-      { id: 'l10', clothingItemId: 'c4', name: 'Costumes', quantity: 3, unitPrice: 5000, subtotal: 15000, serviceType: 'Pressing à sec' },
+      { id: 'l10', clothingItemId: 'c4', name: 'Costumes', quantity: 3, unitPrice: 5000, subtotal: 15000, serviceType: 'Nettoyage à sec' },
     ],
     subtotal: 15000,
     serviceFees: 0,

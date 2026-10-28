@@ -34,7 +34,7 @@ import { Badge } from '../common/DataTable';
 import { canPromptInstall, isRunningStandalone, promptInstall, PWA_INSTALLABLE_EVENT } from '../../lib/pwa';
 import { SupabaseBackendSection } from './SupabaseBackendSection';
 import { BackupSection } from './BackupSection';
-import { BlanchisserieSettingsSection } from './BlanchisserieSettingsSection';
+import { PrestationsSettingsSection } from './PrestationsSettingsSection';
 import { fileToLogoDataUrl } from '../../lib/imageDownscale';
 import {
   MAX_LOGO_FILE_BYTES,
@@ -293,6 +293,7 @@ export const SettingsPage: React.FC = () => {
       storageSuggestionsEnabled,
       storageDefaultCapacityPackages,
       blanchisserie: shopSettings.blanchisserie,
+      pressing: shopSettings.pressing,
     });
     setPickupFeeInput(String(Math.round(pickupFee)));
     setDeliveryFeeInput(String(Math.round(deliveryFee)));
@@ -532,7 +533,7 @@ export const SettingsPage: React.FC = () => {
         )}
 
         {/* Ramassage & livraison */}
-        {tab === 'services' && <BlanchisserieSettingsSection />}
+        {tab === 'services' && <PrestationsSettingsSection />}
 
         {tab === 'logistics' && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-5 shadow-2xs space-y-4 text-[13px]">

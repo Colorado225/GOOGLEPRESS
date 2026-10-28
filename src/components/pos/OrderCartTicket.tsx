@@ -184,7 +184,7 @@ export const OrderCartTicket: React.FC = () => {
           </div>
           {expressFee > 0 && (
             <div className="flex justify-between text-amber-800 dark:text-amber-200">
-              <span>Supplément Express (+50 %)</span>
+              <span>Type de service express 24h (×2)</span>
               <span className="font-semibold tabular-nums">+{formatFCFA(expressFee)}</span>
             </div>
           )}

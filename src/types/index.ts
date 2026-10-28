@@ -361,6 +361,24 @@ export interface BlanchisserieSettings {
   perGarment: Record<BlanchisserieServiceId, boolean>;
 }
 
+/** Type de prestation pressing (« Nettoyage à sec », « Teinture »…). */
+export interface PressingServiceType {
+  id: string;
+  label: string;
+}
+
+/**
+ * Réglages du pressing : liste des prestations et prix de chaque vêtement
+ * pour chaque prestation (`prix[articleId:prestationId]`).
+ *
+ * « Express 24h » n'est pas une prestation : c'est un type de service
+ * (normal / express) qui double le montant des prestations.
+ */
+export interface PressingSettings {
+  services: PressingServiceType[];
+  prices: Record<string, number>;
+}
+
 export interface ShopSettings {
   name: string;
   /** Logo de l'établissement en data URL (PNG/WebP 256 px), `null` = aucun. */
@@ -381,6 +399,8 @@ export interface ShopSettings {
   storageDefaultCapacityPackages: number;
   /** Grille des prestations de blanchisserie (forfaits au nombre de vêtements). */
   blanchisserie: BlanchisserieSettings;
+  /** Prestations du pressing et prix par vêtement. */
+  pressing: PressingSettings;
 }
 
 export interface CashRegisterData {

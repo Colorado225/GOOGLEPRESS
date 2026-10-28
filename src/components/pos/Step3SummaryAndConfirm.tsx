@@ -287,7 +287,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               </div>
               {expressFee > 0 && (
                 <div className="flex justify-between text-amber-800 dark:text-amber-200 font-medium">
-                  <span>Supplément express (+50 %)</span>
+                  <span>Type de service express 24h (×2)</span>
                   <span className="tabular-nums">+{formatFCFA(expressFee)}</span>
                 </div>
               )}

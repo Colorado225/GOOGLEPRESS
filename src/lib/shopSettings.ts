@@ -4,6 +4,7 @@ import {
   DEMO_BLANCHISSERIE_SETTINGS,
   EMPTY_BLANCHISSERIE_SETTINGS,
 } from './blanchisserie';
+import { EMPTY_PRESSING_SETTINGS } from './pressing';
 
 /** Clé localStorage des paramètres de la boutique (écran Paramètres). */
 export const SHOP_SETTINGS_STORAGE_KEY = 'pressingpro_shop_settings';
@@ -34,6 +35,9 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   // Grille d'exemple : le modèle est celui des forfaits au nombre de
   // vêtements, pas des kilos.
   blanchisserie: DEMO_BLANCHISSERIE_SETTINGS,
+  // Prestations pressing et prix par vêtement : liste de départ, tarifs
+  // laissés au catalogue tant que le propriétaire ne saisit rien.
+  pressing: EMPTY_PRESSING_SETTINGS,
 };
 
 /**
@@ -64,5 +68,6 @@ export const resolveDefaultShopSettings = (
     // Aucun tarif inventé : le pressing définit sa grille dans Paramètres →
     // Prestations avant la première commande de blanchisserie.
     blanchisserie: EMPTY_BLANCHISSERIE_SETTINGS,
+    pressing: EMPTY_PRESSING_SETTINGS,
   };
 };

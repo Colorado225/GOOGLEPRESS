@@ -56,7 +56,7 @@ export const PickupOptionsSection: React.FC = () => {
             <span className="font-bold text-zinc-900 dark:text-zinc-100">{expressLabel}</span>
           </div>
           <p className="text-[11.5px] text-amber-700 dark:text-amber-300 font-semibold mt-1 pl-6">
-            Express +50 %
+            Express 24h — ×2
           </p>
         </label>
 
