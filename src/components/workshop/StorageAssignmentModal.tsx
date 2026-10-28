@@ -37,6 +37,7 @@ export const StorageAssignmentModal: React.FC<StorageAssignmentModalProps> = ({
     orders,
     logisticsTasks,
     storageLocations,
+    shopSettings,
     markOrderReadyAndStore,
     assignOrderStorage,
   } = useApp();
@@ -84,6 +85,7 @@ export const StorageAssignmentModal: React.FC<StorageAssignmentModalProps> = ({
     ) {
       return currentOrder.storageLocationId;
     }
+    if (!shopSettings.storageSuggestionsEnabled) return '';
     return (
       getSuggestedStorageLocation(
         currentOrder,
@@ -98,8 +100,11 @@ export const StorageAssignmentModal: React.FC<StorageAssignmentModalProps> = ({
   const initialPackageCount = String(getOrderPackageCount(currentOrder) ?? 1);
   const initialNotes = currentOrder.storageNotes ?? '';
 
+  const storageRequired = shopSettings.storageAssignmentRequired;
   const initialReadyChoice: ReadyChoice =
-    mode === 'mark_ready' && selectableLocations.length === 0 ? 'store_later' : 'store_now';
+    mode === 'mark_ready' && !storageRequired && selectableLocations.length === 0
+      ? 'store_later'
+      : 'store_now';
   const [readyChoice, setReadyChoice] = useState<ReadyChoice>(initialReadyChoice);
   const [locationId, setLocationId] = useState(initialLocationId);
   const [packageCount, setPackageCount] = useState(initialPackageCount);
@@ -120,7 +125,8 @@ export const StorageAssignmentModal: React.FC<StorageAssignmentModalProps> = ({
       selectedOccupancy.packageCount + parsedPackages > selectedLocation.capacityPackages
   );
 
-  const storeLater = mode === 'mark_ready' && readyChoice === 'store_later';
+  const storeLater =
+    mode === 'mark_ready' && !storageRequired && readyChoice === 'store_later';
   const isDirty =
     readyChoice !== initialReadyChoice ||
     locationId !== initialLocationId ||
@@ -138,6 +144,12 @@ export const StorageAssignmentModal: React.FC<StorageAssignmentModalProps> = ({
       }
       if (!Number.isInteger(parsedPackages) || parsedPackages < 1 || parsedPackages > 999) {
         setError('Indiquez un nombre de paquets entier compris entre 1 et 999.');
+        return;
+      }
+      if (!shopSettings.storageAllowCapacityOverflow && exceedsCapacity && selectedLocation) {
+        setError(
+          `${selectedLocation.code} atteindrait sa capacité maximale : choisissez un autre emplacement ou demandez au propriétaire d’augmenter sa capacité.`
+        );
         return;
       }
     }
@@ -201,37 +213,56 @@ export const StorageAssignmentModal: React.FC<StorageAssignmentModalProps> = ({
         {mode === 'mark_ready' && (
           <div>
             <span className={labelClass}>Après la finition</span>
-            <SegmentedControl
-              ariaLabel="Ranger maintenant ou plus tard"
-              options={[
-                { id: 'store_now', label: 'Ranger maintenant' },
-                { id: 'store_later', label: 'Prête, non rangée' },
-              ]}
-              value={readyChoice}
-              onChange={(choice) => {
-                setReadyChoice(choice);
-                setError(null);
-              }}
-            />
-            {storeLater && (
-              <p className="mt-2 flex items-start gap-1.5 text-[12px] text-amber-700 dark:text-amber-300">
-                <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                La commande apparaîtra dans la file « À ranger » jusqu’à ce qu’un casier soit choisi.
+            {storageRequired ? (
+              <p className="flex items-start gap-1.5 rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/60 px-3 py-2 text-[12px] leading-relaxed text-teal-900 dark:text-teal-200">
+                <PackageCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                Règle définie par le propriétaire : un casier doit être choisi avant de marquer la commande prête.
               </p>
+            ) : (
+              <>
+                <SegmentedControl
+                  ariaLabel="Ranger maintenant ou plus tard"
+                  options={[
+                    { id: 'store_now', label: 'Ranger maintenant' },
+                    { id: 'store_later', label: 'Prête, non rangée' },
+                  ]}
+                  value={readyChoice}
+                  onChange={(choice) => {
+                    setReadyChoice(choice);
+                    setError(null);
+                  }}
+                />
+                {storeLater && (
+                  <p className="mt-2 flex items-start gap-1.5 text-[12px] text-amber-700 dark:text-amber-300">
+                    <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    La commande apparaîtra dans la file « À ranger » jusqu’à ce qu’un casier soit choisi.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
 
         {!storeLater && (
           <>
-            <div className="rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/60 px-3 py-2.5 text-[12.5px] text-teal-900 dark:text-teal-200">
-              <p className="font-bold">Suggestion : {STORAGE_ZONE_LABELS[suggestedZone]}</p>
-              <p className="mt-0.5 leading-relaxed">{STORAGE_ZONE_DESCRIPTIONS[suggestedZone]}</p>
-              <p className="mt-1 leading-relaxed">
-                Choisissez ensuite le code exact reporté sur l’étiquette physique du portant ou de l’étagère.
-                Regroupez tous les paquets du ticket au même endroit ; en cas d’exception, précisez le second repère ci-dessous.
-              </p>
-            </div>
+            {shopSettings.storageSuggestionsEnabled ? (
+              <div className="rounded-lg border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/60 px-3 py-2.5 text-[12.5px] text-teal-900 dark:text-teal-200">
+                <p className="font-bold">Suggestion : {STORAGE_ZONE_LABELS[suggestedZone]}</p>
+                <p className="mt-0.5 leading-relaxed">{STORAGE_ZONE_DESCRIPTIONS[suggestedZone]}</p>
+                <p className="mt-1 leading-relaxed">
+                  Choisissez ensuite le code exact reporté sur l’étiquette physique du portant ou de l’étagère.
+                  Regroupez tous les paquets du ticket au même endroit ; en cas d’exception, précisez le second repère ci-dessous.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-[12.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+                <p className="font-bold text-zinc-950 dark:text-zinc-50">Choix manuel du casier</p>
+                <p className="mt-0.5">
+                  Les suggestions automatiques sont désactivées par le propriétaire. Sélectionnez le code exact
+                  de l’étiquette physique et regroupez tous les paquets du ticket au même endroit.
+                </p>
+              </div>
+            )}
 
             <div>
               <label htmlFor="storage-location-select" className={labelClass}>
@@ -315,12 +346,20 @@ export const StorageAssignmentModal: React.FC<StorageAssignmentModalProps> = ({
             </div>
 
             {exceedsCapacity && selectedLocation && selectedOccupancy && (
-              <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/60 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-200">
+              <p
+                className={`flex items-start gap-1.5 rounded-lg border px-3 py-2 text-[12px] ${
+                  shopSettings.storageAllowCapacityOverflow
+                    ? 'border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200'
+                    : 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/60 text-red-800 dark:text-red-200'
+                }`}
+              >
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <span>
-                  {selectedLocation.code} dépasserait sa capacité indicative (
+                  {selectedLocation.code} dépasserait sa capacité (
                   {selectedOccupancy.packageCount + parsedPackages}/{selectedLocation.capacityPackages} paquets).
-                  Vous pouvez confirmer si la place réelle suffit, ou choisir un autre emplacement.
+                  {shopSettings.storageAllowCapacityOverflow
+                    ? ' Vous pouvez confirmer si la place réelle suffit, ou choisir un autre emplacement.'
+                    : ' Le propriétaire a rendu cette capacité stricte : choisissez un autre emplacement.'}
                 </span>
               </p>
             )}

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { MapPin, Save } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ModalShell } from '../common/ModalShell';
-import type { StorageLocation, StorageZone } from '../../types';
+import type { StorageLocation, StorageLocationFormData, StorageZone } from '../../types';
 import {
   STORAGE_ZONE_DESCRIPTIONS,
   STORAGE_ZONE_LABELS,
@@ -13,6 +13,8 @@ import {
 interface StorageLocationFormModalProps {
   /** null = nouvel emplacement ; objet = adaptation du plan existant. */
   location: StorageLocation | null;
+  /** Valeurs reprises pour dupliquer un emplacement (le code reste à saisir). */
+  prefill?: StorageLocationFormData | null;
   onClose: () => void;
 }
 
@@ -29,21 +31,27 @@ const STORAGE_ZONES = Object.keys(STORAGE_ZONE_LABELS) as StorageZone[];
 
 export const StorageLocationFormModal: React.FC<StorageLocationFormModalProps> = ({
   location,
+  prefill = null,
   onClose,
 }) => {
-  const { storageLocations, createStorageLocation, updateStorageLocation } = useApp();
+  const { storageLocations, shopSettings, createStorageLocation, updateStorageLocation } = useApp();
   const isEdit = location !== null;
+  const isDuplicate = !isEdit && prefill !== null;
 
   const initial = useMemo<FormState>(
     () => ({
       code: location?.code ?? '',
-      label: location?.label ?? '',
-      zone: location?.zone ?? 'folded',
-      capacityPackages: location ? String(location.capacityPackages) : '20',
-      description: location?.description ?? '',
-      isActive: location?.isActive ?? true,
+      label: location?.label ?? prefill?.label ?? '',
+      zone: location?.zone ?? prefill?.zone ?? 'folded',
+      capacityPackages: location
+        ? String(location.capacityPackages)
+        : prefill
+          ? String(prefill.capacityPackages)
+          : String(shopSettings.storageDefaultCapacityPackages),
+      description: location?.description ?? prefill?.description ?? '',
+      isActive: location?.isActive ?? prefill?.isActive ?? true,
     }),
-    [location]
+    [location, prefill, shopSettings.storageDefaultCapacityPackages]
   );
 
   const [form, setForm] = useState<FormState>(initial);
@@ -116,8 +124,14 @@ export const StorageLocationFormModal: React.FC<StorageLocationFormModalProps> =
 
   return (
     <ModalShell
-      title={isEdit ? 'Modifier l’emplacement' : 'Nouvel emplacement'}
-      subtitle={isEdit ? `${location.code} • ${location.label}` : 'À reporter sur l’étiquette physique'}
+      title={isEdit ? 'Modifier l’emplacement' : isDuplicate ? 'Dupliquer l’emplacement' : 'Nouvel emplacement'}
+      subtitle={
+        isEdit
+          ? `${location.code} • ${location.label}`
+          : isDuplicate
+            ? 'Choisissez le nouveau code à reporter sur l’étiquette'
+            : 'À reporter sur l’étiquette physique'
+      }
       icon={<MapPin className="w-5 h-5 text-teal-400" aria-hidden="true" />}
       onClose={onClose}
       isDirty={isDirty}
@@ -162,7 +176,7 @@ export const StorageLocationFormModal: React.FC<StorageLocationFormModalProps> =
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="storage-location-zone" className={labelClass}>
-              Mode de rangement *
+              Type fonctionnel *
             </label>
             <select
               id="storage-location-zone"
@@ -177,7 +191,8 @@ export const StorageLocationFormModal: React.FC<StorageLocationFormModalProps> =
               ))}
             </select>
             <p className="mt-1 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-              {STORAGE_ZONE_DESCRIPTIONS[form.zone]}
+              {STORAGE_ZONE_DESCRIPTIONS[form.zone]} Ce type sert uniquement aux suggestions :
+              le code et le libellé physiques restent entièrement libres.
             </p>
           </div>
 
@@ -198,7 +213,10 @@ export const StorageLocationFormModal: React.FC<StorageLocationFormModalProps> =
               aria-invalid={Boolean(errors.capacityPackages)}
             />
             <p className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-400">
-              En paquets/sacs. Elle sert à signaler la saturation, sans bloquer un rangement urgent.
+              En paquets/housses.{' '}
+              {shopSettings.storageAllowCapacityOverflow
+                ? 'Elle signale la saturation sans bloquer un rangement urgent.'
+                : 'Le propriétaire a rendu cette limite stricte : un casier plein ne pourra plus recevoir de paquet.'}
             </p>
             {errors.capacityPackages && <p className={errorClass}>{errors.capacityPackages}</p>}
           </div>
@@ -260,7 +278,11 @@ export const StorageLocationFormModal: React.FC<StorageLocationFormModalProps> =
             className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-950 dark:bg-zinc-100 px-3.5 py-2 text-[13px] font-bold text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-white disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
           >
             <Save className="h-4 w-4" aria-hidden="true" />
-            {isEdit ? 'Enregistrer l’emplacement' : 'Ajouter l’emplacement'}
+            {isEdit
+              ? 'Enregistrer l’emplacement'
+              : isDuplicate
+                ? 'Créer la copie'
+                : 'Ajouter l’emplacement'}
           </button>
         </div>
       </form>

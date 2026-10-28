@@ -19,4 +19,10 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   // Proposition commerciale de démarrage, modifiable dans Paramètres.
   pickupFee: 1000,
   deliveryFee: 1000,
+  // Rangement : souple au démarrage (file « À ranger » et dépassement
+  // signalé mais autorisé), durcissable par le propriétaire.
+  storageAssignmentRequired: false,
+  storageAllowCapacityOverflow: true,
+  storageSuggestionsEnabled: true,
+  storageDefaultCapacityPackages: 20,
 };

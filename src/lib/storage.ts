@@ -11,7 +11,14 @@
  * Les codes et capacités initiaux sont des propositions modifiables : ils
  * doivent être reportés tels quels sur les étiquettes physiques du local.
  */
-import type { LaundryOrder, LogisticsTask, StorageLocation, StorageZone } from '../types';
+import type {
+  LaundryOrder,
+  LogisticsTask,
+  StorageLocation,
+  StorageLocationFormData,
+  StorageLocationSeriesInput,
+  StorageZone,
+} from '../types';
 import { normalizeText } from './utils';
 
 export const STORAGE_LOCATIONS_STORAGE_KEY = 'pressingpro_storage_locations';
@@ -141,6 +148,88 @@ export function normalizeStorageLocations(
   return normalized;
 }
 
+/** Préfixe d'une série, sans tiret final : « rayon b » → « RAYON-B ». */
+export function normalizeStorageSeriesPrefix(value: string): string {
+  return normalizeStorageCode(value).replace(/-+$/g, '');
+}
+
+const formatSeriesNumber = (value: number): string => String(value).padStart(2, '0');
+
+export interface StorageLocationSeriesBuildResult {
+  locations: StorageLocationFormData[];
+  error?: string;
+}
+
+/**
+ * Construit une série complète d'emplacements numérotés, sans rien créer si
+ * un seul code est invalide ou déjà utilisé. Le propriétaire peut ainsi
+ * reproduire d'un coup ses casiers réels (B-01 → B-12, P-01 → P-08…).
+ */
+export function buildStorageLocationSeries(
+  input: StorageLocationSeriesInput,
+  existingLocations: readonly Pick<StorageLocation, 'code'>[]
+): StorageLocationSeriesBuildResult {
+  const fail = (error: string): StorageLocationSeriesBuildResult => ({ locations: [], error });
+
+  const prefix = normalizeStorageSeriesPrefix(input.codePrefix);
+  if (!prefix || prefix.length > 11 || !/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(prefix)) {
+    return fail('Le préfixe doit contenir des lettres/chiffres (11 caractères maximum), ex. B, RAYON-2 ou PORTANT.');
+  }
+  if (!Number.isInteger(input.startNumber) || input.startNumber < 0 || input.startNumber > 9999) {
+    return fail('Le premier numéro doit être un entier entre 0 et 9 999.');
+  }
+  if (!Number.isInteger(input.count) || input.count < 1 || input.count > 50) {
+    return fail('Créez entre 1 et 50 emplacements par série.');
+  }
+  const labelTemplate = input.labelTemplate.trim();
+  if (!labelTemplate) return fail('Le modèle de libellé est obligatoire.');
+  if (labelTemplate.length > 120) return fail('Le modèle de libellé ne doit pas dépasser 120 caractères.');
+  const capacityPackages = sanitizePackageCount(input.capacityPackages);
+  if (!capacityPackages) return fail('La capacité de chaque emplacement doit être entre 1 et 999 paquets.');
+
+  const existingCodes = new Set(
+    existingLocations.map((location) => normalizeStorageCode(location.code))
+  );
+  const generatedCodes = new Set<string>();
+  const locations: StorageLocationFormData[] = [];
+
+  for (let offset = 0; offset < input.count; offset += 1) {
+    const number = input.startNumber + offset;
+    const paddedNumber = formatSeriesNumber(number);
+    const code = `${prefix}-${paddedNumber}`;
+    if (!isValidStorageCode(code)) {
+      return fail(`Le code généré ${code} est invalide ou trop long.`);
+    }
+    if (existingCodes.has(code)) {
+      return fail(`Le code ${code} existe déjà : aucun emplacement de la série n’a été créé.`);
+    }
+    if (generatedCodes.has(code)) {
+      return fail(`La série générerait deux fois le code ${code}.`);
+    }
+    generatedCodes.add(code);
+
+    const label = labelTemplate
+      .replaceAll('{code}', code)
+      .replaceAll('{nn}', paddedNumber)
+      .replaceAll('{n}', String(number))
+      .trim();
+    if (!label || label.length > 160) {
+      return fail(`Le libellé généré pour ${code} est vide ou trop long.`);
+    }
+
+    locations.push({
+      code,
+      label,
+      zone: input.zone,
+      capacityPackages,
+      description: input.description?.trim() || undefined,
+      isActive: input.isActive,
+    });
+  }
+
+  return { locations };
+}
+
 /** Emplacements actifs d'abord, puis ordre de code identique au plan physique. */
 export function compareStorageLocations(a: StorageLocation, b: StorageLocation): number {
   if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
@@ -264,6 +353,20 @@ export function isStorageLocationSaturated(
   occupancy: StorageOccupancy | undefined
 ): boolean {
   return Boolean(occupancy && occupancy.packageCount >= location.capacityPackages);
+}
+
+/**
+ * Dépassement certain au vu des paquets connus. Les commandes anciennes sans
+ * nombre de paquets ne sont pas inventées : elles n'augmentent pas ce total.
+ */
+export function wouldExceedKnownStorageCapacity(
+  location: StorageLocation,
+  occupancy: StorageOccupancy | undefined,
+  additionalPackages: number
+): boolean {
+  const additional = sanitizePackageCount(additionalPackages);
+  if (!additional) return false;
+  return (occupancy?.packageCount ?? 0) + additional > location.capacityPackages;
 }
 
 function isBulkyOrder(order: LaundryOrder): boolean {

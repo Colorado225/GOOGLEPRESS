@@ -143,6 +143,21 @@ export interface StorageLocationFormData {
   isActive: boolean;
 }
 
+/**
+ * Création en série d'emplacements numérotés (ex. B-01 → B-12). Le modèle
+ * de libellé accepte {code}, {nn} (01, 02…) et {n} (1, 2…).
+ */
+export interface StorageLocationSeriesInput {
+  codePrefix: string;
+  startNumber: number;
+  count: number;
+  labelTemplate: string;
+  zone: StorageZone;
+  capacityPackages: number;
+  description?: string;
+  isActive: boolean;
+}
+
 /** Affectation physique d'une commande prête à un emplacement. */
 export interface StorageAssignmentInput {
   locationId?: string;
@@ -308,6 +323,11 @@ export interface ShopSettings {
   /** Forfaits appliqués aux NOUVEAUX ramassages / livraisons (0 = offert). */
   pickupFee: number;
   deliveryFee: number;
+  /** Règles du propriétaire pour le rangement des commandes terminées. */
+  storageAssignmentRequired: boolean;
+  storageAllowCapacityOverflow: boolean;
+  storageSuggestionsEnabled: boolean;
+  storageDefaultCapacityPackages: number;
 }
 
 export interface CashRegisterData {

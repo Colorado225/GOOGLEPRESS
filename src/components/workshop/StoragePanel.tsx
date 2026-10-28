@@ -3,7 +3,9 @@ import {
   AlertTriangle,
   Archive,
   CheckCircle2,
+  Copy,
   Info,
+  Layers,
   MapPin,
   Package,
   PackageCheck,
@@ -11,7 +13,9 @@ import {
   Plus,
   Printer,
   Search,
+  Settings2,
   Store,
+  Trash2,
   Truck,
   X,
 } from 'lucide-react';
@@ -41,11 +45,18 @@ import {
   hasStorageLocation,
   hasStructuredStorage,
   isStorageLocationSaturated,
+  normalizeStorageCode,
   sortStorageLocations,
 } from '../../lib/storage';
-import type { LaundryOrder, StorageLocation, StorageZone } from '../../types';
+import type {
+  LaundryOrder,
+  StorageLocation,
+  StorageLocationFormData,
+  StorageZone,
+} from '../../types';
 import { StorageAssignmentModal } from './StorageAssignmentModal';
 import { StorageLocationFormModal } from './StorageLocationFormModal';
+import { StorageLocationSeriesModal } from './StorageLocationSeriesModal';
 
 type StorageView = 'orders' | 'locations';
 type StorageStateFilter = 'all' | 'unstored' | 'legacy' | 'stored';
@@ -66,6 +77,16 @@ const parseTicketNumber = (ticketNumber: string): number => {
   return match ? Number(match[1]) : 0;
 };
 
+const hasLocationReferences = (
+  location: StorageLocation,
+  orders: LaundryOrder[]
+): boolean =>
+  orders.some((order) => {
+    if (order.storageLocationId === location.id) return true;
+    const referencedCode = normalizeStorageCode(getOrderStorageCode(order) ?? '');
+    return referencedCode !== '' && referencedCode === location.code;
+  });
+
 const waitingLabel = (order: LaundryOrder): string | undefined => {
   const date = parseStoredDateTime(order.readyAt);
   if (!date) return undefined;
@@ -79,14 +100,19 @@ export const StoragePanel: React.FC = () => {
     orders,
     logisticsTasks,
     storageLocations,
+    shopSettings,
+    requestSettingsTab,
     setPreviewTicket,
     setActiveHandoverOrder,
     requestWorkshopTab,
     focusLogisticsTask,
     focusedStorageOrderId,
     setFocusedStorageOrderId,
+    storagePanelViewRequest,
+    clearStoragePanelViewRequest,
     clearOrderStorage,
     setStorageLocationActive,
+    deleteStorageLocation,
     showToast,
   } = useApp();
 
@@ -98,8 +124,11 @@ export const StoragePanel: React.FC = () => {
   const [locationFilter, setLocationFilter] = useState('all');
   const [assignmentOrder, setAssignmentOrder] = useState<LaundryOrder | null>(null);
   const [locationFormOpen, setLocationFormOpen] = useState(false);
+  const [seriesModalOpen, setSeriesModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<StorageLocation | null>(null);
+  const [locationPrefill, setLocationPrefill] = useState<StorageLocationFormData | null>(null);
   const [clearingOrder, setClearingOrder] = useState<LaundryOrder | null>(null);
+  const [deletingLocation, setDeletingLocation] = useState<StorageLocation | null>(null);
   const handledFocusRef = useRef<string | null>(null);
 
   const sortedLocations = useMemo(
@@ -312,6 +341,12 @@ export const StoragePanel: React.FC = () => {
     };
   }, [focusedStorageOrderId, orders, setFocusedStorageOrderId]);
 
+  useEffect(() => {
+    if (!storagePanelViewRequest) return;
+    setView(storagePanelViewRequest);
+    clearStoragePanelViewRequest();
+  }, [clearStoragePanelViewRequest, storagePanelViewRequest]);
+
   const openHandover = (order: LaundryOrder) => {
     setActiveHandoverOrder(order);
     requestWorkshopTab('handover');
@@ -336,12 +371,24 @@ export const StoragePanel: React.FC = () => {
       type="button"
       onClick={() => {
         setEditingLocation(null);
+        setLocationPrefill(null);
         setLocationFormOpen(true);
       }}
       className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#09090b] dark:bg-zinc-100 px-4 py-2.5 text-[13px] font-bold text-white dark:text-zinc-950 shadow-sm transition-colors hover:bg-zinc-800 dark:hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
     >
       <Plus className="h-4 w-4" aria-hidden="true" />
       Nouvel emplacement
+    </button>
+  );
+
+  const seriesButton = (
+    <button
+      type="button"
+      onClick={() => setSeriesModalOpen(true)}
+      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-4 py-2.5 text-[13px] font-bold text-zinc-800 dark:text-zinc-200 shadow-sm transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+    >
+      <Layers className="h-4 w-4" aria-hidden="true" />
+      Créer une série
     </button>
   );
 
@@ -592,8 +639,50 @@ export const StoragePanel: React.FC = () => {
     }
 
     return (
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {sortedLocations.map((location) => {
+      <>
+        <div className="mb-3 rounded-xl border border-teal-200 dark:border-teal-900 bg-teal-50/80 dark:bg-teal-950/60 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="text-[13.5px] font-extrabold text-zinc-950 dark:text-zinc-50">
+                Plan physique du propriétaire
+              </h3>
+              <p className="mt-0.5 max-w-3xl text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Créez les casiers comme ils existent dans votre atelier, puis reportez exactement
+                les mêmes codes sur les étiquettes. Un casier déjà utilisé ne se supprime pas :
+                désactivez-le pour conserver l’historique.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold">
+                <span className="rounded-full bg-white dark:bg-zinc-900 px-2 py-1 text-zinc-700 dark:text-zinc-300">
+                  Rangement {shopSettings.storageAssignmentRequired ? 'obligatoire' : 'différable'}
+                </span>
+                <span className="rounded-full bg-white dark:bg-zinc-900 px-2 py-1 text-zinc-700 dark:text-zinc-300">
+                  Capacité {shopSettings.storageAllowCapacityOverflow ? 'indicative' : 'stricte'}
+                </span>
+                <span className="rounded-full bg-white dark:bg-zinc-900 px-2 py-1 text-zinc-700 dark:text-zinc-300">
+                  Suggestions {shopSettings.storageSuggestionsEnabled ? 'activées' : 'désactivées'}
+                </span>
+                <span className="rounded-full bg-white dark:bg-zinc-900 px-2 py-1 text-zinc-700 dark:text-zinc-300">
+                  Défaut : {shopSettings.storageDefaultCapacityPackages} paquets/casier
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => requestSettingsTab('storage')}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-teal-300 dark:border-teal-800 bg-white dark:bg-zinc-900 px-3.5 py-2 text-[12.5px] font-bold text-teal-800 dark:text-teal-200 hover:bg-teal-100 dark:hover:bg-teal-950 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              >
+                <Settings2 className="h-4 w-4" aria-hidden="true" />
+                Règles du propriétaire
+              </button>
+              {seriesButton}
+              {newLocationButton}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {sortedLocations.map((location) => {
           const occupancy = occupancyByLocation.get(location.id) ?? {
             orderCount: 0,
             packageCount: 0,
@@ -604,6 +693,7 @@ export const StoragePanel: React.FC = () => {
           const locationOrders = currentlyStoredOrders.filter(
             (order) => order.storageLocationId === location.id
           );
+          const canDeleteLocation = !hasLocationReferences(location, orders);
 
           return (
             <article
@@ -706,12 +796,32 @@ export const StoragePanel: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setEditingLocation(location);
+                    setLocationPrefill(null);
                     setLocationFormOpen(true);
                   }}
                   className="inline-flex items-center gap-1 rounded-lg border border-zinc-300 dark:border-zinc-600 px-2.5 py-1.5 text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 >
                   <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                   Modifier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingLocation(null);
+                    setLocationPrefill({
+                      code: '',
+                      label: `${location.label} — copie`,
+                      zone: location.zone,
+                      capacityPackages: location.capacityPackages,
+                      description: location.description,
+                      isActive: location.isActive,
+                    });
+                    setLocationFormOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-300 dark:border-zinc-600 px-2.5 py-1.5 text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  Dupliquer
                 </button>
                 <button
                   type="button"
@@ -725,11 +835,22 @@ export const StoragePanel: React.FC = () => {
                   )}
                   {location.isActive ? 'Désactiver' : 'Réactiver'}
                 </button>
+                {canDeleteLocation && (
+                  <button
+                    type="button"
+                    onClick={() => setDeletingLocation(location)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-900 px-2.5 py-1.5 text-[12px] font-semibold text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Supprimer
+                  </button>
+                )}
               </div>
             </article>
           );
-        })}
-      </div>
+          })}
+        </div>
+      </>
     );
   };
 
@@ -742,19 +863,23 @@ export const StoragePanel: React.FC = () => {
             Rangement des commandes terminées
           </h2>
           <p className="mt-0.5 max-w-3xl text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Retrouvez chaque paquet par ticket, client ou code de rayon : A pour les cintres,
-            B pour le plié comptoir, C pour les départs livraison, D pour les volumineux et E pour les contrôles.
+            Retrouvez chaque paquet par ticket, client ou code physique. Le propriétaire fixe
+            librement les casiers, leurs capacités et les règles de rangement selon son local.
           </p>
         </div>
-        {newLocationButton}
+        <div className="flex flex-wrap gap-2">
+          {seriesButton}
+          {newLocationButton}
+        </div>
       </div>
 
       <p className="flex items-start gap-2 rounded-lg border border-blue-100 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/70 px-3 py-2 text-[11.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />
         <span>
-          Le plan A–E est une <strong>proposition de démarrage</strong> : renommez les codes et capacités
-          pour les faire correspondre à votre local. Les emplacements sont conservés
-          <strong> uniquement dans ce navigateur</strong> pour le moment.
+          Le plan A–E est seulement une <strong>proposition de démarrage</strong> : créez vos propres
+          codes, dupliquez un casier type ou générez une série complète (B-01 → B-12). Les règles
+          du propriétaire se règlent dans <strong>Paramètres → Rangement atelier</strong>. Les données
+          restent <strong>uniquement dans ce navigateur</strong> pour le moment.
         </span>
       </p>
 
@@ -779,7 +904,11 @@ export const StoragePanel: React.FC = () => {
         <KpiCard
           label="Emplacements saturés"
           value={String(metrics.saturated)}
-          hint="Capacité indicative atteinte"
+          hint={
+            shopSettings.storageAllowCapacityOverflow
+              ? 'Capacité indicative atteinte'
+              : 'Capacité stricte atteinte'
+          }
           tone={metrics.saturated > 0 ? 'danger' : 'default'}
         />
       </div>
@@ -860,7 +989,7 @@ export const StoragePanel: React.FC = () => {
 
               <div>
                 <label htmlFor="storage-zone-filter" className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                  Zone
+                  Type d’emplacement
                 </label>
                 <select
                   id="storage-zone-filter"
@@ -868,7 +997,7 @@ export const StoragePanel: React.FC = () => {
                   onChange={(e) => setZoneFilter(e.target.value as 'all' | StorageZone)}
                   className="rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-2.5 py-2 text-[12.5px] font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 >
-                  <option value="all">Toutes les zones</option>
+                  <option value="all">Tous les types</option>
                   {STORAGE_ZONES.map((zone) => (
                     <option key={zone} value={zone}>{STORAGE_ZONE_LABELS[zone]}</option>
                   ))}
@@ -931,13 +1060,22 @@ export const StoragePanel: React.FC = () => {
 
       {locationFormOpen && (
         <StorageLocationFormModal
-          key={editingLocation?.id ?? 'new-storage-location'}
+          key={
+            editingLocation?.id ??
+            (locationPrefill ? `duplicate-${locationPrefill.label}` : 'new-storage-location')
+          }
           location={editingLocation}
+          prefill={locationPrefill}
           onClose={() => {
             setLocationFormOpen(false);
             setEditingLocation(null);
+            setLocationPrefill(null);
           }}
         />
+      )}
+
+      {seriesModalOpen && (
+        <StorageLocationSeriesModal onClose={() => setSeriesModalOpen(false)} />
       )}
 
       {clearingOrder && (
@@ -958,6 +1096,30 @@ export const StoragePanel: React.FC = () => {
             setClearingOrder(null);
           }}
           onCancel={() => setClearingOrder(null)}
+        />
+      )}
+
+      {deletingLocation && (
+        <ConfirmModal
+          title="Supprimer cet emplacement ?"
+          description={
+            <>
+              <strong>
+                {deletingLocation.code} — {deletingLocation.label}
+              </strong>{' '}
+              n’a jamais été utilisé par une commande. Il peut donc disparaître du plan sans
+              casser l’historique. Si le casier physique existe encore, retirez aussi son étiquette.
+            </>
+          }
+          confirmLabel="Oui, supprimer"
+          cancelLabel="Garder l’emplacement"
+          onConfirm={() => {
+            const result = deleteStorageLocation(deletingLocation.id);
+            if (!result.ok) showToast(result.error);
+            else if (locationFilter === deletingLocation.id) setLocationFilter('all');
+            setDeletingLocation(null);
+          }}
+          onCancel={() => setDeletingLocation(null)}
         />
       )}
     </div>

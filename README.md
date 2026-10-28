@@ -19,9 +19,9 @@ clôture journalière Z.
   et livraison à domicile (adresse, date et créneau de tournée).
 - **Production & suivi** — Kanban atelier (Reçu → Lavage → Repassage → Prêt),
   onglet **Rangement** pour retrouver les commandes terminées par ticket,
-  client ou code de casier (plan proposé : A portants/cintres, B étagères/plié,
-  C départs livraison, D volumineux/pro, E attente/contrôle ; codes et
-  capacités modifiables), onglet **Tournées** pour les
+  client ou code de casier (plan A–E proposé au départ, puis entièrement
+  configurable par le propriétaire : codes libres, duplication, séries
+  numérotées type B-01 → B-12, capacités et règles de travail), onglet **Tournées** pour les
   ramassages/livraisons (programmation, coursier, départ,
   échec/reprogrammation, encaissement du solde à la livraison), remise au
   comptoir et clôture de caisse Z.
@@ -95,8 +95,16 @@ src/
   Paramètres → « Ramassage & livraison » (proposition initiale : 1 000 FCFA
   par course, 0 = offert).
 - Rangement des prêts : le passage en « Prêt » demande le casier réel et le
-  nombre de paquets/housses, avec possibilité explicite de laisser la
-  commande dans la file « À ranger ». Tous les paquets d'un ticket doivent
+  nombre de paquets/housses. Par défaut, la commande peut explicitement
+  rester dans la file « À ranger » et la capacité n’est qu’une alerte ; dans
+  **Paramètres → Rangement atelier**, le propriétaire peut au contraire
+  rendre le casier obligatoire avant « Prête », rendre la capacité
+  strictement bloquante, activer/couper les suggestions automatiques et
+  fixer la capacité proposée pour les nouveaux emplacements. Le plan
+  physique se gère dans Atelier → Rangement → Emplacements : création libre,
+  duplication d’un casier type, série numérotée en bloc (50 maximum),
+  modification/désactivation, et suppression réservée aux emplacements
+  jamais cités par une commande. Tous les paquets d'un ticket doivent
   normalement rester ensemble. Un retour en production libère
   l'emplacement ; une commande partie en livraison ne compte plus dans
   l'occupation des rayons. Les anciens repères en texte libre restent
@@ -112,9 +120,9 @@ navigateur, sous les clés `pressingpro_orders`, `pressingpro_customers`,
 `pressingpro_cash_register`, `pressingpro_logistics_tasks`,
 `pressingpro_storage_locations` (plan des casiers de l'atelier),
 `pressingpro_next_ticket_number` et `pressingpro_theme` (thème d'interface
-choisi sur l'appareil) et `pressingpro_shop_settings` (identité, réglages
-et forfaits de ramassage/livraison saisis dans les Paramètres — affichés
-sur le ticket, la barre latérale et les rapports).
+choisi sur l'appareil) et `pressingpro_shop_settings` (identité, réglages,
+forfaits de ramassage/livraison et règles de rangement saisis dans les
+Paramètres — affichés sur le ticket, la barre latérale et les rapports).
 Au premier lancement, des données de démonstration datées du jour courant
 sont chargées (dates relatives, voir `src/data/demoData.ts`). Sur un
 navigateur contenant déjà des commandes, seuls deux exemples de ramassage
@@ -172,9 +180,12 @@ ticket reste blanc, comme le papier.
 - **SMS et impression simulés** (aucun envoi réel, aucun pilote d'imprimante).
 - **Tournées sans GPS ni réservation client en ligne** : réservation prise par
   le personnel, suivi par statuts et créneaux dans ce navigateur uniquement.
-- **Rangement sans scan d'étiquettes** : la recherche se fait par saisie du
-  ticket, du client ou du code de casier ; les codes doivent être reportés
-  manuellement sur les étiquettes physiques du local.
+- **Rangement sans scan d'étiquettes ni rôle verrouillé** : la recherche se
+  fait par saisie du ticket, du client ou du code de casier ; les codes
+  doivent être reportés manuellement sur les étiquettes physiques du local.
+  Les règles dites « du propriétaire » ne sont pas encore protégées par un
+  compte ou un mot de passe : toute personne ayant accès à ce navigateur
+  peut les modifier, en attendant le backend et les rôles utilisateurs.
 - Statistiques 7 jours de démo.
 
 Prochaine étape logique (P1) : brancher un backend (ex. Supabase) avec

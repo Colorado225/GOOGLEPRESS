@@ -7,6 +7,7 @@ import {
   FulfillmentMethod, LogisticsIssueReason, LogisticsTask, LogisticsTaskScheduleFormData,
   LogisticsTimeSlot, PaymentMethod, PickupTaskFormData,
   StorageAssignmentInput, StorageLocation, StorageLocationFormData,
+  StorageLocationSeriesInput,
 } from '../types';
 import {
   INITIAL_CUSTOMERS, INITIAL_ORDERS, INITIAL_CASH_REGISTER, INITIAL_LOGISTICS_TASKS,
@@ -26,9 +27,11 @@ import {
   isHomeDeliveryOrder, normalizeLogisticsFee,
 } from '../lib/logistics';
 import {
-  STORAGE_LOCATIONS_STORAGE_KEY, formatStorageLocation, hasStorageLocation,
-  isValidStorageCode, normalizeStorageCode, normalizeStorageLocations,
-  sanitizePackageCount,
+  STORAGE_LOCATIONS_STORAGE_KEY, buildStorageLocationSeries,
+  calculateStorageOccupancy, formatStorageLocation, getOrderPackageCount,
+  getOrderStorageCode, hasStorageLocation, isValidStorageCode, normalizeStorageCode,
+  normalizeStorageLocations, sanitizePackageCount,
+  wouldExceedKnownStorageCapacity,
 } from '../lib/storage';
 
 /** Clé localStorage du compteur séquentiel de tickets (voir plus bas). */
@@ -58,6 +61,12 @@ export type ScreenId =
 
 /** Onglets de l’écran Production & remises. */
 export type WorkshopTab = 'production' | 'storage' | 'logistics' | 'handover' | 'cash';
+
+/** Sous-vues du panneau Rangement (commandes prêtes ou plan des emplacements). */
+export type StoragePanelView = 'orders' | 'locations';
+
+/** Onglets de l’écran Paramètres. */
+export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices';
 
 /** Chargement localStorage avec repli sur les données initiales (même convention que commandes/clients/caisse). */
 function loadPersistedState<T>(key: string, fallback: T): T {
@@ -142,7 +151,11 @@ interface AppContextType {
   createStorageLocation: (
     data: StorageLocationFormData
   ) => ActionResult & { location?: StorageLocation };
+  createStorageLocationSeries: (
+    input: StorageLocationSeriesInput
+  ) => ActionResult & { locations?: StorageLocation[] };
   updateStorageLocation: (id: string, data: StorageLocationFormData) => ActionResult;
+  deleteStorageLocation: (id: string) => ActionResult;
   setStorageLocationActive: (id: string, isActive: boolean) => void;
   markOrderReadyAndStore: (orderId: string, input: StorageAssignmentInput) => ActionResult;
   assignOrderStorage: (orderId: string, input: StorageAssignmentInput) => ActionResult;
@@ -150,6 +163,9 @@ interface AppContextType {
   focusedStorageOrderId: string | null;
   setFocusedStorageOrderId: (orderId: string | null) => void;
   focusStorageOrder: (orderId: string) => void;
+  storagePanelViewRequest: StoragePanelView | null;
+  clearStoragePanelViewRequest: () => void;
+  openStorageLocationsConfig: () => void;
   // --- Ramassage & livraison ---
   logisticsTasks: LogisticsTask[];
   createPickupTask: (data: PickupTaskFormData) => ActionResult & { task?: LogisticsTask };
@@ -169,6 +185,10 @@ interface AppContextType {
   workshopTabRequest: WorkshopTab | null;
   requestWorkshopTab: (tab: WorkshopTab) => void;
   clearWorkshopTabRequest: () => void;
+  /** Demande ponctuelle d’ouverture d’un onglet précis des Paramètres. */
+  settingsTabRequest: SettingsTab | null;
+  requestSettingsTab: (tab: SettingsTab) => void;
+  clearSettingsTabRequest: () => void;
   addNewCustomer: (cust: Omit<Customer, 'id' | 'depositsCount' | 'balance'>) => Customer;
   notifyAllSms: () => void;
   selectedServiceCategory: ServiceCategory | null;
@@ -380,18 +400,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     )
   );
   const [focusedStorageOrderId, setFocusedStorageOrderId] = useState<string | null>(null);
+  const [storagePanelViewRequest, setStoragePanelViewRequest] =
+    useState<StoragePanelView | null>(null);
 
   // Paramètres de la boutique (écran Paramètres) : fusionnés aux valeurs par
   // défaut pour rester complets même si une ancienne version est en mémoire.
-  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => ({
-    ...DEFAULT_SHOP_SETTINGS,
-    ...loadPersistedState<Partial<ShopSettings>>(SHOP_SETTINGS_STORAGE_KEY, {}),
-  }));
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => {
+    const merged = {
+      ...DEFAULT_SHOP_SETTINGS,
+      ...loadPersistedState<Partial<ShopSettings>>(SHOP_SETTINGS_STORAGE_KEY, {}),
+    };
+    return {
+      ...merged,
+      storageAssignmentRequired: merged.storageAssignmentRequired === true,
+      storageAllowCapacityOverflow: merged.storageAllowCapacityOverflow !== false,
+      storageSuggestionsEnabled: merged.storageSuggestionsEnabled !== false,
+      storageDefaultCapacityPackages:
+        sanitizePackageCount(merged.storageDefaultCapacityPackages) ??
+        DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
+    };
+  });
   const updateShopSettings = (next: ShopSettings) =>
     setShopSettings({
       ...next,
       pickupFee: normalizeLogisticsFee(next.pickupFee),
       deliveryFee: normalizeLogisticsFee(next.deliveryFee),
+      storageAssignmentRequired: next.storageAssignmentRequired === true,
+      storageAllowCapacityOverflow: next.storageAllowCapacityOverflow === true,
+      storageSuggestionsEnabled: next.storageSuggestionsEnabled === true,
+      storageDefaultCapacityPackages:
+        sanitizePackageCount(next.storageDefaultCapacityPackages) ??
+        DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
     });
 
   useEffect(() => persistState(LOGISTICS_TASKS_STORAGE_KEY, logisticsTasks), [logisticsTasks]);
@@ -427,6 +466,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pendingPickupTaskId, setPendingPickupTaskId] = useState<string | null>(null);
   const [focusedLogisticsTaskId, setFocusedLogisticsTaskId] = useState<string | null>(null);
   const [workshopTabRequest, setWorkshopTabRequest] = useState<WorkshopTab | null>(null);
+  const [settingsTabRequest, setSettingsTabRequest] = useState<SettingsTab | null>(null);
 
   const pendingPickupTask = pendingPickupTaskId
     ? logisticsTasks.find((task) => task.id === pendingPickupTaskId) ?? null
@@ -437,9 +477,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveScreen('workshop');
   };
   const clearWorkshopTabRequest = () => setWorkshopTabRequest(null);
+  const requestSettingsTab = (tab: SettingsTab) => {
+    setSettingsTabRequest(tab);
+    setActiveScreen('settings');
+  };
+  const clearSettingsTabRequest = () => setSettingsTabRequest(null);
 
   const focusStorageOrder = (orderId: string) => {
     setFocusedStorageOrderId(orderId);
+    requestWorkshopTab('storage');
+  };
+
+  const clearStoragePanelViewRequest = () => setStoragePanelViewRequest(null);
+  const openStorageLocationsConfig = () => {
+    setStoragePanelViewRequest('locations');
     requestWorkshopTab('storage');
   };
 
@@ -859,6 +910,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast('Cette commande est déjà en route : terminez ou signalez la livraison dans Tournées avant tout retour en production.');
       return;
     }
+    if (
+      newStatus === 'ready' &&
+      order.status !== 'ready' &&
+      shopSettings.storageAssignmentRequired
+    ) {
+      showToast('Règle du propriétaire : choisissez un casier pour marquer cette commande prête.');
+      return;
+    }
 
     const now = nowDateTime();
     const leavingReady = order.status === 'ready' && newStatus !== 'ready';
@@ -953,6 +1012,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true, location };
   };
 
+  const createStorageLocationSeries = (
+    input: StorageLocationSeriesInput
+  ): ActionResult & { locations?: StorageLocation[] } => {
+    const { locations: drafts, error } = buildStorageLocationSeries(input, storageLocations);
+    if (error || drafts.length === 0) {
+      return { ok: false, error: error ?? 'Aucun emplacement à créer.' };
+    }
+
+    const now = nowISODateTime();
+    const locations: StorageLocation[] = drafts.map((draft, index) => ({
+      ...draft,
+      id: `${genId('storage')}-${index}`,
+      createdAt: now,
+      updatedAt: now,
+    }));
+    setStorageLocations((prev) => [...prev, ...locations]);
+    showToast(
+      `✓ Série créée : ${locations.length} emplacement(s), de ${locations[0].code} à ${locations[locations.length - 1].code}.`
+    );
+    return { ok: true, locations };
+  };
+
   const updateStorageLocation = (id: string, data: StorageLocationFormData): ActionResult => {
     const current = storageLocations.find((location) => location.id === id);
     if (!current) return { ok: false, error: 'Emplacement introuvable.' };
@@ -984,6 +1065,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  const deleteStorageLocation = (id: string): ActionResult => {
+    const location = storageLocations.find((item) => item.id === id);
+    if (!location) return { ok: false, error: 'Emplacement introuvable.' };
+    const isReferenced = orders.some((order) => {
+      if (order.storageLocationId === id) return true;
+      const referencedCode = normalizeStorageCode(getOrderStorageCode(order) ?? '');
+      return referencedCode !== '' && referencedCode === location.code;
+    });
+    if (isReferenced) {
+      return {
+        ok: false,
+        error:
+          'Cet emplacement est déjà cité par au moins une commande : désactivez-le pour conserver l’historique.',
+      };
+    }
+    setStorageLocations((prev) => prev.filter((item) => item.id !== id));
+    showToast(`✓ Emplacement supprimé : ${formatStorageLocation(location)}`);
+    return { ok: true };
+  };
+
   const setStorageLocationActive = (id: string, isActive: boolean) => {
     const location = storageLocations.find((item) => item.id === id);
     if (!location) return;
@@ -1010,7 +1111,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const resolveStorageAssignment = (
     input: StorageAssignmentInput,
     required: boolean,
-    existingLocationId?: string
+    existingLocationId?: string,
+    orderId?: string
   ): {
     location?: StorageLocation;
     packageCount?: number;
@@ -1032,6 +1134,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!packageCount) {
       return { error: 'Indiquez un nombre de paquets entier compris entre 1 et 999.' };
     }
+
+    if (!shopSettings.storageAllowCapacityOverflow) {
+      const occupancy = calculateStorageOccupancy(orders, logisticsTasks).get(location.id) ?? {
+        orderCount: 0,
+        packageCount: 0,
+        unknownPackageOrders: 0,
+      };
+      const adjustedOccupancy = { ...occupancy };
+      const currentOrder = orderId ? orders.find((item) => item.id === orderId) : undefined;
+      if (
+        currentOrder &&
+        currentOrder.storageLocationId === location.id &&
+        currentOrder.status === 'ready' &&
+        !isOrderOutForDelivery(currentOrder.id)
+      ) {
+        const currentPackages = getOrderPackageCount(currentOrder);
+        if (currentPackages) {
+          adjustedOccupancy.packageCount = Math.max(
+            0,
+            adjustedOccupancy.packageCount - currentPackages
+          );
+        } else {
+          adjustedOccupancy.unknownPackageOrders = Math.max(
+            0,
+            adjustedOccupancy.unknownPackageOrders - 1
+          );
+        }
+      }
+      if (wouldExceedKnownStorageCapacity(location, adjustedOccupancy, packageCount)) {
+        return {
+          error: `${location.code} est plein (${adjustedOccupancy.packageCount}/${location.capacityPackages} paquets connus) : choisissez un autre emplacement ou augmentez sa capacité.`,
+        };
+      }
+    }
+
     return {
       location,
       packageCount,
@@ -1067,7 +1204,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (isOrderOutForDelivery(orderId)) {
       return { ok: false, error: 'Cette commande est déjà en cours de livraison.' };
     }
-    const { location, packageCount, notes, error } = resolveStorageAssignment(input, false);
+    const { location, packageCount, notes, error } = resolveStorageAssignment(
+      input,
+      shopSettings.storageAssignmentRequired,
+      undefined,
+      orderId
+    );
     if (error) return { ok: false, error };
 
     const now = nowDateTime();
@@ -1113,7 +1255,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { location, packageCount, notes, error } = resolveStorageAssignment(
       input,
       true,
-      order.storageLocationId
+      order.storageLocationId,
+      orderId
     );
     if (error || !location) return { ok: false, error: error ?? 'Emplacement invalide.' };
 
@@ -2053,7 +2196,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         settleAndDeliverOrder,
         storageLocations,
         createStorageLocation,
+        createStorageLocationSeries,
         updateStorageLocation,
+        deleteStorageLocation,
         setStorageLocationActive,
         markOrderReadyAndStore,
         assignOrderStorage,
@@ -2061,6 +2206,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         focusedStorageOrderId,
         setFocusedStorageOrderId,
         focusStorageOrder,
+        storagePanelViewRequest,
+        clearStoragePanelViewRequest,
+        openStorageLocationsConfig,
         logisticsTasks,
         createPickupTask,
         updateLogisticsTask,
@@ -2078,6 +2226,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         workshopTabRequest,
         requestWorkshopTab,
         clearWorkshopTabRequest,
+        settingsTabRequest,
+        requestSettingsTab,
+        clearSettingsTabRequest,
         addNewCustomer,
         notifyAllSms,
         selectedServiceCategory,

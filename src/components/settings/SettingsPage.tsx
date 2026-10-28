@@ -1,6 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { useApp } from '../../context/AppContext';
-import { ArrowLeft, Save, Sliders, Smartphone, Printer, Building2, Download, CheckCircle2, Moon, Sun, Truck } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useApp, type SettingsTab } from '../../context/AppContext';
+import {
+  AlertTriangle,
+  Archive,
+  ArrowLeft,
+  ArrowRight,
+  Save,
+  Sliders,
+  Smartphone,
+  Printer,
+  Building2,
+  Download,
+  CheckCircle2,
+  Moon,
+  PackageCheck,
+  Sun,
+  Truck,
+} from 'lucide-react';
+import {
+  calculateStorageOccupancy,
+  getOrdersOutForDeliveryIds,
+  hasStructuredStorage,
+  isStorageLocationSaturated,
+} from '../../lib/storage';
 import { Tabs } from '../common/Tabs';
 import { SegmentedControl, SegmentedOption } from '../common/SegmentedControl';
 import { AppTheme } from '../../lib/theme';
@@ -127,7 +149,18 @@ const PwaInstallCard: React.FC = () => {
 };
 
 export const SettingsPage: React.FC = () => {
-  const { setActiveScreen, showToast, shopSettings, updateShopSettings } = useApp();
+  const {
+    setActiveScreen,
+    showToast,
+    shopSettings,
+    updateShopSettings,
+    orders,
+    storageLocations,
+    logisticsTasks,
+    openStorageLocationsConfig,
+    settingsTabRequest,
+    clearSettingsTabRequest,
+  } = useApp();
 
   // Le formulaire démarre depuis les paramètres persistés (contexte).
   const [shopName, setShopName] = useState(shopSettings.name);
@@ -139,14 +172,66 @@ export const SettingsPage: React.FC = () => {
   const [enableThermalPrinter, setEnableThermalPrinter] = useState(shopSettings.enableThermalPrinter);
   const [pickupFeeInput, setPickupFeeInput] = useState(String(shopSettings.pickupFee));
   const [deliveryFeeInput, setDeliveryFeeInput] = useState(String(shopSettings.deliveryFee));
-  const [tab, setTab] = useState<'shop' | 'logistics' | 'devices'>('shop');
+  const [storageAssignmentRequired, setStorageAssignmentRequired] = useState(
+    shopSettings.storageAssignmentRequired
+  );
+  const [storageCapacityMode, setStorageCapacityMode] = useState<'flexible' | 'strict'>(
+    shopSettings.storageAllowCapacityOverflow ? 'flexible' : 'strict'
+  );
+  const [storageSuggestionsEnabled, setStorageSuggestionsEnabled] = useState(
+    shopSettings.storageSuggestionsEnabled
+  );
+  const [storageDefaultCapacityInput, setStorageDefaultCapacityInput] = useState(
+    String(shopSettings.storageDefaultCapacityPackages)
+  );
+  const [tab, setTab] = useState<SettingsTab>('shop');
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!settingsTabRequest) return;
+    setTab(settingsTabRequest);
+    clearSettingsTabRequest();
+  }, [clearSettingsTabRequest, settingsTabRequest]);
+
+  const storageSummary = useMemo(() => {
+    const occupancyByLocation = calculateStorageOccupancy(orders, logisticsTasks);
+    const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
+    const activeLocations = storageLocations.filter((location) => location.isActive);
+    const saturatedLocations = storageLocations.filter((location) =>
+      isStorageLocationSaturated(
+        location,
+        occupancyByLocation.get(location.id) ?? {
+          orderCount: 0,
+          packageCount: 0,
+          unknownPackageOrders: 0,
+        }
+      )
+    );
+    const readyWithoutStorage = orders.filter(
+      (order) =>
+        order.status === 'ready' &&
+        !outForDeliveryIds.has(order.id) &&
+        !hasStructuredStorage(order)
+    );
+    return {
+      totalLocations: storageLocations.length,
+      activeLocations: activeLocations.length,
+      saturatedLocations: saturatedLocations.length,
+      readyWithoutStorage: readyWithoutStorage.length,
+    };
+  }, [logisticsTasks, orders, storageLocations]);
+
+  /**
+   * Enregistrement commun à tous les onglets. L’action « gérer les emplacements »
+   * l’utilise aussi, pour ne jamais quitter les Paramètres avec des règles
+   * modifiées mais non sauvegardées.
+   */
+  const saveSettings = (openStorageManager = false): boolean => {
     if (!shopName.trim()) {
       showToast('Le nom commercial ne peut pas être vide.');
-      return;
+      setTab('shop');
+      return false;
     }
+
     const pickupFee = Number(pickupFeeInput.replace(/\s/g, ''));
     const deliveryFee = Number(deliveryFeeInput.replace(/\s/g, ''));
     if (
@@ -159,8 +244,21 @@ export const SettingsPage: React.FC = () => {
     ) {
       showToast('Les frais de ramassage et de livraison doivent être des montants valides (0 = offert).');
       setTab('logistics');
-      return;
+      return false;
     }
+
+    const storageDefaultCapacityPackages = Number(storageDefaultCapacityInput);
+    if (
+      storageDefaultCapacityInput.trim() === '' ||
+      !Number.isInteger(storageDefaultCapacityPackages) ||
+      storageDefaultCapacityPackages < 1 ||
+      storageDefaultCapacityPackages > 999
+    ) {
+      showToast('La capacité par défaut des nouveaux emplacements doit être un entier entre 1 et 999 paquets.');
+      setTab('storage');
+      return false;
+    }
+
     updateShopSettings({
       name: shopName.trim(),
       tagline: shopTagline.trim(),
@@ -171,10 +269,26 @@ export const SettingsPage: React.FC = () => {
       enableThermalPrinter,
       pickupFee,
       deliveryFee,
+      storageAssignmentRequired,
+      storageAllowCapacityOverflow: storageCapacityMode === 'flexible',
+      storageSuggestionsEnabled,
+      storageDefaultCapacityPackages,
     });
     setPickupFeeInput(String(Math.round(pickupFee)));
     setDeliveryFeeInput(String(Math.round(deliveryFee)));
-    showToast('✓ Paramètres enregistrés sur cet appareil');
+    setStorageDefaultCapacityInput(String(storageDefaultCapacityPackages));
+
+    if (openStorageManager) {
+      openStorageLocationsConfig();
+    } else {
+      showToast('✓ Paramètres enregistrés sur cet appareil');
+    }
+    return true;
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveSettings(false);
   };
 
   return (
@@ -192,7 +306,7 @@ export const SettingsPage: React.FC = () => {
               Paramètres du pressing
             </h1>
             <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
-              Configuration de l'atelier, des imprimantes de caisse et des notifications SMS
+              Établissement, rangement atelier, imprimantes de caisse et notifications SMS
             </p>
           </div>
         </div>
@@ -207,6 +321,12 @@ export const SettingsPage: React.FC = () => {
           tabs={[
             { id: 'shop', label: 'Établissement', icon: <Building2 className="w-4 h-4" aria-hidden="true" /> },
             { id: 'logistics', label: 'Ramassage & livraison', icon: <Truck className="w-4 h-4" aria-hidden="true" /> },
+            {
+              id: 'storage',
+              label: 'Rangement atelier',
+              icon: <Archive className="w-4 h-4" aria-hidden="true" />,
+              badge: storageSummary.activeLocations,
+            },
             { id: 'devices', label: 'Périphériques & passerelles', icon: <Sliders className="w-4 h-4" aria-hidden="true" /> },
           ]}
         />
@@ -348,6 +468,213 @@ export const SettingsPage: React.FC = () => {
             Proposition de démarrage : 1 000 FCFA par course dans la zone habituelle. Ajustez ces
             montants selon vos coûts réels de carburant et vos quartiers desservis.
           </div>
+        </div>
+        )}
+
+        {/* Rangement atelier : règles du propriétaire */}
+        {tab === 'storage' && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-5 shadow-2xs space-y-4 text-[13px]">
+          <div className="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
+            <Archive className="w-4 h-4 text-teal-600 dark:text-teal-400" aria-hidden="true" />
+            <h2 className="font-bold text-[14.5px] text-zinc-900 dark:text-zinc-100">
+              Rangement atelier — règles du propriétaire
+            </h2>
+          </div>
+
+          <p className="text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+            Vous décidez comment l’atelier doit ranger les commandes terminées. Le plan A–E
+            fourni au départ n’est qu’une proposition : le vrai modèle est celui de votre local —
+            portants, étagères, casiers, bacs ou rangées numérotées.
+          </p>
+
+          <div className="flex flex-wrap gap-1.5" aria-label="Résumé actuel du rangement">
+            <span className="rounded-full bg-teal-50 dark:bg-teal-950 px-2.5 py-1 text-[11.5px] font-bold text-teal-800 dark:text-teal-200">
+              {storageSummary.totalLocations} emplacement(s) configuré(s)
+            </span>
+            <span className="rounded-full bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 text-[11.5px] font-bold text-zinc-700 dark:text-zinc-300">
+              {storageSummary.activeLocations} actif(s)
+            </span>
+            <span className="rounded-full bg-amber-50 dark:bg-amber-950 px-2.5 py-1 text-[11.5px] font-bold text-amber-800 dark:text-amber-200">
+              {storageSummary.readyWithoutStorage} prête(s) sans repère structuré
+            </span>
+            <span className="rounded-full bg-red-50 dark:bg-red-950 px-2.5 py-1 text-[11.5px] font-bold text-red-800 dark:text-red-200">
+              {storageSummary.saturatedLocations} saturé(s)
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <label
+              htmlFor="settings-storage-assignment-required"
+              className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            >
+              <span className="flex items-center gap-3">
+                <PackageCheck className="h-5 w-5 shrink-0 text-zinc-600 dark:text-zinc-400" aria-hidden="true" />
+                <span>
+                  <span className="block font-bold text-zinc-900 dark:text-zinc-100">
+                    Rangement obligatoire avant « Prête »
+                  </span>
+                  <span className="block text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    Décoché : l’équipe peut marquer prête puis ranger juste après. Coché : un
+                    emplacement actif doit être choisi pour terminer la commande.
+                  </span>
+                </span>
+              </span>
+              <input
+                id="settings-storage-assignment-required"
+                type="checkbox"
+                checked={storageAssignmentRequired}
+                onChange={(e) => setStorageAssignmentRequired(e.target.checked)}
+                className="h-4 w-4 shrink-0 accent-black"
+              />
+            </label>
+
+            <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+              <p id="settings-storage-capacity-title" className="font-bold text-zinc-900 dark:text-zinc-100">
+                Capacité des emplacements
+              </p>
+              <p className="mt-0.5 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Souple : l’app signale le dépassement mais autorise un rangement exceptionnel.
+                Stricte : un casier plein ne peut plus recevoir de paquet (les anciens nombres
+                de paquets inconnus ne sont pas inventés).
+              </p>
+              <SegmentedControl
+                ariaLabel="Choisir le mode de capacité du rangement"
+                options={[
+                  { id: 'flexible', label: 'Souple (alerte)' },
+                  { id: 'strict', label: 'Stricte (bloquante)' },
+                ]}
+                value={storageCapacityMode}
+                onChange={setStorageCapacityMode}
+                className="mt-2"
+              />
+            </div>
+
+            <label
+              htmlFor="settings-storage-suggestions"
+              className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            >
+              <span>
+                <span className="block font-bold text-zinc-900 dark:text-zinc-100">
+                  Suggestions automatiques d’emplacement
+                </span>
+                <span className="block text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  L’app pré-sélectionne le casier le plus adapté (cintre, plié, volumineux,
+                  livraison…) ; l’équipe peut toujours le changer. Désactivez si vous préférez
+                  un choix manuel systématique.
+                </span>
+              </span>
+              <input
+                id="settings-storage-suggestions"
+                type="checkbox"
+                checked={storageSuggestionsEnabled}
+                onChange={(e) => setStorageSuggestionsEnabled(e.target.checked)}
+                className="h-4 w-4 shrink-0 accent-black"
+              />
+            </label>
+
+            <div className="max-w-xs">
+              <label
+                htmlFor="settings-storage-default-capacity"
+                className="block text-[11.5px] font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1"
+              >
+                Capacité par défaut d’un nouvel emplacement
+              </label>
+              <div className="relative">
+                <input
+                  id="settings-storage-default-capacity"
+                  type="number"
+                  min={1}
+                  max={999}
+                  step={1}
+                  inputMode="numeric"
+                  value={storageDefaultCapacityInput}
+                  onChange={(e) => setStorageDefaultCapacityInput(e.target.value)}
+                  aria-describedby="settings-storage-default-capacity-help"
+                  className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 px-3 py-2 pr-20 text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-zinc-400 dark:text-zinc-500">
+                  PAQUETS
+                </span>
+              </div>
+              <p id="settings-storage-default-capacity-help" className="mt-1 text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Pré-remplit la création d’un casier ou d’une série ; chaque emplacement peut
+                ensuite avoir sa propre capacité.
+              </p>
+            </div>
+          </div>
+
+          {(storageSummary.totalLocations === 0 ||
+            (storageAssignmentRequired && storageSummary.activeLocations === 0) ||
+            (storageAssignmentRequired && storageSummary.readyWithoutStorage > 0) ||
+            (storageCapacityMode === 'strict' && storageSummary.saturatedLocations > 0)) && (
+            <div className="space-y-2" aria-live="polite">
+              {storageSummary.totalLocations === 0 && (
+                <p className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/60 px-3 py-2.5 text-[12px] leading-relaxed text-amber-900 dark:text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    Aucun emplacement n’est configuré. Créez votre plan avant d’activer le
+                    rangement obligatoire.
+                  </span>
+                </p>
+              )}
+              {storageAssignmentRequired && storageSummary.activeLocations === 0 && storageSummary.totalLocations > 0 && (
+                <p className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/60 px-3 py-2.5 text-[12px] leading-relaxed text-amber-900 dark:text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    Tous les emplacements sont désactivés : aucune commande ne pourra passer en
+                    « Prête » tant qu’au moins un casier n’est pas réactivé.
+                  </span>
+                </p>
+              )}
+              {storageAssignmentRequired && storageSummary.readyWithoutStorage > 0 && (
+                <p className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/60 px-3 py-2.5 text-[12px] leading-relaxed text-amber-900 dark:text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    {storageSummary.readyWithoutStorage} commande(s) sont déjà prêtes sans repère
+                    structuré. Elles resteront visibles dans la file « À ranger / convertir »
+                    jusqu’à saisie de leur casier.
+                  </span>
+                </p>
+              )}
+              {storageCapacityMode === 'strict' && storageSummary.saturatedLocations > 0 && (
+                <p className="flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/60 px-3 py-2.5 text-[12px] leading-relaxed text-red-900 dark:text-red-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>
+                    {storageSummary.saturatedLocations} emplacement(s) ont déjà atteint leur
+                    capacité. En mode strict, vérifiez la place réelle ou augmentez leur capacité
+                    avant de continuer à y ranger.
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="rounded-xl border border-teal-200 dark:border-teal-900 bg-teal-50/70 dark:bg-teal-950/60 p-3.5">
+            <h3 className="font-bold text-zinc-950 dark:text-zinc-50">Votre plan physique</h3>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-[12.5px] leading-relaxed text-zinc-700 dark:text-zinc-300">
+              <li>Choisissez des codes courts et lisibles de loin : PORTANT-1, MUR-A, B-01…</li>
+              <li>Créez un emplacement type, dupliquez-le ou générez une série B-01 → B-12.</li>
+              <li>Reportez exactement les mêmes codes sur les étiquettes réelles de l’atelier.</li>
+              <li>Désactivez un casier déjà utilisé ; seuls les emplacements jamais utilisés se suppriment.</li>
+            </ol>
+            <button
+              type="button"
+              onClick={() => saveSettings(true)}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#09090b] dark:bg-zinc-100 px-4 py-2 text-[13px] font-bold text-white dark:text-zinc-950 shadow-sm transition-colors hover:bg-zinc-800 dark:hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+            >
+              Enregistrer et gérer les emplacements
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          <p className="flex items-start gap-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              L’application n’a pas encore de comptes ni de rôles : toute personne ayant accès à
+              cet appareil peut modifier ces règles. Le verrouillage « propriétaire » arrivera
+              avec les comptes utilisateurs du backend.
+            </span>
+          </p>
         </div>
         )}
 
