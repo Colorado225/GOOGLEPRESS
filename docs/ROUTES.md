@@ -133,7 +133,7 @@ statiques existants restent servis en priorité par Vercel.
 | `npx playwright test --list` | RÉUSSI — 10 tests découverts (1 nouveau : routes ERP) |
 | Playwright local | BLOQUÉ — Chromium absent du bac à sable ; exécution par la CI de la PR #7 |
 | Serveur de développement (port 3000) | RÉUSSI — HTTP 200 sur les 10 chemins ERP + alias + route inconnue ; modules transformés sans erreur |
-| CI GitHub Actions | À constater sur la PR #7 après poussée de ce lot |
+| CI GitHub Actions (PR #7) | RÉUSSI — run `40719168109` au commit `d1cc020` : « Lint, tests et build » et « Smoke tests navigateur » (10 tests e2e, routage inclus) au vert |
 
 Non vérifié à ce stade : le retour post-connexion de bout en bout avec un
 vrai compte (aucun compte réel n'existe encore ; la logique est couverte
