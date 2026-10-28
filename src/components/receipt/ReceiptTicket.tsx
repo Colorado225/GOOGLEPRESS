@@ -121,7 +121,9 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
   let kilos = 0;
   order.lines.forEach((line) => {
     if (line.pricingType === 'kilo') kilos += line.weightKg ?? line.quantity;
-    else pieces += line.quantity;
+    // Un forfait couvre plusieurs vêtements : on compte les vêtements réels,
+    // pas les blocs de forfait facturés.
+    else pieces += line.garments ?? line.quantity;
   });
   const itemsSummaryParts: string[] = [];
   if (pieces > 0) itemsSummaryParts.push(`${formatQty(pieces)} pièce${pieces > 1 ? 's' : ''}`);

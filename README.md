@@ -280,7 +280,9 @@ la reprise des pages de connexion et d’inscription dans
 la barre latérale personnalisable et la carte d'abonnement dans
 [`docs/BARRE-LATERALE.md`](docs/BARRE-LATERALE.md), le nom et le logo propres à
 chaque pressing dans
-[`docs/IDENTITE-ETABLISSEMENT.md`](docs/IDENTITE-ETABLISSEMENT.md) et la carte
+[`docs/IDENTITE-ETABLISSEMENT.md`](docs/IDENTITE-ETABLISSEMENT.md), la
+blanchisserie au forfait par nombre de vêtements dans
+[`docs/BLANCHISSERIE-FORFAITS.md`](docs/BLANCHISSERIE-FORFAITS.md) et la carte
 des routes par contexte (client, personnel, ERP) dans
 [`docs/ROUTES.md`](docs/ROUTES.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis

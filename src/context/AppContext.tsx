@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
-  Customer, LaundryOrder, OrderLine, ClothingItem, CashRegisterData, OrderStatus, ServiceCategory, PickupOption,
+  Customer, LaundryOrder, OrderLine, ClothingItem, CartLineDetails, CashRegisterData, OrderStatus, ServiceCategory, PickupOption,
   Employee, EmployeeStatus, EmployeeFormData, AttendanceRecord,
   InventoryProduct, ProductFormData, StockMovement, StockMovementInput,
   Expense, ExpenseFormData, ExpenseCategory, ActionResult,
@@ -47,6 +47,7 @@ import {
   resolveDefaultShopSettings,
 } from '../lib/shopSettings';
 import { isValidLogoDataUrl } from '../lib/shopIdentity';
+import { normalizeBlanchisserieSettings } from '../lib/blanchisserie';
 import { ShopSettings } from '../types';
 import {
   TICKET_COUNTER_STORAGE_KEY as TICKET_COUNTER_KEY,
@@ -84,7 +85,14 @@ export type WorkshopTab =
 export type StoragePanelView = 'orders' | 'locations';
 
 /** Onglets de l’écran Paramètres. */
-export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices' | 'backend' | 'backup';
+export type SettingsTab =
+  | 'shop'
+  | 'services'
+  | 'logistics'
+  | 'storage'
+  | 'devices'
+  | 'backend'
+  | 'backup';
 
 interface AppContextType {
   /** Portée courante : démonstration locale amorcée ou organisation réelle vide. */
@@ -100,7 +108,13 @@ interface AppContextType {
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer) => void;
   cartLines: OrderLine[];
-  addCartItem: (item: ClothingItem, serviceType?: string, quantity?: number, weightKg?: number) => void;
+  addCartItem: (
+    item: ClothingItem,
+    serviceType?: string,
+    quantity?: number,
+    weightKg?: number,
+    details?: CartLineDetails
+  ) => void;
   removeCartItem: (lineId: string) => void;
   updateCartItemQty: (lineId: string, delta: number) => void;
   /** Couleur appliquée aux pièces ajoutées au panier (undefined = non précisée). */
@@ -423,6 +437,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...persisted,
       name: persisted.name?.trim() ? persisted.name : base.name,
       logoDataUrl: isValidLogoDataUrl(persisted.logoDataUrl) ? persisted.logoDataUrl : null,
+      // Une sauvegarde absente ne doit pas écraser la grille de départ
+      // (démonstration) : seule une valeur réellement enregistrée est nettoyée.
+      blanchisserie:
+        persisted.blanchisserie === undefined
+          ? base.blanchisserie
+          : normalizeBlanchisserieSettings(persisted.blanchisserie),
     };
     return {
       ...merged,
@@ -438,6 +458,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setShopSettings({
       ...next,
       logoDataUrl: isValidLogoDataUrl(next.logoDataUrl) ? next.logoDataUrl : null,
+      blanchisserie: normalizeBlanchisserieSettings(next.blanchisserie),
       pickupFee: normalizeLogisticsFee(next.pickupFee),
       deliveryFee: normalizeLogisticsFee(next.deliveryFee),
       storageAssignmentRequired: next.storageAssignmentRequired === true,
@@ -639,7 +660,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     item: ClothingItem,
     serviceType = selectedServiceFilter,
     quantity = 1,
-    weightKg?: number
+    weightKg?: number,
+    details?: CartLineDetails
   ) => {
     setCartLines((prev) => {
       const existing = prev.find(
@@ -662,6 +684,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 ...line,
                 quantity: newQty,
                 weightKg: isKilo ? newQty : undefined,
+                garments:
+                  details?.garments != null
+                    ? (line.garments ?? 0) + details.garments
+                    : line.garments,
                 subtotal: newSubtotal,
               }
             : line
@@ -676,6 +702,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           quantity: actualQty,
           pricingType: item.pricingType,
           weightKg: isKilo ? actualQty : undefined,
+          garments: details?.garments,
+          pricingBasis: details?.pricingBasis,
+          blanchisserieService: details?.blanchisserieService,
           unitLabel: item.unitLabel,
           unitPrice: item.unitPrice,
           subtotal: calcSubtotal,

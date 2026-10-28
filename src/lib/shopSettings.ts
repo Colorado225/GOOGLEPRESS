@@ -1,5 +1,9 @@
 import type { ShopSettings } from '../types';
 import type { WorkspaceScope } from './workspaceScope';
+import {
+  DEMO_BLANCHISSERIE_SETTINGS,
+  EMPTY_BLANCHISSERIE_SETTINGS,
+} from './blanchisserie';
 
 /** Clé localStorage des paramètres de la boutique (écran Paramètres). */
 export const SHOP_SETTINGS_STORAGE_KEY = 'pressingpro_shop_settings';
@@ -27,6 +31,9 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   storageAllowCapacityOverflow: true,
   storageSuggestionsEnabled: true,
   storageDefaultCapacityPackages: 20,
+  // Grille d'exemple : le modèle est celui des forfaits au nombre de
+  // vêtements, pas des kilos.
+  blanchisserie: DEMO_BLANCHISSERIE_SETTINGS,
 };
 
 /**
@@ -54,5 +61,8 @@ export const resolveDefaultShopSettings = (
     tagline: '',
     address: '',
     phone: '',
+    // Aucun tarif inventé : le pressing définit sa grille dans Paramètres →
+    // Prestations avant la première commande de blanchisserie.
+    blanchisserie: EMPTY_BLANCHISSERIE_SETTINGS,
   };
 };

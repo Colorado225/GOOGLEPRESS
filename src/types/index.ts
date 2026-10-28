@@ -187,12 +187,28 @@ export interface OrderLine {
   unitPrice: number;
   pricingType?: PricingType;
   weightKg?: number;
+  /** Prestation de blanchisserie facturée (forfait ou à l'unité). */
+  blanchisserieService?: BlanchisserieServiceId;
+  /** Nombre de vêtements couverts par la ligne (forfait ou complément). */
+  garments?: number;
+  /** Nature de la ligne blanchisserie : bloc de forfait ou vêtements à l'unité. */
+  pricingBasis?: 'forfait' | 'per_garment';
   unitLabel?: string;
   subtotal: number;
   serviceType: string;
   /** Couleur de la pièce (identification et tri) — voir GARMENT_COLORS. Absente = non précisée. */
   color?: string;
   notes?: string;
+}
+
+/** Précisions portées par une ligne ajoutée au panier depuis le comptoir. */
+export interface CartLineDetails {
+  /** Nombre de vêtements couverts par la ligne (forfait ou complément). */
+  garments?: number;
+  /** Bloc de forfait ou vêtements facturés à l'unité. */
+  pricingBasis?: 'forfait' | 'per_garment';
+  /** Prestation de blanchisserie concernée. */
+  blanchisserieService?: BlanchisserieServiceId;
 }
 
 export interface GarmentColor {
@@ -316,6 +332,35 @@ export interface LaundryOrder {
  * (clé pressingpro_shop_settings). L'identité alimente le ticket thermique,
  * la barre latérale et l'en-tête imprimé des rapports.
  */
+/**
+ * Prestations de blanchisserie.
+ *
+ * La blanchisserie ne se vend plus au kilo ni à la pièce du catalogue : elle
+ * propose trois prestations, dont deux au forfait par NOMBRE DE VÊTEMENTS
+ * (ex. 20 vêtements = 3 000 FCFA). La grille est définie à l'avance dans les
+ * Paramètres ; le repassage seul se facture au vêtement.
+ */
+export type BlanchisserieServiceId = 'wash_only' | 'wash_iron' | 'iron_only';
+
+/** Un palier de forfait : N vêtements et le prix de chaque prestation. */
+export interface BlanchisserieTier {
+  id: string;
+  garments: number;
+  prices: Record<BlanchisserieServiceId, number>;
+}
+
+export interface BlanchisserieSettings {
+  /** Paliers de forfaits (nombre de vêtements croissant). */
+  tiers: BlanchisserieTier[];
+  /**
+   * Prix du vêtement supplémentaire au-delà du forfait, et tarif des
+   * prestations facturées à l'unité (repassage seul).
+   */
+  unitPrices: Record<BlanchisserieServiceId, number>;
+  /** `true` = prestation facturée au vêtement, sans forfait. */
+  perGarment: Record<BlanchisserieServiceId, boolean>;
+}
+
 export interface ShopSettings {
   name: string;
   /** Logo de l'établissement en data URL (PNG/WebP 256 px), `null` = aucun. */
@@ -334,6 +379,8 @@ export interface ShopSettings {
   storageAllowCapacityOverflow: boolean;
   storageSuggestionsEnabled: boolean;
   storageDefaultCapacityPackages: number;
+  /** Grille des prestations de blanchisserie (forfaits au nombre de vêtements). */
+  blanchisserie: BlanchisserieSettings;
 }
 
 export interface CashRegisterData {

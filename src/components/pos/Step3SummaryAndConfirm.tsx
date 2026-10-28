@@ -260,7 +260,11 @@ export const Step3SummaryAndConfirm: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-zinc-600 dark:text-zinc-400">{line.serviceType}</TableCell>
                       <TableCell className="text-center font-bold tabular-nums">
-                        {line.quantity} {line.pricingType === 'kilo' ? 'kg' : 'pièce(s)'}
+                        {line.pricingType === 'kilo'
+                          ? `${line.quantity} kg`
+                          : line.unitLabel === 'forfait'
+                            ? `${line.quantity} forfait${line.quantity > 1 ? 's' : ''}`
+                            : `${line.quantity} vêtement${line.quantity > 1 ? 's' : ''}`}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">
                         {formatFCFA(line.unitPrice)}

@@ -5,9 +5,16 @@ import { ClothingItem } from '../../types';
 import { CurrentColorSelector } from './ColorPicker';
 import { Reveal } from '../common/Reveal';
 import { SegmentedControl } from '../common/SegmentedControl';
+import { BlanchisserieCounter } from './BlanchisserieCounter';
 
 export const ClothingCatalogSection: React.FC = () => {
-  const { addCartItem, cartLines, selectedServiceFilter, setSelectedServiceFilter } = useApp();
+  const {
+    addCartItem,
+    cartLines,
+    selectedServiceFilter,
+    setSelectedServiceFilter,
+    selectedServiceCategory,
+  } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'men' | 'women' | 'home'>('all');
   const [itemSearch, setItemSearch] = useState('');
 
@@ -18,6 +25,10 @@ export const ClothingCatalogSection: React.FC = () => {
     { id: 'Teinture', label: '🎨 Teinture' },
     { id: 'Express 24h', label: '⚡ Express 24h' },
   ];
+
+  // La blanchisserie ne se vend plus à la pièce : elle a son comptoir de
+  // forfaits au nombre de vêtements.
+  if (selectedServiceCategory === 'blanchisserie') return <BlanchisserieCounter />;
 
   const filteredItems = INITIAL_CLOTHING_ITEMS.filter((item) => {
     const matchesCat = selectedCategory === 'all' || item.category === selectedCategory || item.category === 'all';

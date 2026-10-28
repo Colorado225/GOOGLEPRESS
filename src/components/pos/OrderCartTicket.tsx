@@ -110,7 +110,10 @@ export const OrderCartTicket: React.FC = () => {
               >
                 <div className="flex-1 pr-2">
                   <p className="font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
-                    <span className="tabular-nums">{line.quantity} ×</span> {line.name}{' '}
+                    <span className="tabular-nums">
+                      {line.quantity} {line.unitLabel === 'forfait' ? 'forfait' : '×'}
+                    </span>{' '}
+                    {line.name}{' '}
                     <span className="font-normal text-zinc-500 dark:text-zinc-400 text-[11.5px]">— {line.serviceType}</span>
                   </p>
                   <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 truncate">

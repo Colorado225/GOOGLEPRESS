@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Save,
+  Shirt,
   Sliders,
   Smartphone,
   Printer,
@@ -33,6 +34,7 @@ import { Badge } from '../common/DataTable';
 import { canPromptInstall, isRunningStandalone, promptInstall, PWA_INSTALLABLE_EVENT } from '../../lib/pwa';
 import { SupabaseBackendSection } from './SupabaseBackendSection';
 import { BackupSection } from './BackupSection';
+import { BlanchisserieSettingsSection } from './BlanchisserieSettingsSection';
 import { fileToLogoDataUrl } from '../../lib/imageDownscale';
 import {
   MAX_LOGO_FILE_BYTES,
@@ -290,6 +292,7 @@ export const SettingsPage: React.FC = () => {
       storageAllowCapacityOverflow: storageCapacityMode === 'flexible',
       storageSuggestionsEnabled,
       storageDefaultCapacityPackages,
+      blanchisserie: shopSettings.blanchisserie,
     });
     setPickupFeeInput(String(Math.round(pickupFee)));
     setDeliveryFeeInput(String(Math.round(deliveryFee)));
@@ -369,6 +372,12 @@ export const SettingsPage: React.FC = () => {
           onChange={setTab}
           tabs={[
             { id: 'shop', label: 'Établissement', icon: <Building2 className="w-4 h-4" aria-hidden="true" /> },
+            {
+              id: 'services',
+              label: 'Prestations',
+              icon: <Shirt className="w-4 h-4" aria-hidden="true" />,
+              badge: shopSettings.blanchisserie.tiers.length,
+            },
             { id: 'logistics', label: 'Ramassage & livraison', icon: <Truck className="w-4 h-4" aria-hidden="true" /> },
             {
               id: 'storage',
@@ -523,6 +532,8 @@ export const SettingsPage: React.FC = () => {
         )}
 
         {/* Ramassage & livraison */}
+        {tab === 'services' && <BlanchisserieSettingsSection />}
+
         {tab === 'logistics' && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-5 shadow-2xs space-y-4 text-[13px]">
           <div className="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">

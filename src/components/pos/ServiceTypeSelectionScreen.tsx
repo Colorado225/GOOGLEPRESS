@@ -118,46 +118,37 @@ export const ServiceTypeSelectionScreen: React.FC = () => {
               Blanchisserie & Linge de maison
             </h2>
             <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1">
-              Draps, serviettes, taies, nappes, uniformes pros, lavage grand volume et linge au kilo.
+              Linge de maison, draps, serviettes, uniformes et grand volume, facturés au forfait
+              par nombre de vêtements.
             </p>
 
             {/* List of covered categories */}
             <div className="mt-5 space-y-2 border-t border-zinc-100 dark:border-zinc-800 pt-4 text-[12.5px] text-zinc-700 dark:text-zinc-300">
               <p className="font-bold text-[11px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                Prestations & Linge inclus :
+                Trois prestations :
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <span className="flex items-center gap-1.5 font-medium">
-                  🛏️ Draps & housses de lit
+                  🫧 Lavage simple — au forfait
                 </span>
                 <span className="flex items-center gap-1.5 font-medium">
-                  🧖 Serviettes & peignoirs
+                  🧺 Lavage + repassage — au forfait
                 </span>
                 <span className="flex items-center gap-1.5 font-medium">
-                  🛌 Taies d'oreiller
-                </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                  🍽️ Nappes & restauration
-                </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                  🦺 Uniformes & blouses
-                </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                  🛋️ Couettes & édredons
-                </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                  🪟 Rideaux & voilages
-                </span>
-                <span className="flex items-center gap-1.5 font-bold text-teal-700 dark:text-teal-300">
-                  ⚖️ Linge au kilo (au poids)
+                  ♨️ Repassage — facturé au vêtement
                 </span>
               </div>
+              <p className="pt-1 text-[11.5px] leading-snug text-zinc-500 dark:text-zinc-400">
+                Le prix dépend du nombre de vêtements (ex. 20 vêtements = 3 000 FCFA), selon la
+                grille réglée dans Paramètres → Prestations.
+              </p>
             </div>
           </div>
 
           <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
             <span className="text-[12px] font-semibold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-              <Scale className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" /> Au kilo & à la pièce
+              <Scale className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" /> Forfaits au
+              nombre de vêtements
             </span>
             <button
               type="button"
