@@ -19,6 +19,7 @@ Documentation complète :
 - `docs/backend/phase-0/01-inventaire-et-porte-de-decision.md`
 - `docs/backend/phase-0/02-socle-option-b-et-validation-locale.md`
 - `docs/backend/phase-0/03-purge-pressing-pro-et-installation.md`
+- `docs/backend/phase-0/04-branchement-progressif-et-domaine.md`
 - `docs/PLAN-BACKEND.md`
 
 ## Contenu
@@ -31,6 +32,10 @@ Documentation complète :
   entièrement fictives, réservées à un environnement jetable.
 - `tests/phase0/run-isolation-pglite.mjs` : application locale des migrations
   et vérifications RLS/métier avec PostgreSQL en mémoire (PGlite).
+- `../scripts/generate-supabase-types.mjs` : génération de
+  `src/lib/database.types.ts` depuis le schéma local des migrations.
+- `../scripts/test-supabase-rest.mjs` : test Auth/PostgREST réel avec des
+  comptes de validation fournis par variables d’environnement.
 
 ## Validation locale
 
@@ -39,13 +44,17 @@ Depuis la racine du dépôt :
 ```bash
 npm install
 npm run test:phase0
+npm run gen:supabase-types
 ```
 
-Résultat attendu au 28 octobre 2026 : 19 vérifications réussies.
+Résultat attendu au 28 octobre 2026 : 19 vérifications PGlite réussies et
+37 tables typées.
 
-Le harnais émule uniquement les rôles et `auth.uid()` nécessaires aux règles
-SQL. Il ne remplace pas les tests Auth/PostgREST avec de vrais jetons, les
-advisors Supabase ni les validations Realtime/Storage, qui restent à effectuer.
+Un test hébergé avec `request.jwt.claims` a confirmé l’isolation dans une
+transaction annulée. Le parcours HTTP complet se lance avec
+`npm run test:supabase-rest` lorsque des comptes de validation réels sont
+fournis par variables d’environnement. Les validations Realtime/Storage et
+les optimisations d’index relevées restent à effectuer.
 
 ## État au 28 octobre 2026
 
@@ -53,9 +62,10 @@ advisors Supabase ni les validations Realtime/Storage, qui restent à effectuer.
   politiques.
 - Aucun utilisateur Auth, tenant, client ou commande n’a été créé.
 - Les fixtures fictives n’ont pas été chargées dans Pressing_Pro.
-- L’inscription publique est désactivée et Auth pointe temporairement vers
-  `http://localhost:3000`.
-- Le front n’utilise pas encore ce socle.
-- Deux anciennes enveloppes Edge ont été neutralisées par HTTP 410, mais leur
-  suppression physique reste à confirmer par une liste vide.
+- L’inscription publique est désactivée ; Auth accepte
+  `https://laundrypressing.vercel.app` et `http://localhost:3000`.
+- Les Edge Functions héritées sont physiquement supprimées ; la liste
+  distante est vide.
+- Le front contient un premier client Supabase optionnel et l’onglet
+  Paramètres → Backend Supabase ; les données métier restent locales.
 - Aucun secret et aucune donnée réelle ne doivent être ajoutés ici.

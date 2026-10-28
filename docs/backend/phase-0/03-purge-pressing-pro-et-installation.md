@@ -10,7 +10,12 @@
 >
 > **Résultat : la base hébergée contient le nouveau socle vide — 37 tables,
 > RLS activée et forcée, 89 politiques, aucune donnée métier et aucun
-> utilisateur Auth.** Le front n’est pas encore branché.
+> utilisateur Auth.** Le front n’était pas encore branché à la fin de cette
+> étape.
+>
+> **Suite : voir `04-branchement-progressif-et-domaine.md`** pour la
+> suppression physique confirmée des Edge Functions, le domaine de
+> production, les tests hébergés et le premier client front.
 
 ---
 

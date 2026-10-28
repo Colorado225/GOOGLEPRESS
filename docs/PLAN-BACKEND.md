@@ -1,17 +1,18 @@
 # Plan backend multi-tenant, espace client et messagerie — PressingPro CI
 
-> **Statut : socle phase 0 hébergé installé le 28 octobre 2026.** Les quatre
-> migrations versionnées dans ce dépôt ont été appliquées à Pressing_Pro
-> après purge autorisée de son héritage. La base contient 37 tables vides
-> protégées par RLS ; le front n’est pas encore branché et aucun tenant,
-> utilisateur ou donnée métier n’a été créé.
+> **Statut : socle phase 0 hébergé installé et premier branchement front
+> livré le 28 octobre 2026.** Les quatre migrations versionnées dans ce dépôt
+> ont été appliquées à Pressing_Pro après purge autorisée de son héritage.
+> La base contient 37 tables vides protégées par RLS. Le client Supabase et
+> l’onglet Paramètres → Backend sont branchés progressivement, mais les
+> données métier des écrans restent locales et aucun tenant réel n’a encore
+> été créé.
 >
-> **Phase 0 : inventaire, Option B, purge et installation terminés.**
-> Pressing_Pro contenait un backend préexistant désynchronisé. Le
-> propriétaire, après avoir confirmé l’absence d’usage réel, a autorisé sa
-> suppression complète puis l’installation du nouveau socle. La chronologie
-> complète est dans
-> [`backend/phase-0/03-purge-pressing-pro-et-installation.md`](backend/phase-0/03-purge-pressing-pro-et-installation.md).
+> **Phase 0 : inventaire, Option B, purge, installation et porte de
+> branchement terminés.** Les Edge Functions héritées sont physiquement
+> supprimées et le domaine `https://laundrypressing.vercel.app` est déclaré
+> dans Auth. La chronologie complète est dans
+> [`backend/phase-0/04-branchement-progressif-et-domaine.md`](backend/phase-0/04-branchement-progressif-et-domaine.md).
 >
 > **Environnement actuel : Pressing_Pro nettoyé**
 > (`phjstsydxvggtduohfrl`, `eu-west-1`). Son statut définitif
@@ -167,8 +168,10 @@ Le propriétaire a ensuite retenu l’**Option B**, confirmé qu’aucun site,
 application ou client réel n’utilise cet existant, puis autorisé la purge
 complète de Pressing_Pro. Les quatre migrations v1 y ont été appliquées après
 suppression de l’ancien historique, des routines publiques, du compte Auth,
-des sessions et des secrets applicatifs. Le rapport d’exécution est dans
-[`backend/phase-0/03-purge-pressing-pro-et-installation.md`](backend/phase-0/03-purge-pressing-pro-et-installation.md).
+des sessions et des secrets applicatifs. Les rapports d’exécution sont dans
+[`backend/phase-0/03-purge-pressing-pro-et-installation.md`](backend/phase-0/03-purge-pressing-pro-et-installation.md)
+et
+[`backend/phase-0/04-branchement-progressif-et-domaine.md`](backend/phase-0/04-branchement-progressif-et-domaine.md).
 
 Avant l’ouverture aux utilisateurs, il reste à confirmer :
 
@@ -177,8 +180,9 @@ Avant l’ouverture aux utilisateurs, il reste à confirmer :
 - la séparation future entre production, préproduction et développement ;
 - les personnes ayant accès au projet et la procédure de récupération du
   compte propriétaire ;
-- les domaines Auth définitifs et la suppression physique des deux enveloppes
-  Edge désactivées.
+- l’ajout éventuel d’un domaine personnalisé en plus de
+  `https://laundrypressing.vercel.app` ;
+- les informations réelles du premier tenant et de son propriétaire.
 
 Il reste recommandé de ne pas développer directement dans un schéma de
 production sans migrations versionnées et environnement de validation.
@@ -748,8 +752,9 @@ Contrôles minimums :
 
 1. Arrêter le statut de Pressing_Pro (`phjstsydxvggtduohfrl`, `eu-west-1`) :
    développement, validation ou production. Définir ensuite la séparation des
-   environnements, les domaines Auth, les sauvegardes et la suppression
-   physique des deux enveloppes Edge désactivées.
+   environnements, les sauvegardes et l’audit des anciennes variables du
+   projet Vercel. Le domaine `https://laundrypressing.vercel.app` est déjà
+   déclaré dans Auth avec `localhost:3000` pour le développement.
 2. Valider le modèle **organisation → agences**, avec le pressing pilote comme
    premier tenant.
 3. Valider un compte par employé et la liste initiale des rôles.
@@ -786,20 +791,26 @@ l’installation des quatre migrations dans le projet nettoyé. Les opérations,
 versions distantes, contrôles catalogue et limites sont dans
 [`backend/phase-0/03-purge-pressing-pro-et-installation.md`](backend/phase-0/03-purge-pressing-pro-et-installation.md).
 
+La suppression physique des Edge Functions, le domaine Auth de production,
+un test hébergé avec claims JWT en rollback, les types TypeScript et le
+premier client front sont maintenant documentés dans
+[`backend/phase-0/04-branchement-progressif-et-domaine.md`](backend/phase-0/04-branchement-progressif-et-domaine.md).
+
 La prochaine étape est donc :
 
-- supprimer physiquement les deux enveloppes Edge désactivées et confirmer
-  une liste vide ;
-- tester Auth/PostgREST avec de vrais jetons de validation et examiner les
-  advisors sécurité/performance ;
-- générer les types TypeScript depuis Pressing_Pro ;
-- arrêter les domaines Auth et le statut
-  développement/validation/production ;
-- valider cette répétition hébergée avant tout branchement de l’application.
+- fournir les informations réelles du premier tenant et de son propriétaire,
+  puis créer le compte, l’organisation, la première agence et le membership ;
+- exécuter `npm run test:supabase-rest` avec les comptes de validation ;
+- auditer/purger les anciennes variables Vercel et traiter les index de clés
+  étrangères signalés par les contrôles catalogue ;
+- brancher un premier domaine métier en lecture/écriture distante, sans
+  reconstruire les écrans ni abandonner le repli local tant que la recette
+  n’est pas signée.
 
 ---
 
 *Plan mis à jour le 28 octobre 2026 à partir de l’application livrée sur la
 branche `arena/e0c13218-googlepress`, incluant logistique, rangement et
 configuration propriétaire. Pressing_Pro contient désormais le socle backend
-Phase 0 vide et protégé par RLS ; le front n’est pas encore branché.*
+Phase 0 vide et protégé par RLS ; le front dispose du client et de la sonde
+Auth/PostgREST, sans bascule des données métier.*

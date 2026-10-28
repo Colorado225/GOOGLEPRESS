@@ -10,9 +10,12 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test:phase0": "node supabase/tests/phase0/run-isolation-pglite.mjs"
+    "test:phase0": "node supabase/tests/phase0/run-isolation-pglite.mjs",
+    "gen:supabase-types": "node scripts/generate-supabase-types.mjs",
+    "test:supabase-rest": "node scripts/test-supabase-rest.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
     "canvas-confetti": "^1.9.4",

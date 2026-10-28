@@ -66,7 +66,7 @@ export type WorkshopTab = 'production' | 'storage' | 'logistics' | 'handover' | 
 export type StoragePanelView = 'orders' | 'locations';
 
 /** Onglets de l’écran Paramètres. */
-export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices';
+export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices' | 'backend';
 
 /** Chargement localStorage avec repli sur les données initiales (même convention que commandes/clients/caisse). */
 function loadPersistedState<T>(key: string, fallback: T): T {

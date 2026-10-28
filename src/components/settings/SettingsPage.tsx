@@ -10,6 +10,7 @@ import {
   Smartphone,
   Printer,
   Building2,
+  Database,
   Download,
   CheckCircle2,
   Moon,
@@ -28,6 +29,7 @@ import { SegmentedControl, SegmentedOption } from '../common/SegmentedControl';
 import { AppTheme } from '../../lib/theme';
 import { Badge } from '../common/DataTable';
 import { canPromptInstall, isRunningStandalone, promptInstall, PWA_INSTALLABLE_EVENT } from '../../lib/pwa';
+import { SupabaseBackendSection } from './SupabaseBackendSection';
 
 /**
  * Carte « Apparence » : thème clair/sombre de l'interface. Le choix est appliqué
@@ -306,7 +308,7 @@ export const SettingsPage: React.FC = () => {
               Paramètres du pressing
             </h1>
             <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
-              Établissement, rangement atelier, imprimantes de caisse et notifications SMS
+              Établissement, rangement atelier, périphériques et backend Supabase
             </p>
           </div>
         </div>
@@ -328,6 +330,7 @@ export const SettingsPage: React.FC = () => {
               badge: storageSummary.activeLocations,
             },
             { id: 'devices', label: 'Périphériques & passerelles', icon: <Sliders className="w-4 h-4" aria-hidden="true" /> },
+            { id: 'backend', label: 'Backend Supabase', icon: <Database className="w-4 h-4" aria-hidden="true" /> },
           ]}
         />
 
@@ -722,16 +725,22 @@ export const SettingsPage: React.FC = () => {
         </div>
         )}
 
-        <button
-          type="submit"
-          className="bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow"
-        >
-          <Save className="w-4 h-4" /> Enregistrer les réglages
-        </button>
-        <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
-          Réglages conservés uniquement dans ce navigateur : sans serveur, ils ne se synchronisent pas
-          entre appareils.
-        </p>
+        {tab === 'backend' && <SupabaseBackendSection />}
+
+        {tab !== 'backend' && (
+          <>
+            <button
+              type="submit"
+              className="bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow"
+            >
+              <Save className="w-4 h-4" /> Enregistrer les réglages
+            </button>
+            <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+              Réglages conservés uniquement dans ce navigateur : sans serveur, ils ne se synchronisent pas
+              entre appareils.
+            </p>
+          </>
+        )}
       </form>
 
       <PwaInstallCard />
