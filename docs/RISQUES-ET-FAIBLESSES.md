@@ -154,8 +154,8 @@ pures dans `src/lib` et des tests de transition avant déplacement.
   onboarding propriétaire et profil créé à l’inscription ;
 - 8 smoke tests navigateur Playwright ; leur exécution locale reste bloquée
   par l’absence de Chromium dans le bac à sable, la CI de la PR #5 reste
-  l’exécuteur de référence (run `40702372372` vert au commit `3effa2a`,
-  avant l’ajout du 8e test).
+  l’exécuteur de référence (runs verts, dont `40706958874` au commit
+  `4d1df80`, 8e test inclus).
 
 **Angles encore faibles.** Transitions complètes d’`AppContext`, rapports,
 clôture de caisse, périodes, inventaire et parcours longs POS/atelier restent

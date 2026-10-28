@@ -66,7 +66,7 @@ La page le dit explicitement pour éviter toute confusion.
 | `npm run gen:supabase-types` | 38 tables, 522 colonnes, 6 fonctions |
 | `npm run build` | RÉUSSI ; JS d'entrée 379,07 kB, page onboarding en chunk séparé 22,93 kB |
 | `npx playwright test --list` | 8 tests découverts (1 nouveau pour les 3 pages) |
-| Playwright local | BLOQUÉ — Chromium absent du bac à sable ; la CI de la PR #5 est l'exécuteur navigateur |
+| Playwright local | BLOQUÉ — Chromium absent du bac à sable ; CI PR #5 verte (run `40706958874`, commit `4d1df80`) |
 
 Scénarios base prouvés sous PGlite : création complète (slug
 `pressing-gamma-fictif`, 32 prestations, frais personnalisés, compteur à 1,
