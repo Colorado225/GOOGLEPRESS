@@ -74,25 +74,87 @@ membership propriétaire), second rattachement refusé, déduplication de slug
 (`…-2`) avec démarrage sans catalogue, membre actif refusé, nom invalide
 refusé, `anon` refusé.
 
-## Ce qui reste à activer (hors code)
+## Activation hébergée du 2026-10-28 (Pressing_Pro)
 
-Ces pages sont **livrées mais pas encore utilisables en réel**. Il manque,
-dans l'ordre :
+Réalisée sur autorisation explicite, points 1 et 2 de la liste initiale
+uniquement (migrations + ouverture des inscriptions). La création du
+premier compte et la fusion de la PR #5 restent à faire.
 
-1. **Appliquer les migrations à Pressing_Pro** (après sauvegarde) : d'abord
-   `20261028150000_order_creation_payments.sql`, puis
-   `20261028160000_owner_onboarding.sql`. Pressing_Pro est inchangé à ce
-   jour : 0 tenant, 0 compte, pas de table `payments`, pas de RPC
-   d'onboarding.
-2. **Ouvrir les inscriptions dans le projet Supabase Auth** (désactivées
-   aujourd'hui) et décider de la confirmation e-mail ; sans SMTP de
-   production, les e-mails de confirmation/réinitialisation resteront
-   limités au service par défaut.
-3. **Vérifier les URL de redirection Auth** pour le domaine de production
-   (`/connexion` après confirmation, `/` après réinitialisation).
-4. **Fusionner la PR #5 après la création des premiers comptes**, sinon
-   l'ERP de production exigera une connexion sans qu'aucun compte n'existe.
-5. Recetter avec de vrais jetons : inscription → onboarding → ERP, refus
+### Sauvegarde / état « avant »
+
+Inventaire catalogue consigné avant toute écriture : 7 migrations hébergées
+(dernière `20261028124739`), 37 tables avec RLS activée et forcée,
+89 politiques, 0 utilisateur Auth, 0 organisation/agence/membership/cliente/
+commande, pas de table `payments`, inscriptions Auth désactivées. La base ne
+contenait aucune donnée métier ; son schéma reste intégralement
+reproductible depuis `supabase/migrations/`.
+
+### Migrations appliquées
+
+| Fichier du dépôt | Version hébergée | Résultat vérifié |
+|---|---|---|
+| `20261028150000_order_creation_payments.sql` | `20261028144456` | 38 tables protégées, 90 politiques, `payments` publiée en Realtime, `INSERT` direct sur `orders`/`payments` refusé à `authenticated` |
+| `20261028160000_owner_onboarding.sql` | `20261028144951` (`owner_onboarding_fix_alignment`) | RPC `create_my_organization` exécutable par `authenticated` uniquement |
+
+**Incident corrigé pendant l'activation :** la première application de la
+migration onboarding (version `20261028144558`) a installé une retranscription
+inexacte de la fonction (signature erronée, appel à une fonction
+`private.slugify` inexistante). La recette transactionnelle annulée l'a
+détectée immédiatement ; aucune donnée ni aucun accès n'ont été créés. La
+surcharge erronée a été supprimée et la définition exacte du dépôt installée.
+L'identité hébergé ↔ dépôt est prouvée par des empreintes `md5(prosrc)` et
+des signatures identiques pour les 7 fonctions concernées (`create_order`,
+`record_order_payment`, `refund_order_payment`, `get_payment_totals`,
+`create_my_organization`, `private.recalculate_*` ×2), comparées à une base
+PGlite reconstruite depuis les fichiers du dépôt. Le fichier
+`20261028170000_owner_onboarding_alignment.sql` consigne cette traçabilité
+(côté PGlite, la suite reste à 56/56).
+
+### Recette hébergée (transaction annulée, aucun résidu)
+
+Scénario fictif exécuté avec un JWT simulé, terminé par `ROLLBACK` :
+onboarding (32 prestations amorcées, slugs générés, membership propriétaire,
+compteur de tickets), création d'une cliente sous RLS en tant que
+propriétaire, commande tarifée par le serveur (2 × 1 500 FCFA − 5 % =
+2 850 FCFA, prix navigateur falsifié ignoré, ticket n° 1), rejeu idempotent
+sans doublon, paiement Wave manuel de 400 FCFA, remboursement de 100 FCFA,
+totaux de caisse 400/100/300, visibilité RLS du journal, second rattachement
+refusé, `INSERT` direct sur `orders`/`payments` et `UPDATE` direct de
+`deposit_paid_xof` refusés. Comptes vérifiés à zéro après annulation
+(utilisateurs, profils, organisations, agences, clientes, commandes,
+paiements) ; 10 migrations enregistrées.
+
+### Inscriptions Auth ouvertes
+
+- `disable_signup` passé à `false` ; **confirmation e-mail maintenue**
+  (`mailer_autoconfirm=false`, connexion refusée tant que l'e-mail n'est
+  pas confirmé).
+- URL de redirection déjà autorisées : domaine de production
+  (`https://laundrypressing.vercel.app/**`) et `http://localhost:3000/**`,
+  couvrant `/connexion` après confirmation et `/` après réinitialisation.
+- **Limite connue :** aucun SMTP personnalisé n'est configuré. Les e-mails
+  partent par le service d'envoi intégré de Supabase, strictement limité par
+  la plateforme et à délivrabilité variable (vérifier les courriers
+  indésirables). Un SMTP de production, chez un fournisseur choisi par le
+  propriétaire, reste à configurer dans le tableau de bord Supabase ; aucun
+  identifiant SMTP ne doit transiter par le dépôt ni par une conversation.
+- Longueur minimale de mot de passe côté projet : 6 caractères
+  (l'interface en exige 8).
+- Ce réglage ouvre aussi l'inscription cliente (`/client/inscription`) ;
+  elle ne donne toujours aucun accès aux commandes sans liaison vérifiée
+  par l'agence.
+
+### Il reste, dans l'ordre
+
+1. **Fusionner la PR #5** pour déployer les pages `/inscription`,
+   `/connexion` et `/bienvenue` en production — en créant le premier compte
+   dans la foulée, afin de ne pas laisser l'ERP de production exiger une
+   connexion sans qu'aucun compte n'existe.
+2. **Créer le premier compte propriétaire** via `/inscription`, confirmer
+   l'e-mail, puis créer l'organisation dans `/bienvenue`.
+3. Configurer un **SMTP de production** avant toute inscription à grande
+   échelle.
+4. Recetter avec de vrais jetons : inscription → onboarding → ERP, refus
    inter-tenant, puis parcours deux appareils.
 
 ## Limites assumées de ce lot

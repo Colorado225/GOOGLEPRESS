@@ -38,10 +38,10 @@ clôture journalière Z.
 - **Espace client distant** — pages séparées `/client/connexion`,
   `/client/inscription`, `/client/nouveau-mot-de-passe` et `/client`, reliées
   à Supabase Auth. Après liaison vérifiée par le pressing, la cliente voit ses
-  commandes distantes et leur historique client. L’inscription publique reste
-  désactivée sur Pressing_Pro tant que l’ouverture n’est pas explicitement
-  autorisée ; aucun accès aux commandes n’est accordé par la seule création
-  d’un compte.
+  commandes distantes et leur historique client. L’inscription publique est
+  ouverte sur Pressing_Pro depuis le 28 octobre 2026, avec confirmation
+  e-mail exigée ; aucun accès aux commandes n’est accordé par la seule
+  création d’un compte.
 - **Personnel & présences** — registre des employés (postes, téléphone,
   salaire facultatif), activation/désactivation sans suppression, saisie
   des présences (présent, retard, absent, congé) par employé et par jour.
@@ -64,9 +64,10 @@ React 19 · TypeScript strict · Vite 8 · Tailwind CSS v4 · lucide-react ·
 canvas-confetti. Les écrans ERP et le portail client sont découpés en chunks
 chargés à la demande. Les écrans métier historiques restent pour l’instant
 locaux ; la fondation Supabase multi-tenant porte le suivi distant et
-l’espace client. Une migration locale ajoute en outre la création de commande
-serveur et un journal de paiements testés sous PGlite, mais elle n’est ni
-appliquée à Pressing_Pro ni branchée au POS à ce stade.
+l’espace client. La création de commande serveur, le journal de paiements
+et l’onboarding propriétaire sont appliqués à Pressing_Pro depuis le
+28 octobre 2026 (testés sous PGlite et par recette hébergée annulée), mais
+le POS n’écrit pas encore dans Supabase à ce stade.
 
 ## Démarrage
 
@@ -242,13 +243,14 @@ ticket reste blanc, comme le papier.
 
 - **Exploitation encore mono-poste** : les données métier historiques vivent
   dans un seul navigateur. Le socle de suivi distant est installé et testé
-  localement, mais la synchronisation réelle comptoir ↔ atelier ne sera
-  prouvée qu’après création du premier tenant, application hébergée de la
-  migration commandes/paiements, bascule du POS et recette sur deux
-  appareils.
+  localement, et les migrations commandes/paiements et onboarding sont
+  appliquées à Pressing_Pro, mais la synchronisation réelle comptoir ↔
+  atelier ne sera prouvée qu’après création du premier tenant, bascule du
+  POS et recette sur deux appareils.
 - **Authentification du personnel livrée mais non recettée en réel** : un
   build de production configuré exige désormais session + membership actif ;
-  Pressing_Pro ne contient toutefois encore aucun compte à tester. En mode de
+  les migrations et les inscriptions sont activées sur Pressing_Pro, mais
+  aucun compte réel n’a encore été créé pour tester le parcours complet. En mode de
   démonstration locale explicite, toute personne ayant accès au navigateur
   peut toujours modifier les données locales.
 - **Aucune notification externe envoyée** : les commandes prêtes sont

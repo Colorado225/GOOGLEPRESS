@@ -12,7 +12,7 @@ clôture que lorsque son critère d’acceptation est démontré.
 | ID | Risque | Gravité résiduelle | État |
 |---|---|---:|---|
 | R1 | Données uniquement locales | Élevée | Ouvert ; création/paiements serveur implémentés et testés localement, mais migration non appliquée et POS non branché |
-| R2 | Authentification et rôles applicatifs incomplets | Élevée | Ouvert ; garde production session+membership livrée, aucun tenant réel et restrictions d’écran par rôle encore incomplètes |
+| R2 | Authentification et rôles applicatifs incomplets | Élevée | Ouvert ; garde production session+membership livrée, migrations et inscriptions activées sur Pressing_Pro (2026-10-28), aucun tenant réel et restrictions d’écran par rôle encore incomplètes |
 | R3 | Aucun SMS/WhatsApp réellement envoyé | Moyenne | Ouvert, libellés rendus honnêtes |
 | R4 | Pas de pilote direct d’imprimante thermique | Moyenne | Ouvert, impression navigateur réelle mais limitée |
 | R5 | Pas de GPS ni d’optimisation géographique | Moyenne | Ouvert |
@@ -57,18 +57,22 @@ développement ou avec `VITE_ALLOW_LOCAL_DEMO=true`, sans protection des
 données locales. Les pages `/connexion`, `/inscription` (compte
 propriétaire uniquement) et `/bienvenue` (onboarding créant organisation et
 première agence via la RPC `create_my_organization`) sont livrées et
-testées localement, mais ni cette migration ni l’ouverture des inscriptions
-ne sont activées sur Pressing_Pro : aucun tenant ou compte réel ne permet
-encore la recette des rôles, et la garde ne restreint pas encore chaque
-écran historique selon le rôle du membership.
+testées localement. Depuis le 28 octobre 2026, les migrations commandes/
+paiements et onboarding sont appliquées à Pressing_Pro et les inscriptions
+Auth sont ouvertes (confirmation e-mail exigée ; recette hébergée annulée
+réussie, voir `docs/ACCES-PERSONNEL-ONBOARDING.md`). Il ne manque donc plus
+que la création des premiers comptes réels ; la recette des rôles reste à
+faire, et la garde ne restreint pas encore chaque écran historique selon le
+rôle du membership.
 
 **Atténuation client livrée.** Les pages `/client/connexion`,
 `/client/inscription`, `/client/nouveau-mot-de-passe` et `/client` sont
 reliées à Supabase Auth, hors du shell ERP. Un compte client ne donne aucun
 droit métier tant qu’une liaison téléphonique vérifiée n’a pas été créée par
-le pressing. L’inscription publique reste néanmoins désactivée sur
-Pressing_Pro et aucun SMTP de production n’est configuré ; la recette Auth
-réelle reste donc à faire.
+le pressing. L’inscription publique est ouverte depuis le 28 octobre 2026
+(confirmation e-mail exigée), mais aucun SMTP de production n’est configuré
+(service d’envoi intégré, limité) et aucun compte réel n’existe encore ; la
+recette Auth réelle reste donc à faire.
 
 **Clôture attendue.** Comptes Supabase Auth reliés à des profils d’agence :
 propriétaire, responsable, caisse/réception, atelier et coursier ; recette
