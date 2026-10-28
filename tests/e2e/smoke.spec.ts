@@ -35,7 +35,7 @@ test.describe('PressingPro — parcours critiques', () => {
   });
 
   test('l’atelier affiche une action de notification locale dynamique', async ({ page }) => {
-    await page.getByRole('button', { name: /Production & Suivi/ }).click();
+    await page.getByRole('button', { name: /Production & Remise/ }).click();
 
     await expect(
       page.getByRole('button', { name: /Marquer \d+ prête\(s\) comme notifiée\(s\)/ })
@@ -53,7 +53,7 @@ test.describe('PressingPro — parcours critiques', () => {
     ).toBeVisible();
 
     // Navigation interne : l’URL suit l’écran choisi dans la barre latérale.
-    await page.getByRole('button', { name: /Production & Suivi/ }).click();
+    await page.getByRole('button', { name: /Production & Remise/ }).click();
     await expect(page).toHaveURL(/\/atelier$/);
 
     // Bouton Précédent du navigateur : retour à l’écran précédent.
@@ -78,7 +78,7 @@ test.describe('PressingPro — parcours critiques', () => {
   });
 
   test('le suivi distant explique l’absence de configuration et ouvre le backend', async ({ page }) => {
-    await page.getByRole('button', { name: /Production & Suivi/ }).click();
+    await page.getByRole('button', { name: /Production & Remise/ }).click();
     await page.getByRole('tab', { name: /Suivi distant/ }).click();
 
     await expect(

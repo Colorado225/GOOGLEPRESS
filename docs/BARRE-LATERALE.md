@@ -14,6 +14,63 @@ le haut, laissant un grand vide au milieu. Chaque entrée porte maintenant un
 identifiant stable (`dashboard`, `pos`, `workshop:production`, …) au lieu d'une
 position, ce qui permet de la déplacer sans casser sa cible.
 
+## Groupe « Production & Remise » et sous-onglets
+
+L'atelier n'occupe plus quatre lignes de même niveau. « Production & Remise »
+est désormais **un onglet principal** dont les écrans de l'atelier sont les
+**sous-onglets** :
+
+| Sous-onglet | Onglet réel de l'atelier |
+|---|---|
+| Production | `production` |
+| Rangement atelier | `storage` |
+| Remises & Livraisons | `logistics` |
+| Caisse & Clôture | `cash` |
+
+Comportement :
+
+- un clic sur la ligne principale ouvre l'atelier **sans perdre l'onglet en
+  cours** (on ne retombe pas systématiquement sur Production) ;
+- le chevron, bouton distinct, déplie ou replie les sous-onglets sans naviguer ;
+- l'état déplié est mémorisé par organisation
+  (`pressingpro_sidebar_group_workshop`) ;
+- arriver sur l'atelier par un autre chemin (F3, carte du tableau de bord,
+  lien des Paramètres) déplie automatiquement le groupe ;
+- le sous-onglet affiché est surligné, y compris quand l'onglet est changé
+  ailleurs (par exemple depuis une carte Kanban « Prêts ») : l'onglet courant
+  vit dans le contexte de l'application, plus dans un état local de l'écran ;
+- les badges du groupe et de « Rangement atelier » / « Remises & Livraisons »
+  restent des compteurs réels calculés sur les commandes et tournées.
+
+La définition des sous-onglets vit dans `src/lib/workshopNav.ts` (et non dans le
+composant) : une entrée ne peut donc pas pointer vers un onglet inexistant, et
+la structure est testée.
+
+### Animation et fluidité
+
+- **Dépliage sans mesure** : la hauteur s'anime via une grille passant de
+  `grid-rows-[0fr]` à `grid-rows-[1fr]`, avec
+  `transition-[grid-template-rows,opacity]` — fluide quel que soit le nombre de
+  sous-onglets, sans calcul JavaScript.
+- **Cascade** : chaque sous-onglet apparaît avec un délai de 35 ms cumulé et un
+  léger glissement vertical.
+- **Chevron** : rotation de 180° en 300 ms.
+- **Repère d'onglet actif** : barre bleue qui se déploie en largeur (3 px) au
+  lieu d'apparaître brutalement.
+- **Survol** : translation horizontale de 0,5 et mise à l'échelle de l'icône.
+- Toutes les transitions sont annulées automatiquement par la règle globale
+  `prefers-reduced-motion: reduce` déjà présente dans `index.css`.
+
+### Accessibilité
+
+- le chevron porte `aria-expanded` et `aria-controls` vers le panneau ;
+- le panneau est un `role="group"` étiqueté ;
+- replié, les sous-onglets sont retirés de l'ordre de tabulation
+  (`tabIndex={-1}`) ;
+- l'entrée active porte `aria-current="page"` ;
+- les libellés du chevron ne répètent pas « Production & Remise », pour rester
+  sans ambiguïté au lecteur d'écran et dans les tests.
+
 ## Réorganisation des entrées
 
 | Méthode | Geste |
@@ -69,14 +126,16 @@ défaut. Le jour où Supabase portera les abonnements, seule la source de
 ## Vérifications
 
 - `npx tsc --noEmit` : OK ;
-- `npm run test:unit` : 124 tests réussis, dont 18 nouveaux
-  (`sidebarLayout` : fusion, bornes, réordonnancement, lectures défensives ;
-  `subscription` : formules, états par défaut, validation, libellés) ;
+- `npm run test:unit` : 138 tests réussis, dont 32 sur la barre latérale
+  (`sidebarLayout` : fusion, migration des anciennes clés, bornes,
+  réordonnancement, lectures défensives ; `subscription` ; `workshopNav` :
+  structure des sous-onglets, clés uniques, cible valide, onglet actif) ;
 - `npm run build` : OK ;
-- rendu serveur contrôlé : 12 entrées `draggable`, poignées présentes, carte
-  d'abonnement positionnée **avant** les raccourcis et le profil, ordre
-  personnalisé relu depuis le stockage (première entrée « Paramètres »),
-  bouton **Réinitialiser** absent à l'ordre par défaut et présent sinon.
+- rendu serveur contrôlé : 9 entrées de premier niveau + 4 sous-onglets,
+  `aria-expanded`/`aria-controls` câblés, `role="group"`, classes d'animation
+  de grille, chevron pivoté, délais en cascade 0/35/70/105 ms ; état replié
+  relu depuis le stockage avec `tabIndex=-1` sur les quatre sous-onglets ;
+  carte d'abonnement toujours **avant** les raccourcis et le profil.
 
 **Non vérifié ici** : la manipulation réelle à la souris dans un navigateur
 (aucun navigateur disponible dans cet environnement) ; les tests Playwright de

@@ -53,7 +53,7 @@ describe('erpPathForScreen', () => {
 
   it('intitule les écrans avec leur libellé métier', () => {
     expect(getErpScreenTitle('pos')).toBe('Réception (POS) — PressingPro CI');
-    expect(getErpScreenTitle('workshop')).toBe('Production & Suivi — PressingPro CI');
+    expect(getErpScreenTitle('workshop')).toBe('Production & Remise — PressingPro CI');
   });
 });
 

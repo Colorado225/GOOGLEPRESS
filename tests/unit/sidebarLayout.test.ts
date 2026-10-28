@@ -45,6 +45,56 @@ describe('sidebarLayout — fusion de l’ordre', () => {
   });
 });
 
+describe('sidebarLayout — groupes et migration', () => {
+  it('regroupe les anciens onglets d’atelier sous une seule entrée', () => {
+    expect(DEFAULT_SIDEBAR_ORDER).toContain('workshop');
+    expect(DEFAULT_SIDEBAR_ORDER).not.toContain('workshop:storage');
+    expect(DEFAULT_SIDEBAR_ORDER).not.toContain('closing');
+  });
+
+  it('ramène une sauvegarde héritée vers le groupe, sans perdre sa position', () => {
+    // Ordre enregistré avant le passage en sous-onglets : le groupe doit
+    // reprendre la place du premier ancien onglet rencontré.
+    const legacy = [
+      'dashboard',
+      'pos',
+      'workshop:storage',
+      'workshop:logistics',
+      'closing',
+      'clients',
+      'employees',
+      'inventory',
+      'expenses',
+      'reports',
+      'settings',
+    ];
+    const merged = mergeSidebarOrder(legacy, DEFAULTS);
+    expect(merged).toEqual([
+      'dashboard',
+      'pos',
+      'workshop',
+      'clients',
+      'employees',
+      'inventory',
+      'expenses',
+      'reports',
+      'settings',
+    ]);
+  });
+
+  it('place le groupe en fin de liste si sa clé n’était pas connue', () => {
+    const merged = mergeSidebarOrder(['dashboard'], DEFAULTS);
+    expect(merged[0]).toBe('dashboard');
+    expect(merged).toContain('workshop');
+    expect(merged).toHaveLength(DEFAULTS.length);
+  });
+
+  it('accepte une table d’alias personnalisée', () => {
+    const merged = mergeSidebarOrder(['ancien'], ['nouveau', 'autre'], { ancien: 'nouveau' });
+    expect(merged).toEqual(['nouveau', 'autre']);
+  });
+});
+
 describe('sidebarLayout — lecture défensive', () => {
   it('retourne null sur une valeur absente ou illisible', () => {
     expect(parseSidebarOrder(null)).toBeNull();

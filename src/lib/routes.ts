@@ -56,7 +56,7 @@ export interface ErpRouteDefinition {
 export const ERP_ROUTES: readonly ErpRouteDefinition[] = [
   { screen: 'dashboard', path: '/', aliases: ['/tableau-de-bord'], label: 'Tableau de bord' },
   { screen: 'pos', path: '/reception', aliases: [], label: 'Réception (POS)' },
-  { screen: 'workshop', path: '/atelier', aliases: [], label: 'Production & Suivi' },
+  { screen: 'workshop', path: '/atelier', aliases: [], label: 'Production & Remise' },
   { screen: 'orders', path: '/commandes', aliases: [], label: 'Commandes' },
   { screen: 'clients', path: '/clients', aliases: [], label: 'Clients' },
   { screen: 'employees', path: '/personnel', aliases: [], label: 'Personnel' },

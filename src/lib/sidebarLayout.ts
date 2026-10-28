@@ -12,10 +12,7 @@ export const SIDEBAR_ORDER_STORAGE_KEY = 'pressingpro_sidebar_order';
 export const DEFAULT_SIDEBAR_ORDER = [
   'dashboard',
   'pos',
-  'workshop:production',
-  'workshop:storage',
-  'workshop:logistics',
-  'closing',
+  'workshop',
   'clients',
   'employees',
   'inventory',
@@ -23,6 +20,20 @@ export const DEFAULT_SIDEBAR_ORDER = [
   'reports',
   'settings',
 ] as const;
+
+/**
+ * Anciennes clés de premier niveau, devenues des sous-onglets de l'atelier.
+ *
+ * Une sauvegarde d'ordre antérieure contient encore `workshop:storage` ou
+ * `closing` : elles sont ramenées vers le groupe `workshop` sans perdre la
+ * position choisie par l'utilisateur.
+ */
+export const LEGACY_SIDEBAR_KEYS: Readonly<Record<string, string>> = {
+  'workshop:production': 'workshop',
+  'workshop:storage': 'workshop',
+  'workshop:logistics': 'workshop',
+  closing: 'workshop',
+};
 
 /**
  * Fusionne un ordre enregistré avec les entrées réellement disponibles.
@@ -37,7 +48,8 @@ export const DEFAULT_SIDEBAR_ORDER = [
  */
 export const mergeSidebarOrder = (
   saved: unknown,
-  available: readonly string[]
+  available: readonly string[],
+  aliases: Readonly<Record<string, string>> = LEGACY_SIDEBAR_KEYS
 ): string[] => {
   const availableSet = new Set(available);
   if (!Array.isArray(saved)) return [...available];
@@ -46,9 +58,10 @@ export const mergeSidebarOrder = (
   const ordered: string[] = [];
   for (const value of saved) {
     if (typeof value !== 'string') continue;
-    if (!availableSet.has(value) || seen.has(value)) continue;
-    seen.add(value);
-    ordered.push(value);
+    const canonical = aliases[value] ?? value;
+    if (!availableSet.has(canonical) || seen.has(canonical)) continue;
+    seen.add(canonical);
+    ordered.push(canonical);
   }
   for (const id of available) {
     if (!seen.has(id)) ordered.push(id);

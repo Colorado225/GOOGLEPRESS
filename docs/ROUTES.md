@@ -53,7 +53,7 @@ production → suivi des commandes → gestion.
 |---|---|---|
 | `/` (alias `/tableau-de-bord`) | `dashboard` | Tableau de bord |
 | `/reception` | `pos` | Réception (POS) |
-| `/atelier` | `workshop` | Production & Suivi |
+| `/atelier` | `workshop` | Production & Remise |
 | `/commandes` | `orders` | Commandes |
 | `/clients` | `clients` | Clients |
 | `/personnel` | `employees` | Personnel |

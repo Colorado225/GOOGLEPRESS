@@ -179,6 +179,9 @@ interface AppContextType {
   workshopTabRequest: WorkshopTab | null;
   requestWorkshopTab: (tab: WorkshopTab) => void;
   clearWorkshopTabRequest: () => void;
+  /** Onglet réellement affiché dans l'atelier (partagé avec la navigation). */
+  activeWorkshopTab: WorkshopTab;
+  setActiveWorkshopTab: (tab: WorkshopTab) => void;
   /** Demande ponctuelle d’ouverture d’un onglet précis des Paramètres. */
   settingsTabRequest: SettingsTab | null;
   requestSettingsTab: (tab: SettingsTab) => void;
@@ -481,6 +484,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pendingPickupTaskId, setPendingPickupTaskId] = useState<string | null>(null);
   const [focusedLogisticsTaskId, setFocusedLogisticsTaskId] = useState<string | null>(null);
   const [workshopTabRequest, setWorkshopTabRequest] = useState<WorkshopTab | null>(null);
+  // Onglet courant de l'atelier : la barre latérale le lit pour surligner le
+  // bon sous-onglet, et l'écran Atelier l'écrit quand l'utilisateur navigue.
+  const [activeWorkshopTab, setActiveWorkshopTab] = useState<WorkshopTab>('production');
   const [settingsTabRequest, setSettingsTabRequest] = useState<SettingsTab | null>(null);
 
   const pendingPickupTask = pendingPickupTaskId
@@ -489,6 +495,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const requestWorkshopTab = (tab: WorkshopTab) => {
     setWorkshopTabRequest(tab);
+    // Mémorisé tout de suite : la barre latérale surligne le sous-onglet sans
+    // attendre le montage de l'écran Atelier.
+    setActiveWorkshopTab(tab);
     setActiveScreen('workshop');
   };
   const clearWorkshopTabRequest = () => setWorkshopTabRequest(null);
@@ -2262,6 +2271,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         focusLogisticsTask,
         workshopTabRequest,
         requestWorkshopTab,
+        activeWorkshopTab,
+        setActiveWorkshopTab,
         clearWorkshopTabRequest,
         settingsTabRequest,
         requestSettingsTab,

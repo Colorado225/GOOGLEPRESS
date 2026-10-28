@@ -4,12 +4,8 @@ import { isLogisticsTaskActionable } from '../../lib/logistics';
 import { getOrdersOutForDeliveryIds, hasStructuredStorage } from '../../lib/storage';
 import {
   Crown,
-  ChevronLeft,
-  ChevronRight,
   PanelLeftClose,
-  PanelLeftOpen,
   Keyboard,
-  Sparkles,
   LayoutDashboard,
   ShoppingBag,
   Cog,
@@ -26,6 +22,8 @@ import {
   UserRound,
   GripVertical,
   RotateCcw,
+  ChevronDown,
+  WashingMachine,
 } from 'lucide-react';
 import { formatTime } from '../../lib/dates';
 import { getAlertProducts } from '../../lib/inventory';
@@ -36,6 +34,7 @@ import {
   getUserInitials,
   getUserRoleLabel,
   isLiveWorkspace,
+  scopeStorageKey,
 } from '../../lib/workspaceScope';
 import {
   DEFAULT_SIDEBAR_ORDER,
@@ -46,23 +45,66 @@ import {
   parseSidebarOrder,
   reorderSidebarItems,
 } from '../../lib/sidebarLayout';
-import {
-  loadPersistedString,
-  persistString,
-} from '../../lib/localPersistence';
-import { scopeStorageKey } from '../../lib/workspaceScope';
+import { loadPersistedString, persistString } from '../../lib/localPersistence';
 import {
   normalizeSubscription,
   resolveDefaultSubscription,
 } from '../../lib/subscription';
 import { SubscriptionPlanCard } from './SubscriptionPlanCard';
+import {
+  WORKSHOP_GROUP_LABEL,
+  WORKSHOP_GROUP_STORAGE_KEY,
+  WORKSHOP_SUBTABS,
+  isWorkshopSubTabActive,
+  type WorkshopSubTabIcon,
+} from '../../lib/workshopNav';
+
+/** Icône de chaque sous-onglet (le libellé et la cible viennent de lib/workshopNav). */
+const WORKSHOP_SUBTAB_ICONS: Record<WorkshopSubTabIcon, React.ReactNode> = {
+  washing: <WashingMachine className="w-[16px] h-[16px] shrink-0" />,
+  archive: <Archive className="w-[16px] h-[16px] shrink-0" />,
+  truck: <Truck className="w-[16px] h-[16px] shrink-0" />,
+  wallet: <Wallet className="w-[16px] h-[16px] shrink-0" />,
+};
+
+/** Sous-onglet de l'atelier tel qu'il apparaît dans la barre latérale. */
+interface SidebarSubItem {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  workshopTab: WorkshopTab;
+  badge?: number;
+  badgeTitle?: string;
+}
+
+/** Entrée de premier niveau. Un groupe possède des sous-onglets. */
+interface SidebarEntry {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  screen: ScreenId;
+  workshopTab?: WorkshopTab;
+  badge?: number;
+  badgeTitle?: string;
+  shortcut?: string;
+  action?: () => void;
+  children?: SidebarSubItem[];
+}
+
+/**
+ * Transition de hauteur sans mesure JavaScript : la grille passe de `0fr`
+ * (repliée) à `1fr` (dépliée), le contenu étant masqué par `overflow-hidden`.
+ * C'est fluide quel que soit le nombre de sous-onglets, et la règle globale
+ * `prefers-reduced-motion` neutralise l'animation si l'utilisateur le demande.
+ */
+const collapseGridClassName =
+  'grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]';
 
 export const AppSidebar: React.FC = () => {
   const {
     activeScreen,
     setActiveScreen,
     orders,
-    setClosingZModalOpen,
     isSidebarCollapsed,
     toggleSidebar,
     isMobileMenuOpen,
@@ -73,6 +115,7 @@ export const AppSidebar: React.FC = () => {
     shopSettings,
     logisticsTasks,
     requestWorkshopTab,
+    activeWorkshopTab,
     cashRegister,
     employees,
     workspace,
@@ -101,6 +144,31 @@ export const AppSidebar: React.FC = () => {
     persistString(orderStorageKey, JSON.stringify(next));
     if (announcement) setOrderAnnouncement(announcement);
   };
+
+  // --- État déplié du groupe Atelier ---------------------------------------
+  const workshopGroupStorageKey = scopeStorageKey(workspace, WORKSHOP_GROUP_STORAGE_KEY);
+  const [workshopGroupOpen, setWorkshopGroupOpen] = useState(
+    () => loadPersistedString(workshopGroupStorageKey) !== '0'
+  );
+
+  const toggleWorkshopGroup = () => {
+    setWorkshopGroupOpen((previous) => {
+      const next = !previous;
+      persistString(workshopGroupStorageKey, next ? '1' : '0');
+      return next;
+    });
+  };
+
+  // Arriver sur l'atelier (raccourci F3, carte du tableau de bord, lien de
+  // Paramètres…) déplie le groupe pour montrer où l'on se trouve.
+  useEffect(() => {
+    if (activeScreen !== 'workshop') return;
+    setWorkshopGroupOpen((previous) => {
+      if (previous) return previous;
+      persistString(workshopGroupStorageKey, '1');
+      return true;
+    });
+  }, [activeScreen, workshopGroupStorageKey]);
 
   // --- Plan d'abonnement ---------------------------------------------------
   const [subscription, setSubscription] = useState(() =>
@@ -155,106 +223,96 @@ export const AppSidebar: React.FC = () => {
       !hasStructuredStorage(order)
   ).length;
 
-  const navItems: {
-    /** Identifiant stable, utilisé pour mémoriser l'ordre choisi. */
-    key: string;
-    id: ScreenId;
-    label: string;
-    icon: React.ReactNode;
-    badge?: number;
-    shortcut?: string;
-    action?: () => void;
-    workshopTab?: WorkshopTab;
-  }[] = [
+  // Nombre total d'actions en attente dans l'atelier, pour le badge du groupe.
+  const workshopActionCount = storageActionCount + logisticsActionCount;
+
+  const navItems: SidebarEntry[] = [
     {
       key: 'dashboard',
-      id: 'dashboard',
       label: 'Tableau de bord',
       icon: <LayoutDashboard className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'dashboard',
       shortcut: 'F1',
     },
     {
       key: 'pos',
-      id: 'pos',
       label: 'Réception (POS)',
       icon: <ShoppingBag className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'pos',
       // Compteur réel uniquement : aucun nombre de démonstration en repli.
       badge: receivedCount > 0 ? receivedCount : undefined,
+      badgeTitle: `${receivedCount} commande(s) reçue(s) en attente de traitement`,
       shortcut: 'F2',
     },
     {
-      key: 'workshop:production',
-      id: 'workshop',
-      label: 'Production & Suivi',
+      key: 'workshop',
+      label: WORKSHOP_GROUP_LABEL,
       icon: <Cog className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'workshop',
+      badge: workshopActionCount > 0 ? workshopActionCount : undefined,
+      badgeTitle: `${workshopActionCount} action(s) en attente dans l’atelier`,
       shortcut: 'F3',
-      workshopTab: 'production',
-    },
-    {
-      key: 'workshop:storage',
-      id: 'workshop',
-      label: 'Rangement atelier',
-      icon: <Archive className="w-[18px] h-[18px] shrink-0" />,
-      badge: storageActionCount || undefined,
-      workshopTab: 'storage',
-    },
-    {
-      key: 'workshop:logistics',
-      id: 'workshop',
-      label: 'Remises & Livraisons',
-      icon: <Truck className="w-[18px] h-[18px] shrink-0" />,
-      badge: logisticsActionCount || undefined,
-      workshopTab: 'logistics',
-    },
-    {
-      key: 'closing',
-      id: 'dashboard',
-      label: 'Caisse & Clôture',
-      icon: <Wallet className="w-[18px] h-[18px] shrink-0" />,
-      shortcut: 'F4',
-      action: () => setClosingZModalOpen(true),
+      children: WORKSHOP_SUBTABS.map((subTab) => ({
+        key: subTab.key,
+        label: subTab.label,
+        icon: WORKSHOP_SUBTAB_ICONS[subTab.icon],
+        workshopTab: subTab.workshopTab,
+        ...(subTab.workshopTab === 'storage' && storageActionCount > 0
+          ? {
+              badge: storageActionCount,
+              badgeTitle: `${storageActionCount} commande(s) prête(s) à ranger`,
+            }
+          : {}),
+        ...(subTab.workshopTab === 'logistics' && logisticsActionCount > 0
+          ? {
+              badge: logisticsActionCount,
+              badgeTitle: `${logisticsActionCount} tournée(s) à traiter`,
+            }
+          : {}),
+      })),
     },
     {
       key: 'clients',
-      id: 'clients',
       label: 'Clients',
       icon: <Users className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'clients',
       shortcut: 'Alt+5',
     },
     {
       key: 'employees',
-      id: 'employees',
       label: 'Personnel',
       icon: <ContactRound className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'employees',
       shortcut: 'Alt+7',
     },
     {
       key: 'inventory',
-      id: 'inventory',
       label: 'Stocks',
       icon: <Boxes className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'inventory',
       badge: stockAlertCount > 0 ? stockAlertCount : undefined,
+      badgeTitle: `${stockAlertCount} produit(s) sous le seuil d’alerte`,
       shortcut: 'Alt+8',
     },
     {
       key: 'expenses',
-      id: 'expenses',
       label: 'Dépenses',
       icon: <ReceiptText className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'expenses',
       shortcut: 'Alt+9',
     },
     {
       key: 'reports',
-      id: 'reports',
       label: 'Rapports',
       icon: <ChartColumn className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'reports',
       shortcut: 'Alt+0',
     },
     {
       key: 'settings',
-      id: 'settings',
       label: 'Paramètres',
       icon: <Settings className="w-[18px] h-[18px] shrink-0" />,
+      screen: 'settings',
     },
   ];
 
@@ -266,7 +324,7 @@ export const AppSidebar: React.FC = () => {
   // qui existe réellement, puis on complète avec les nouveautés.
   const orderedNavItems = mergeSidebarOrder(navOrder, [...DEFAULT_SIDEBAR_ORDER])
     .map((key) => navById.get(key))
-    .filter((item): item is (typeof navItems)[number] => Boolean(item));
+    .filter((item): item is SidebarEntry => Boolean(item));
 
   const customOrder = isCustomSidebarOrder(
     orderedNavItems.map((item) => item.key),
@@ -311,6 +369,44 @@ export const AppSidebar: React.FC = () => {
     setDraggedNavId(null);
     setDragOverNavId(null);
   };
+
+  const activateEntry = (entry: SidebarEntry) => {
+    if (entry.action) {
+      entry.action();
+    } else if (entry.children?.length) {
+      // Le groupe garde l'onglet d'atelier courant : on ne force pas un retour
+      // à « Production » quand on arrive depuis un sous-onglet précis.
+      if (activeScreen !== entry.screen) setActiveScreen(entry.screen);
+      if (!workshopGroupOpen) {
+        setWorkshopGroupOpen(true);
+        persistString(workshopGroupStorageKey, '1');
+      }
+    } else if (entry.workshopTab) {
+      requestWorkshopTab(entry.workshopTab);
+    } else {
+      setActiveScreen(entry.screen);
+    }
+    setMobileMenuOpen(false);
+  };
+
+  const activateSubItem = (subItem: SidebarSubItem) => {
+    requestWorkshopTab(subItem.workshopTab);
+    setMobileMenuOpen(false);
+  };
+
+  const handleRowKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, entry: SidebarEntry) => {
+    // Réorganisation au clavier : Alt + ↑ / ↓.
+    if (!event.altKey) return;
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveNavItem(entry.key, -1);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      moveNavItem(entry.key, 1);
+    }
+  };
+
+  const panelIdFor = (key: string) => `sidebar-subnav-${key.replace(/[^a-zA-Z0-9-]/g, '-')}`;
 
   return (
     <aside
@@ -378,110 +474,207 @@ export const AppSidebar: React.FC = () => {
           aria-label="Navigation principale"
           className="flex-1 min-h-0 space-y-1 overflow-y-auto pr-0.5 text-[13.5px]"
         >
-        {orderedNavItems.map((item, idx) => {
-          const isActive =
-            item.action
-              ? false
-              : item.workshopTab && item.workshopTab !== 'production'
-                ? false
-                : activeScreen === item.id;
+          {orderedNavItems.map((item) => {
+            const isGroup = Boolean(item.children?.length);
+            const groupOpen = isGroup && workshopGroupOpen && !collapsed;
+            const isActive = activeScreen === item.screen;
+            const isDragging = draggedNavId === item.key;
+            const isDragTarget = dragOverNavId === item.key && draggedNavId !== item.key;
+            const panelId = panelIdFor(item.key);
 
-          const isDragging = draggedNavId === item.key;
-          const isDragTarget = dragOverNavId === item.key && draggedNavId !== item.key;
-
-          return (
-            <div
-              key={item.key}
-              draggable={!collapsed}
-              onDragStart={(event) => handleNavDragStart(event, item.key)}
-              onDragOver={(event) => handleNavDragOver(event, item.key)}
-              onDragLeave={() => setDragOverNavId((current) => (current === item.key ? null : current))}
-              onDrop={(event) => handleNavDrop(event, item.key)}
-              onDragEnd={endNavDrag}
-              className={`relative rounded-xl transition-all ${
-                isDragging ? 'opacity-40' : ''
-              } ${isDragTarget ? 'ring-2 ring-blue-500/70 ring-offset-2 ring-offset-[#09090b]' : ''}`}
-            >
-            <button
-              onClick={() => {
-                if (item.workshopTab) {
-                  requestWorkshopTab(item.workshopTab);
-                } else if (item.action) {
-                  item.action();
-                } else {
-                  setActiveScreen(item.id);
+            return (
+              <div
+                key={item.key}
+                draggable={!collapsed}
+                onDragStart={(event) => handleNavDragStart(event, item.key)}
+                onDragOver={(event) => handleNavDragOver(event, item.key)}
+                onDragLeave={() =>
+                  setDragOverNavId((current) => (current === item.key ? null : current))
                 }
-                setMobileMenuOpen(false);
-              }}
-              onKeyDown={(event) => {
-                // Réorganisation au clavier : Alt + ↑ / ↓.
-                if (!event.altKey) return;
-                if (event.key === 'ArrowUp') {
-                  event.preventDefault();
-                  moveNavItem(item.key, -1);
-                } else if (event.key === 'ArrowDown') {
-                  event.preventDefault();
-                  moveNavItem(item.key, 1);
-                }
-              }}
-              title={
-                collapsed
-                  ? `${item.label} ${item.shortcut ? `(${item.shortcut})` : ''}`
-                  : `${item.label} — Alt+↑/↓ pour changer de position`
-              }
-              className={`w-full flex items-center rounded-xl text-left transition-all duration-200 hover:translate-x-0.5 relative group ${
-                collapsed
-                  ? 'justify-center p-2.5 my-1'
-                  : 'gap-3 px-3 py-2.5'
-              } ${
-                isActive
-                  ? 'bg-white text-black font-semibold shadow-sm'
-                  : 'text-zinc-300 hover:bg-zinc-800/80 hover:text-white font-normal'
-              }`}
-            >
-              <span className={`transition-transform group-hover:scale-110 ${isActive ? 'text-black' : 'text-zinc-400'}`}>
-                {item.icon}
-              </span>
-
-              <span className="truncate flex-1">{item.label}</span>
-
-              {item.badge !== undefined && (
-                <span
-                  className="text-[11px] px-2 py-0.5 rounded-full font-bold tabular-nums bg-blue-600 text-white"
-                  title={
-                    item.id === 'pos'
-                      ? `${item.badge} commande(s) reçue(s) en attente de traitement`
-                      : undefined
-                  }
-                >
-                  {item.badge}
-                </span>
-              )}
-
-              {item.shortcut && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded font-mono tabular-nums ${
+                onDrop={(event) => handleNavDrop(event, item.key)}
+                onDragEnd={endNavDrag}
+                className={`relative rounded-xl transition-all duration-200 ${
+                  isDragging ? 'opacity-40' : ''
+                } ${
+                  isDragTarget
+                    ? 'ring-2 ring-blue-500/70 ring-offset-2 ring-offset-[#09090b]'
+                    : ''
+                }`}
+              >
+                {/* Une seule pastille : le libellé et le chevron partagent le
+                    même fond, sans imbriquer de boutons. */}
+                <div
+                  className={`group relative flex items-center rounded-xl transition-[background-color,color,box-shadow,transform] duration-200 ease-out hover:translate-x-0.5 ${
                     isActive
-                      ? 'bg-zinc-200 text-zinc-800'
-                      : 'bg-zinc-900 text-zinc-400 group-hover:text-zinc-300'
+                      ? isGroup
+                        ? 'bg-zinc-800/80 text-white shadow-sm ring-1 ring-inset ring-zinc-700/70'
+                        : 'bg-white text-black shadow-sm'
+                      : 'text-zinc-300 hover:bg-zinc-800/80 hover:text-white'
                   }`}
                 >
-                  {item.shortcut}
-                </span>
-              )}
+                  {/* Repère d'onglet actif : la barre bleue se déploie en largeur */}
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-blue-500 transition-all duration-300 ease-out ${
+                      isActive && !collapsed ? 'h-6 w-[3px] opacity-100' : 'h-2 w-0 opacity-0'
+                    }`}
+                  />
 
-              {!collapsed && (
-                <GripVertical
-                  aria-hidden="true"
-                  className={`h-3.5 w-3.5 shrink-0 cursor-grab text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 ${
-                    isDragging ? 'cursor-grabbing opacity-100' : ''
-                  }`}
-                />
-              )}
-            </button>
-            </div>
-          );
-        })}
+                  <button
+                    type="button"
+                    onClick={() => activateEntry(item)}
+                    onKeyDown={(event) => handleRowKeyDown(event, item)}
+                    aria-current={!isGroup && isActive ? 'page' : undefined}
+                    title={
+                      collapsed
+                        ? `${item.label} ${item.shortcut ? `(${item.shortcut})` : ''}`
+                        : `${item.label} — Alt+↑/↓ pour changer de position`
+                    }
+                    className={`flex min-w-0 flex-1 items-center text-left ${
+                      collapsed ? 'justify-center p-2.5 my-1 rounded-xl' : 'gap-3 px-3 py-2.5 rounded-l-xl'
+                    } ${isActive ? 'font-semibold' : 'font-normal'}`}
+                  >
+                    <span
+                      className={`transition-transform duration-200 group-hover:scale-110 ${
+                        isActive ? (isGroup ? 'text-blue-400' : 'text-black') : 'text-zinc-400'
+                      }`}
+                    >
+                      {item.icon}
+                    </span>
+
+                    {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+
+                    {item.badge !== undefined && !collapsed && (
+                      <span
+                        className="text-[11px] px-2 py-0.5 rounded-full font-bold tabular-nums bg-blue-600 text-white"
+                        title={item.badgeTitle}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+
+                    {item.shortcut && !collapsed && (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-mono tabular-nums transition-colors ${
+                          isActive
+                            ? 'bg-zinc-200 text-zinc-800'
+                            : 'bg-zinc-900 text-zinc-400 group-hover:text-zinc-300'
+                        }`}
+                      >
+                        {item.shortcut}
+                      </span>
+                    )}
+
+                    {!collapsed && !isGroup && (
+                      <GripVertical
+                        aria-hidden="true"
+                        className={`h-3.5 w-3.5 shrink-0 cursor-grab text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 ${
+                          isDragging ? 'cursor-grabbing opacity-100' : ''
+                        }`}
+                      />
+                    )}
+                  </button>
+
+                  {/* Dépliant des sous-onglets : bouton distinct pour ne pas
+                      imbriquer d'interactifs et garder `aria-expanded` juste. */}
+                  {isGroup && !collapsed && (
+                    <button
+                      type="button"
+                      onClick={toggleWorkshopGroup}
+                      aria-label={
+                        groupOpen
+                          ? 'Masquer les sous-onglets de l’atelier'
+                          : 'Afficher les sous-onglets de l’atelier'
+                      }
+                      aria-expanded={groupOpen}
+                      aria-controls={panelId}
+                      title={groupOpen ? 'Masquer les sous-onglets' : 'Afficher les sous-onglets'}
+                      className={`mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-[background-color,color,transform] duration-200 hover:bg-zinc-700/70 ${
+                        isActive ? 'text-zinc-200 hover:text-white' : 'text-zinc-500 hover:text-white'
+                      }`}
+                    >
+                      <ChevronDown
+                        aria-hidden="true"
+                        className={`h-3.5 w-3.5 transition-transform duration-300 ease-out ${
+                          groupOpen ? 'rotate-180' : 'rotate-0'
+                        }`}
+                      />
+                    </button>
+                  )}
+                </div>
+
+                {isGroup && (
+                  <div
+                    id={panelId}
+                    className={`${collapseGridClassName} ${
+                      groupOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <ul
+                        role="group"
+                        aria-label={`Sous-onglets de ${WORKSHOP_GROUP_LABEL}`}
+                        className="ml-4 mt-1 space-y-1 border-l border-zinc-800 pl-2"
+                      >
+                        {(item.children ?? []).map((subItem, index) => {
+                          const subActive =
+                            activeScreen === 'workshop' &&
+                            isWorkshopSubTabActive(subItem, activeWorkshopTab);
+
+                          return (
+                            <li
+                              key={subItem.key}
+                              style={{
+                                transitionDelay: groupOpen ? `${index * 35}ms` : '0ms',
+                              }}
+                              className={`transition-[opacity,transform] duration-300 ease-out ${
+                                groupOpen
+                                  ? 'translate-y-0 opacity-100'
+                                  : '-translate-y-1 opacity-0'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => activateSubItem(subItem)}
+                                aria-current={subActive ? 'page' : undefined}
+                                tabIndex={groupOpen ? 0 : -1}
+                                className={`group/sub flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[12.5px] transition-[background-color,color,transform] duration-200 ease-out hover:translate-x-0.5 ${
+                                  subActive
+                                    ? 'bg-blue-600/15 font-semibold text-white ring-1 ring-inset ring-blue-500/40'
+                                    : 'text-zinc-400 hover:bg-zinc-800/70 hover:text-white'
+                                }`}
+                              >
+                                <span
+                                  className={`transition-transform duration-200 group-hover/sub:scale-110 ${
+                                    subActive ? 'text-blue-400' : 'text-zinc-500'
+                                  }`}
+                                >
+                                  {subItem.icon}
+                                </span>
+                                <span className="truncate flex-1">{subItem.label}</span>
+                                {subItem.badge !== undefined && (
+                                  <span
+                                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                                      subActive
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-zinc-800 text-zinc-300 group-hover/sub:bg-zinc-700'
+                                    }`}
+                                    title={subItem.badgeTitle}
+                                  >
+                                    {subItem.badge}
+                                  </span>
+                                )}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <p aria-live="polite" className="sr-only">
