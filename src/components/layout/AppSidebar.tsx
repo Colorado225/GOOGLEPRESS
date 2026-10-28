@@ -22,6 +22,8 @@ import {
   ReceiptText,
   ChartColumn,
   Settings,
+  ExternalLink,
+  UserRound,
 } from 'lucide-react';
 import { formatTime } from '../../lib/dates';
 import { getAlertProducts } from '../../lib/inventory';
@@ -253,6 +255,16 @@ export const AppSidebar: React.FC = () => {
           );
         })}
       </nav>
+
+      <a
+        href="/client/connexion"
+        title="Ouvrir l’espace client (connexion et inscription)"
+        className="mt-3 flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2.5 text-[13.5px] font-semibold text-zinc-200 transition-all duration-200 hover:translate-x-0.5 hover:border-zinc-700 hover:bg-zinc-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70"
+      >
+        <UserRound className="h-[18px] w-[18px] shrink-0 text-teal-300" aria-hidden="true" />
+        <span className="flex-1 truncate">Espace client</span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+      </a>
 
       {/* Subscription Card (Formule Pro) */}
       <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-zinc-900 to-zinc-900/90 border border-amber-500/20 text-white">

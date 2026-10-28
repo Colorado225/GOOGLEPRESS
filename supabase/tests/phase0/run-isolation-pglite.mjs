@@ -544,6 +544,28 @@ try {
     );
   }, /permission denied/i);
 
+  await check('l’inscription e-mail conserve le nom et le téléphone déclaré dans le profil', async () => {
+    await db.query(`
+      insert into auth.users (id, email, phone, raw_user_meta_data)
+      values (
+        '00000000-0000-4000-8000-000000000401',
+        'nouvelle.cliente@example.invalid',
+        null,
+        '{"full_name":"Nouvelle Cliente","phone_e164":"+2250700000401","account_type":"customer"}'::jsonb
+      )
+    `);
+
+    const profile = await db.query(`
+      select display_name, phone_e164
+      from public.profiles
+      where user_id = '00000000-0000-4000-8000-000000000401'
+    `);
+    assert.deepEqual(profile.rows[0], {
+      display_name: 'Nouvelle Cliente',
+      phone_e164: '+2250700000401',
+    });
+  });
+
   await check('la cliente peut créer une demande d’enlèvement en attente', async () => {
     const inserted = await queryAs(
       users.sharedCustomer,

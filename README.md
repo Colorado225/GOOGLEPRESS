@@ -30,6 +30,13 @@ clôture journalière Z.
   encore le Kanban local.
 - **Commandes & Clients** — historique filtrable, fichier clients avec
   fidélité (%), statut VIP et solde dû.
+- **Espace client distant** — pages séparées `/client/connexion`,
+  `/client/inscription`, `/client/nouveau-mot-de-passe` et `/client`, reliées
+  à Supabase Auth. Après liaison vérifiée par le pressing, la cliente voit ses
+  commandes distantes et leur historique client. L’inscription publique reste
+  désactivée sur Pressing_Pro tant que l’ouverture n’est pas explicitement
+  autorisée ; aucun accès aux commandes n’est accordé par la seule création
+  d’un compte.
 - **Personnel & présences** — registre des employés (postes, téléphone,
   salaire facultatif), activation/désactivation sans suppression, saisie
   des présences (présent, retard, absent, congé) par employé et par jour.
@@ -51,8 +58,8 @@ clôture journalière Z.
 React 19 · TypeScript · Vite 8 · Tailwind CSS v4 · lucide-react ·
 canvas-confetti. SPA dont les écrans métier historiques restent pour
 l’instant locaux ; la fondation Supabase multi-tenant porte déjà un premier
-lot de suivi distant (lecture, Realtime et transition RPC), sans bascule de
-la création des commandes au POS.
+lot de suivi distant (lecture, Realtime et transition RPC) et les pages
+d’accès de l’espace client, sans bascule de la création des commandes au POS.
 
 ## Démarrage
 
@@ -75,7 +82,8 @@ Aucune variable d'environnement n'est requise (voir `.env.example`).
 ## Qualité et CI
 
 - **Tests unitaires** : Vitest couvre les cœurs `pricing`, `dates`,
-  `logistics`, `storage`, `backup`, `localPersistence` et `orderTracking` ;
+  `logistics`, `storage`, `backup`, `localPersistence`, `orderTracking` et
+  `customerAuth` ;
   `test:coverage` applique des seuils anti-régression sur ce périmètre précis.
 - **Backend** : `test:phase0` vérifie l’isolation multi-tenant, la RLS et la
   RPC de transition de statut sous PGlite.
@@ -101,6 +109,8 @@ src/
 │   ├── localPersistence.ts  lecture/écriture JSON locale et identifiants locaux
 │   ├── backup.ts            export/import local chiffré et allowlist des clés
 │   ├── orderTracking.ts     étapes, transitions et libellés du suivi synchronisé
+│   ├── customerAuth.ts      routes, validations et erreurs des pages client
+│   ├── supabaseCustomer.ts  profil et liaisons clientes vérifiées
 │   ├── supabaseOrders.ts    lecture, RPC et abonnement Realtime des commandes
 │   ├── database.types.ts    types générés depuis les migrations Supabase
 │   └── utils.ts             helper cn() (classes Tailwind)
@@ -148,8 +158,10 @@ stockent leurs données dans le **localStorage** du navigateur, sous des clés
 `pressingpro_*` : commandes, clients, caisse, tournées, personnel, stocks,
 dépenses, emplacements, paramètres, compteur de tickets et préférences de
 l’appareil. La liste exacte reprise par la sauvegarde fait foi dans
-`src/lib/backup.ts` (`BACKUP_KEYS`). L’exception est Atelier → Suivi distant,
-qui ne lit et ne modifie que des commandes déjà présentes dans Supabase.
+`src/lib/backup.ts` (`BACKUP_KEYS`). Les exceptions sont Atelier → Suivi
+distant et l’espace `/client`, qui ne lisent que des données déjà présentes
+dans Supabase et autorisées par la RLS ; l’espace client ne charge pas les
+données locales du poste du pressing.
 Au premier lancement, des données de démonstration datées du jour courant
 sont chargées (dates relatives, voir `src/data/demoData.ts`). Sur un
 navigateur contenant déjà des commandes, seuls deux exemples de ramassage

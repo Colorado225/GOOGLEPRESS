@@ -277,6 +277,10 @@ export const SupabaseBackendSection: React.FC = () => {
           <RadioTower className="h-4 w-4" aria-hidden="true" />
           Ouvrir Atelier → Suivi distant
         </button>
+        <a href="/client/connexion" className={secondaryButtonClassName}>
+          <LogIn className="h-4 w-4" aria-hidden="true" />
+          Ouvrir l’espace client
+        </a>
       </div>
 
       {probeResult && (

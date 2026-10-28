@@ -58,6 +58,25 @@ test.describe('PressingPro — parcours critiques', () => {
     await expect(page.getByRole('heading', { name: 'Backend Supabase' })).toBeVisible();
   });
 
+  test('les pages de connexion et d’inscription client sont accessibles', async ({ page }) => {
+    await page.getByRole('link', { name: /Espace client/ }).click();
+
+    await expect(page).toHaveURL(/\/client\/connexion$/);
+    await expect(page.getByRole('heading', { name: 'Connexion' })).toBeVisible();
+    await expect(page.getByText('Le service de connexion n’est pas configuré')).toBeVisible();
+    await expect(page.getByLabel('Adresse e-mail')).toBeDisabled();
+    await expect(page.getByLabel('Mot de passe', { exact: true })).toBeDisabled();
+
+    await page.getByRole('link', { name: 'Inscription', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/client\/inscription$/);
+    await expect(page.getByRole('heading', { name: 'Créer un compte client' })).toBeVisible();
+    await expect(page.getByLabel('Nom complet')).toBeVisible();
+    await expect(page.getByLabel('Téléphone utilisé pour vos dépôts')).toBeVisible();
+    await expect(page.getByLabel('Adresse e-mail')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Créer mon compte client' })).toBeDisabled();
+  });
+
   test('l’onglet Sauvegarde affiche l’export chiffré local', async ({ page }) => {
     await page.getByRole('button', { name: /Paramètres/ }).click();
     await page.getByRole('tab', { name: /Sauvegarde/ }).click();

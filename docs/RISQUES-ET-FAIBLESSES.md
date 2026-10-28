@@ -10,7 +10,7 @@ clôture que lorsque son critère d’acceptation est démontré.
 | ID | Risque | Gravité résiduelle | État |
 |---|---|---:|---|
 | R1 | Données uniquement locales | Élevée | Ouvert, atténué par sauvegarde manuelle et socle de suivi distant non encore exploité |
-| R2 | Absence d’authentification et de rôles applicatifs | Élevée | Ouvert |
+| R2 | Authentification et rôles applicatifs incomplets | Élevée | Ouvert ; pages client Supabase livrées, écrans métier locaux toujours non protégés |
 | R3 | Aucun SMS/WhatsApp réellement envoyé | Moyenne | Ouvert, libellés rendus honnêtes |
 | R4 | Pas de pilote direct d’imprimante thermique | Moyenne | Ouvert, impression navigateur réelle mais limitée |
 | R5 | Pas de GPS ni d’optimisation géographique | Moyenne | Ouvert |
@@ -41,13 +41,21 @@ commandes, bascule des écrans domaine par domaine, tests HTTP avec jetons
 Auth, recette Realtime sur deux appareils, RLS vérifiée entre tenants,
 procédure de retour arrière et restauration serveur testée.
 
-## R2 — Absence d’authentification applicative
+## R2 — Authentification applicative incomplète
 
-**Constat.** Aucun compte n’est requis pour ouvrir les écrans ou modifier les
-données locales. L’onglet Backend peut établir une session Supabase et
-l’onglet Suivi distant respecte les memberships renvoyés par RLS/RPC, mais
-cette session ne protège ni les Paramètres ni les données locales ; aucun
-tenant ou profil de rôle réel n’est encore créé.
+**Constat.** Aucun compte n’est requis pour ouvrir les écrans métier ou
+modifier les données locales. L’onglet Backend peut établir une session
+Supabase et l’onglet Suivi distant respecte les memberships renvoyés par
+RLS/RPC, mais cette session ne protège ni les Paramètres ni les données
+locales ; aucun tenant ou profil de rôle réel n’est encore créé.
+
+**Atténuation client livrée.** Les pages `/client/connexion`,
+`/client/inscription`, `/client/nouveau-mot-de-passe` et `/client` sont
+reliées à Supabase Auth, hors du shell ERP. Un compte client ne donne aucun
+droit métier tant qu’une liaison téléphonique vérifiée n’a pas été créée par
+le pressing. L’inscription publique reste néanmoins désactivée sur
+Pressing_Pro et aucun SMTP de production n’est configuré ; la recette Auth
+réelle reste donc à faire.
 
 **Clôture attendue.** Comptes Supabase Auth reliés à des profils d’agence :
 propriétaire, caissier/responsable, atelier et coursier. Les autorisations
@@ -117,14 +125,14 @@ pures dans `src/lib` et des tests de transition avant déplacement.
 
 **Constat corrigé.** Les tests ne ciblent plus seulement Supabase :
 
-- 39 tests unitaires Vitest sur `pricing`, `dates`, `logistics`, `storage`,
-  `backup`, `localPersistence` et `orderTracking` ;
-- couverture V8 mesurée sur ces cœurs : 76,9 % des instructions, 67,4 % des
-  branches, 79,1 % des fonctions et 79,4 % des lignes au 28/10/2026 ;
+- 48 tests unitaires Vitest sur `pricing`, `dates`, `logistics`, `storage`,
+  `backup`, `localPersistence`, `orderTracking` et `customerAuth` ;
+- couverture V8 mesurée sur ces cœurs : 78,2 % des instructions, 68,9 % des
+  branches, 80,8 % des fonctions et 81,0 % des lignes au 28/10/2026 ;
 - seuils anti-régression configurés à 70/60/70/72 % ;
-- 28 vérifications Supabase sous PGlite, dont isolation, RLS et RPC de
-  transition ;
-- 6 smoke tests navigateur Playwright.
+- 29 vérifications Supabase sous PGlite, dont isolation, RLS, RPC de
+  transition et profil créé à l’inscription ;
+- 7 smoke tests navigateur Playwright, dont l’accès aux pages client.
 
 **Angles encore faibles.** Transitions complètes d’`AppContext`, rapports,
 clôture de caisse, périodes, inventaire et parcours longs POS/atelier restent
