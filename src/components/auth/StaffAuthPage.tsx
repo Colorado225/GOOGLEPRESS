@@ -252,7 +252,7 @@ export const StaffAuthPage: React.FC<StaffAuthPageProps> = ({ mode, onNavigate }
             <path d="M75 252 C45 238 32 263 43 286 C52 304 85 302 91 281" stroke="#F6F3EA" strokeOpacity=".55" strokeWidth="1.5" />
             <path d="M160 560 C207 515 268 510 313 554 C345 585 389 577 418 542 C441 515 468 520 491 548 L491 654 L90 654 C108 618 127 589 160 560Z" fill="#F6F3EA" opacity=".13" />
             <path d="M178 596 L194 551 L224 572 L242 538 L276 557 L298 535 L333 566 L358 543 L386 575 L410 557 L438 600 L438 654 L178 654Z" fill="#FFFFFF" opacity=".10" />
-            <g filter="url(#washerShadow)">
+            <g transform="translate(0 70)" filter="url(#washerShadow)">
               <rect x="181" y="213" width="139" height="375" rx="20" fill="#F9A51A" />
               <rect x="201" y="230" width="99" height="18" rx="9" fill="#F9A51A" />
               <rect x="212" y="272" width="76" height="82" rx="2" fill="#F9A51A" stroke="#FFF3DA" strokeOpacity=".95" strokeWidth="2" />
@@ -468,13 +468,9 @@ export const StaffAuthPage: React.FC<StaffAuthPageProps> = ({ mode, onNavigate }
               )}
 
               {!isRegister && (
-                <div className="flex items-center justify-between gap-3 text-[11px]">
-                  <label className="flex items-center gap-2 text-zinc-500">
-                    <input type="checkbox" className="h-3.5 w-3.5 accent-[#302d43]" />
-                    Se souvenir de moi
-                  </label>
-                  <span className="text-zinc-400">Accès réservé au personnel autorisé</span>
-                </div>
+                <p className="text-right text-[11px] text-zinc-400">
+                  Accès réservé au personnel autorisé
+                </p>
               )}
 
               <button
