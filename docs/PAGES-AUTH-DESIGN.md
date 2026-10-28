@@ -100,10 +100,10 @@ bleues ne sont plus utilisées par les pages du personnel.
 | `npm run test:coverage` | RÉUSSI — 73/73 tests (10 fichiers) ; couverture globale 79,62 % instructions / 71,46 % branches / 81,71 % fonctions / 82,26 % lignes ; `staffAuth.ts` 98,78 % |
 | `npm run build` | RÉUSSI — entrée 381,36 kB ; chunks paresseux : `StaffAuthLayout` 9,78 kB, `StaffLoginPage` 5,08 kB, `StaffRegisterPage` 6,27 kB, `LegalPage` 8,85 kB |
 | `npx playwright test --list` | RÉUSSI — 9 tests découverts (1 nouveau : pages légales) |
-| Playwright local | BLOQUÉ — Chromium absent du bac à sable ; exécution par la CI de la PR |
+| Playwright local | BLOQUÉ — Chromium absent du bac à sable ; exécution assurée par la CI de la PR #7 (voir ligne CI ci-dessous) |
 | Serveur de développement (port 3000) | RÉUSSI — HTTP 200 sur `/connexion`, `/inscription`, `/bienvenue`, `/conditions`, `/confidentialite` ; modules transformés sans erreur. Sans variables Supabase locales, les formulaires affichent l'alerte « non configuré » (comportement prévu) |
 | `npm run test:phase0` | NON EXÉCUTÉ — aucune modification SQL dans ce lot (suite PGlite inchangée : 56/56 au lot précédent) |
-| CI GitHub Actions | À constater sur la PR (runs consignés après ouverture) |
+| CI GitHub Actions (PR #7) | RÉUSSI — run `40714965884` au commit `d85f927` : « Lint, tests et build » et « Smoke tests navigateur » (9 tests e2e) au vert |
 
 ## 7. Critères d'acceptation du prompt
 
@@ -116,7 +116,7 @@ bleues ne sont plus utilisées par les pages du personnel.
 | Erreurs et succès gérés | RÉUSSI | Existant + nouvelle validation « conditions » testée |
 | Aucun privilège métier automatique | RÉUSSI | Inchangé (RLS/RPC, redirection par memberships) |
 | Protections de routes non affaiblies | RÉUSSI | Garde, RLS et SQL intacts |
-| Tests pertinents | RÉUSSI (unitaires) / CI (navigateur) | 73/73 locaux ; 9 e2e listés, exécutés par la CI |
+| Tests pertinents | RÉUSSI | 73/73 unitaires locaux ; 9/9 e2e dans la CI PR #7 (run `40714965884`) |
 | TypeScript, lint, build | RÉUSSI | Voir §6 |
 | Aucun secret exposé | RÉUSSI | Aucune variable ajoutée |
 | Migrations/config documentées | RÉUSSI | Aucune migration requise ; rewrites versionnées |
