@@ -575,13 +575,15 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children, onNa
       .eq('status', 'active')
       .limit(1)
       .maybeSingle()
-      .then(({ data, error: membershipError }) => {
-        if (!active) return;
-        setMembershipState(membershipError ? 'error' : data ? 'authorized' : 'pending');
-      })
-      .catch(() => {
-        if (active) setMembershipState('error');
-      });
+      .then(
+        ({ data, error: membershipError }) => {
+          if (!active) return;
+          setMembershipState(membershipError ? 'error' : data ? 'authorized' : 'pending');
+        },
+        () => {
+          if (active) setMembershipState('error');
+        }
+      );
 
     return () => {
       active = false;
