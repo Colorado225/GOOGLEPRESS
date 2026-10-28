@@ -298,6 +298,9 @@ tournées et de la preuve de remise dans
 [`docs/PREUVE-DE-REMISE.md`](docs/PREUVE-DE-REMISE.md) et la phase 1 (carte
 Leaflet/OpenStreetMap, point de livraison, partage de position, heure
 d'arrivée, écran coursier `/tournee`) dans
-[`docs/CARTE-ET-SUIVI-GPS.md`](docs/CARTE-ET-SUIVI-GPS.md).
+[`docs/CARTE-ET-SUIVI-GPS.md`](docs/CARTE-ET-SUIVI-GPS.md). Le reste à faire
+(point de livraison mémorisé par client, zones tarifaires, lien de suivi à
+jeton, positions partagées) est proposé dans
+[`docs/SUIVI-GPS-SUITE.md`](docs/SUIVI-GPS-SUITE.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.
