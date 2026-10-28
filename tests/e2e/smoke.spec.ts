@@ -41,7 +41,7 @@ test.describe('PressingPro — parcours critiques', () => {
 
   test('l’onglet Sauvegarde affiche l’export chiffré local', async ({ page }) => {
     await page.getByRole('button', { name: /Paramètres/ }).click();
-    await page.getByRole('button', { name: /Sauvegarde/ }).click();
+    await page.getByRole('tab', { name: /Sauvegarde/ }).click();
 
     await expect(page.getByRole('heading', { name: 'Sauvegarde locale chiffrée' })).toBeVisible();
     await expect(page.getByText('Non renseignée')).toBeVisible();
@@ -50,7 +50,7 @@ test.describe('PressingPro — parcours critiques', () => {
 
   test('l’onglet Backend affiche l’état non configuré sans variables VITE', async ({ page }) => {
     await page.getByRole('button', { name: /Paramètres/ }).click();
-    await page.getByRole('button', { name: /Backend Supabase/ }).click();
+    await page.getByRole('tab', { name: /Backend Supabase/ }).click();
 
     await expect(page.getByRole('heading', { name: 'Backend Supabase' })).toBeVisible();
     await expect(page.getByText('Non configuré')).toBeVisible();
