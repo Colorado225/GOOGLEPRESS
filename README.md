@@ -272,8 +272,10 @@ preuves de l’intervention dans
 [`docs/AUDIT-FINAL.md`](docs/AUDIT-FINAL.md) et
 [`docs/VALIDATION-TECHNIQUE.md`](docs/VALIDATION-TECHNIQUE.md) ; le chantier
 d’accès du personnel est détaillé dans
-[`docs/ACCES-PERSONNEL-ONBOARDING.md`](docs/ACCES-PERSONNEL-ONBOARDING.md)
-et la refonte visuelle des pages d’accès dans
-[`docs/PAGES-AUTH-DESIGN.md`](docs/PAGES-AUTH-DESIGN.md).
+[`docs/ACCES-PERSONNEL-ONBOARDING.md`](docs/ACCES-PERSONNEL-ONBOARDING.md),
+la refonte visuelle des pages d’accès dans
+[`docs/PAGES-AUTH-DESIGN.md`](docs/PAGES-AUTH-DESIGN.md) et la carte des
+routes par contexte (client, personnel, ERP) dans
+[`docs/ROUTES.md`](docs/ROUTES.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.

@@ -8,6 +8,7 @@ import {
   resolveStaffPostAuthPath,
 } from '../../lib/staffAuth';
 import { listCurrentMemberships } from '../../lib/supabaseOrders';
+import { resolveStaffReturnPath } from '../../lib/routes';
 import {
   StaffAuthAlert,
   StaffAuthHeader,
@@ -27,6 +28,20 @@ interface StaffLoginPageProps {
 }
 
 type AuthView = 'login' | 'forgot';
+
+/**
+ * Destination après connexion : l'écran ERP demandé avant la redirection
+ * (`?retour=…`, validé par liste blanche dans `lib/routes.ts`) lorsque le
+ * compte a bien un accès métier ; sinon la destination habituelle
+ * (ERP ou onboarding selon les rattachements actifs).
+ */
+const resolveLoginDestination = (
+  memberships: Parameters<typeof resolveStaffPostAuthPath>[0]
+): string => {
+  const fallback = resolveStaffPostAuthPath(memberships);
+  if (fallback !== '/') return fallback;
+  return resolveStaffReturnPath(window.location.search) ?? '/';
+};
 
 export const StaffLoginPage: React.FC<StaffLoginPageProps> = ({ onNavigate }) => {
   const authClient = supabase;
@@ -56,7 +71,7 @@ export const StaffLoginPage: React.FC<StaffLoginPageProps> = ({ onNavigate }) =>
         if (cancelled || !data.session) return;
         const memberships = await listCurrentMemberships(data.session.user.id);
         if (!cancelled) {
-          onNavigate(resolveStaffPostAuthPath(memberships), { replace: true });
+          onNavigate(resolveLoginDestination(memberships), { replace: true });
         }
       })
       .catch(() => {
@@ -101,7 +116,7 @@ export const StaffLoginPage: React.FC<StaffLoginPageProps> = ({ onNavigate }) =>
 
     try {
       const memberships = await listCurrentMemberships(data.session.user.id);
-      onNavigate(resolveStaffPostAuthPath(memberships), { replace: true });
+      onNavigate(resolveLoginDestination(memberships), { replace: true });
     } catch (membershipError) {
       setBusy(false);
       setError(

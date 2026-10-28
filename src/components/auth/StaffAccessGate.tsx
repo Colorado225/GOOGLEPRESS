@@ -4,10 +4,10 @@ import { KeyRound, Loader2, LogOut, RefreshCw, Store } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { validateNewPassword } from '../../lib/customerAuth';
 import {
-  STAFF_LOGIN_PATH,
   STAFF_ONBOARDING_PATH,
   mapStaffAuthError,
 } from '../../lib/staffAuth';
+import { getStaffLoginRedirectPath } from '../../lib/routes';
 import {
   formatStaffRole,
   getActiveStaffMemberships,
@@ -129,12 +129,17 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
     void loadMemberships();
   }, [loadMemberships, mode, recoveryMode, refreshTick, session]);
 
-  // Aucune session établie : la connexion vit sur sa page dédiée.
+  // Aucune session établie : la connexion vit sur sa page dédiée. Si le
+  // visiteur visait un écran ERP précis (lien profond), la destination est
+  // conservée en paramètre `retour` — validée par liste blanche côté
+  // connexion — pour l'y ramener après authentification.
   const shouldRedirectToLogin =
     mode === 'supabase-required' && !loadingSession && !session && !recoveryMode;
   useEffect(() => {
     if (shouldRedirectToLogin) {
-      window.location.replace(STAFF_LOGIN_PATH);
+      window.location.replace(
+        getStaffLoginRedirectPath(window.location.pathname)
+      );
     }
   }, [shouldRedirectToLogin]);
 

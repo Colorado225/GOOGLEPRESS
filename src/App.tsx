@@ -32,12 +32,9 @@ const LegalPage = lazy(() =>
     default: module.LegalPage,
   }))
 );
-import {
-  getCanonicalCustomerPath,
-  isCustomerPath,
-  parseCustomerRoute,
-} from './lib/customerAuth';
-import { parseLegalRoute, parseStaffRoute } from './lib/staffAuth';
+import { getCanonicalCustomerPath } from './lib/customerAuth';
+import { resolveAppRoute } from './lib/routes';
+import { useErpRouteSync } from './components/layout/useErpRouteSync';
 import { AppSidebar } from './components/layout/AppSidebar';
 
 // Les écrans métier sont chargés à la demande : ouvrir le tableau de bord ne
@@ -107,8 +104,37 @@ const ScreenLoadingFallback: React.FC = () => (
   </div>
 );
 
+/** Route ERP inconnue : explicite, dans le shell, avec retour au pilotage. */
+const ErpNotFound: React.FC<{ path: string; onGoHome: () => void }> = ({
+  path,
+  onGoHome,
+}) => (
+  <section className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="w-full max-w-md text-center">
+      <p className="text-5xl font-black tracking-tight text-zinc-300 dark:text-zinc-700">
+        404
+      </p>
+      <h1 className="mt-4 text-2xl font-black tracking-tight text-zinc-950 dark:text-zinc-50">
+        Page introuvable
+      </h1>
+      <p className="mt-3 text-[13.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+        L’adresse « {path} » ne correspond à aucun écran de l’application.
+        Vérifiez le lien utilisé, ou reprenez depuis le tableau de bord.
+      </p>
+      <button
+        type="button"
+        onClick={onGoHome}
+        className="mt-6 inline-flex items-center justify-center rounded-xl bg-zinc-950 px-5 py-3 text-[13.5px] font-black text-white shadow-sm transition hover:bg-zinc-800 focus:outline-none focus:ring-4 focus:ring-zinc-900/20 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+      >
+        Retour au tableau de bord
+      </button>
+    </div>
+  </section>
+);
+
 const MainLayout: React.FC = () => {
   const { activeScreen, isSidebarCollapsed, isMobileMenuOpen, setMobileMenuOpen, showToast } = useApp();
+  const { unknownPath, goToScreen } = useErpRouteSync();
 
   // Fermer le tiroir de navigation mobile avec la touche Échap
   useEffect(() => {
@@ -173,18 +199,30 @@ const MainLayout: React.FC = () => {
         {/* Dynamic Screen View with smooth expand */}
         <main className="flex-1 w-full min-w-0 flex flex-col transition-all duration-300 ease-in-out">
           {/* Transition d'écran : fondu + légère montée à chaque changement de page */}
-          <div key={activeScreen} className="screen-enter flex-1 flex flex-col min-h-0">
+          <div
+            key={unknownPath ? 'not-found' : activeScreen}
+            className="screen-enter flex-1 flex flex-col min-h-0"
+          >
             <Suspense fallback={<ScreenLoadingFallback />}>
-              {activeScreen === 'dashboard' && <DashboardPage />}
-              {activeScreen === 'pos' && <PosPage />}
-              {activeScreen === 'workshop' && <WorkshopPage />}
-              {activeScreen === 'orders' && <OrdersPage />}
-              {activeScreen === 'clients' && <ClientsPage />}
-              {activeScreen === 'employees' && <EmployeesPage />}
-              {activeScreen === 'inventory' && <InventoryPage />}
-              {activeScreen === 'expenses' && <ExpensesPage />}
-              {activeScreen === 'reports' && <ReportsPage />}
-              {activeScreen === 'settings' && <SettingsPage />}
+              {unknownPath ? (
+                <ErpNotFound
+                  path={unknownPath}
+                  onGoHome={() => goToScreen('dashboard')}
+                />
+              ) : (
+                <>
+                  {activeScreen === 'dashboard' && <DashboardPage />}
+                  {activeScreen === 'pos' && <PosPage />}
+                  {activeScreen === 'workshop' && <WorkshopPage />}
+                  {activeScreen === 'orders' && <OrdersPage />}
+                  {activeScreen === 'clients' && <ClientsPage />}
+                  {activeScreen === 'employees' && <EmployeesPage />}
+                  {activeScreen === 'inventory' && <InventoryPage />}
+                  {activeScreen === 'expenses' && <ExpensesPage />}
+                  {activeScreen === 'reports' && <ReportsPage />}
+                  {activeScreen === 'settings' && <SettingsPage />}
+                </>
+              )}
             </Suspense>
           </div>
         </main>
@@ -226,40 +264,42 @@ export default function App() {
     }
   }, [navigate, pathname]);
 
+  // Contexte d'implémentation du chemin demandé (voir `lib/routes.ts`) :
+  // espace client, pages légales et accès du personnel vivent hors du
+  // shell ERP ; tout le reste relève de l'ERP protégé par la garde.
+  const appRoute = resolveAppRoute(pathname);
+
   // L'espace client est volontairement hors du shell ERP et de son contexte
   // local : un client ne doit ni voir la navigation métier ni charger les
   // données de démonstration du poste du pressing.
-  if (isCustomerPath(pathname)) {
+  if (appRoute.context === 'customer') {
     return (
       <Suspense fallback={<ScreenLoadingFallback />}>
-        <CustomerPortalApp
-          route={parseCustomerRoute(pathname)}
-          onNavigate={navigate}
-        />
+        <CustomerPortalApp route={appRoute.route} onNavigate={navigate} />
       </Suspense>
     );
   }
 
   // Pages d'information légale : publiques et statiques, liées depuis
   // l'inscription sans charger l'état métier.
-  const legalRoute = parseLegalRoute(pathname);
-  if (legalRoute) {
+  if (appRoute.context === 'legal') {
     return (
       <Suspense fallback={<ScreenLoadingFallback />}>
-        <LegalPage kind={legalRoute} onNavigate={navigate} />
+        <LegalPage kind={appRoute.route} onNavigate={navigate} />
       </Suspense>
     );
   }
 
   // Pages publiques du personnel : également hors AppProvider, pour ne
   // charger ni l'état local ni les données de démonstration avant connexion.
-  const staffRoute = parseStaffRoute(pathname);
-  if (staffRoute) {
+  if (appRoute.context === 'staff') {
     return (
       <Suspense fallback={<ScreenLoadingFallback />}>
-        {staffRoute === 'login' && <StaffLoginPage onNavigate={navigate} />}
-        {staffRoute === 'register' && <StaffRegisterPage onNavigate={navigate} />}
-        {staffRoute === 'onboarding' && (
+        {appRoute.route === 'login' && <StaffLoginPage onNavigate={navigate} />}
+        {appRoute.route === 'register' && (
+          <StaffRegisterPage onNavigate={navigate} />
+        )}
+        {appRoute.route === 'onboarding' && (
           <StaffOnboardingPage onNavigate={navigate} />
         )}
       </Suspense>
