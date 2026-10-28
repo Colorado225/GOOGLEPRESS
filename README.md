@@ -83,7 +83,9 @@ src/
 Sans backend, l'application stocke tout dans le **localStorage** du
 navigateur, sous les clés `pressingpro_orders`, `pressingpro_customers`,
 `pressingpro_cash_register`, `pressingpro_next_ticket_number` et
-`pressingpro_theme` (thème d'interface choisi sur l'appareil).
+`pressingpro_theme` (thème d'interface choisi sur l'appareil) et
+`pressingpro_shop_settings` (identité et réglages de la boutique saisis dans
+les Paramètres — affichés sur le ticket, la barre latérale et les rapports).
 Au premier lancement, des données de démonstration datées du jour courant
 sont chargées (dates relatives, voir `src/data/demoData.ts`).
 

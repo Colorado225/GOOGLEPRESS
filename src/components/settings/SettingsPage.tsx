@@ -127,19 +127,34 @@ const PwaInstallCard: React.FC = () => {
 };
 
 export const SettingsPage: React.FC = () => {
-  const { setActiveScreen, showToast } = useApp();
+  const { setActiveScreen, showToast, shopSettings, updateShopSettings } = useApp();
 
-  const [shopName, setShopName] = useState('Pressing Pro CI');
-  const [shopAddress, setShopAddress] = useState('Rue des Jardins, Cocody, Abidjan');
-  const [shopPhone, setShopPhone] = useState('+225 07 08 09 10 11');
-  const [currency, setCurrency] = useState('FCFA');
-  const [enableSms, setEnableSms] = useState(true);
-  const [enableThermalPrinter, setEnableThermalPrinter] = useState(true);
+  // Le formulaire démarre depuis les paramètres persistés (contexte).
+  const [shopName, setShopName] = useState(shopSettings.name);
+  const [shopTagline, setShopTagline] = useState(shopSettings.tagline);
+  const [shopAddress, setShopAddress] = useState(shopSettings.address);
+  const [shopPhone, setShopPhone] = useState(shopSettings.phone);
+  const [currency, setCurrency] = useState(shopSettings.currency);
+  const [enableSms, setEnableSms] = useState(shopSettings.enableSms);
+  const [enableThermalPrinter, setEnableThermalPrinter] = useState(shopSettings.enableThermalPrinter);
   const [tab, setTab] = useState<'shop' | 'devices'>('shop');
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    showToast('✓ Paramètres enregistrés avec succès !');
+    if (!shopName.trim()) {
+      showToast('Le nom commercial ne peut pas être vide.');
+      return;
+    }
+    updateShopSettings({
+      name: shopName.trim(),
+      tagline: shopTagline.trim(),
+      address: shopAddress.trim(),
+      phone: shopPhone.trim(),
+      currency,
+      enableSms,
+      enableThermalPrinter,
+    });
+    showToast('✓ Paramètres enregistrés sur cet appareil');
   };
 
   return (
@@ -231,6 +246,18 @@ export const SettingsPage: React.FC = () => {
               className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
             />
           </div>
+
+          <div>
+            <label className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
+              Slogan (imprimé sur le ticket)
+            </label>
+            <input
+              type="text"
+              value={shopTagline}
+              onChange={(e) => setShopTagline(e.target.value)}
+              className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+            />
+          </div>
         </div>
         )}
 
@@ -284,6 +311,10 @@ export const SettingsPage: React.FC = () => {
         >
           <Save className="w-4 h-4" /> Enregistrer les réglages
         </button>
+        <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
+          Réglages conservés uniquement dans ce navigateur : sans serveur, ils ne se synchronisent pas
+          entre appareils.
+        </p>
       </form>
 
       <PwaInstallCard />

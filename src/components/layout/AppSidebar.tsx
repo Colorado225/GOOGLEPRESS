@@ -36,6 +36,7 @@ export const AppSidebar: React.FC = () => {
     setShortcutHelpOpen,
     nextTicketNumber,
     products,
+    shopSettings,
   } = useApp();
 
   // En tiroir mobile, la barre est toujours rendue déployée (le repli ne concerne que le bureau)
@@ -136,10 +137,12 @@ export const AppSidebar: React.FC = () => {
             P
           </div>
           <div className="overflow-hidden">
-            <p className="font-bold text-[15px] leading-tight text-white tracking-tight">
-              Pressing Pro CI
+            <p className="font-bold text-[15px] leading-tight text-white tracking-tight truncate">
+              {shopSettings.name}
             </p>
-            <p className="text-[11px] text-zinc-400 font-medium">Cocody, Abidjan</p>
+            <p className="text-[11px] text-zinc-400 font-medium truncate" title={shopSettings.address}>
+              {shopSettings.address}
+            </p>
           </div>
         </div>
 

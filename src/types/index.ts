@@ -120,6 +120,21 @@ export interface LaundryOrder {
   smsSent?: boolean;
 }
 
+/**
+ * Paramètres de la boutique (écran Paramètres), persistés dans le navigateur
+ * (clé pressingpro_shop_settings). L'identité alimente le ticket thermique,
+ * la barre latérale et l'en-tête imprimé des rapports.
+ */
+export interface ShopSettings {
+  name: string;
+  tagline: string;
+  address: string;
+  phone: string;
+  currency: string;
+  enableSms: boolean;
+  enableThermalPrinter: boolean;
+}
+
 export interface CashRegisterData {
   date: string;
   cashAmount: number;

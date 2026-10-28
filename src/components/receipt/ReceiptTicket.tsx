@@ -2,20 +2,15 @@ import React from 'react';
 import { Customer, LaundryOrder } from '../../types';
 import { formatFCFA } from '../../data/demoData';
 import { encodeCode39 } from '../../lib/barcode';
+import { useApp } from '../../context/AppContext';
 
 export type ReceiptVariant = 'client' | 'atelier';
 
 /**
- * Coordonnées de la boutique imprimées sur le reçu.
- * (Valeurs alignées sur l'écran Paramètres ; elles y deviendront éditables
- * lorsque les paramètres seront persistés.)
+ * L'identité de la boutique imprimée ci-dessous provient des paramètres
+ * persistés (contexte : shopSettings, écran Paramètres → Établissement) ;
+ * les valeurs par défaut sont dans lib/shopSettings.ts.
  */
-export const SHOP_INFO = {
-  name: 'PRESSING PRO CI',
-  tagline: 'Pressing & Blanchisserie — Haute qualité',
-  address: 'Rue des Jardins, Cocody • Abidjan',
-  phone: '+225 07 08 09 10 11',
-} as const;
 
 const PAYMENT_LABELS: Record<LaundryOrder['paymentMethod'], string> = {
   especes: 'Espèces',
@@ -106,6 +101,7 @@ interface ReceiptTicketProps {
  * les informations absentes sont simplement omises (ou « Non renseigné »).
  */
 export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, customer }) => {
+  const { shopSettings } = useApp();
   const isClient = variant === 'client';
   const isSettled = order.remainingBalance <= 0;
 
@@ -132,10 +128,10 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <div className="w-9 h-9 bg-zinc-950 text-white flex items-center justify-center font-sans font-black text-[17px] rounded-md mx-auto">
             P
           </div>
-          <h2 className="font-sans font-black text-[18px] tracking-tight mt-1.5">{SHOP_INFO.name}</h2>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">{SHOP_INFO.tagline}</p>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 mt-1">{SHOP_INFO.address}</p>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">Tél : {SHOP_INFO.phone}</p>
+          <h2 className="font-sans font-black text-[18px] tracking-tight mt-1.5">{shopSettings.name.toUpperCase()}</h2>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">{shopSettings.tagline}</p>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 mt-1">{shopSettings.address}</p>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">Tél : {shopSettings.phone}</p>
         </div>
 
         <div className="mt-3">

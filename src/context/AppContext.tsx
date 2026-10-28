@@ -18,6 +18,8 @@ import { normalizeText } from '../lib/utils';
 
 /** Clé localStorage du compteur séquentiel de tickets (voir plus bas). */
 import { AppTheme, applyTheme, getInitialTheme, persistTheme } from '../lib/theme';
+import { DEFAULT_SHOP_SETTINGS, SHOP_SETTINGS_STORAGE_KEY } from '../lib/shopSettings';
+import { ShopSettings } from '../types';
 
 const TICKET_COUNTER_KEY = 'pressingpro_next_ticket_number';
 
@@ -118,6 +120,8 @@ interface AppContextType {
   theme: AppTheme;
   setTheme: (theme: AppTheme) => void;
   toggleTheme: () => void;
+  shopSettings: ShopSettings;
+  updateShopSettings: (settings: ShopSettings) => void;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -285,12 +289,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadPersistedState('pressingpro_expense_categories', INITIAL_EXPENSE_CATEGORIES)
   );
 
+  // Paramètres de la boutique (écran Paramètres) : fusionnés aux valeurs par
+  // défaut pour rester complets même si une ancienne version est en mémoire.
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => ({
+    ...DEFAULT_SHOP_SETTINGS,
+    ...loadPersistedState<Partial<ShopSettings>>(SHOP_SETTINGS_STORAGE_KEY, {}),
+  }));
+  const updateShopSettings = (next: ShopSettings) => setShopSettings(next);
+
   useEffect(() => persistState('pressingpro_employees', employees), [employees]);
   useEffect(() => persistState('pressingpro_attendance', attendanceRecords), [attendanceRecords]);
   useEffect(() => persistState('pressingpro_inventory_products', products), [products]);
   useEffect(() => persistState('pressingpro_stock_movements', stockMovements), [stockMovements]);
   useEffect(() => persistState('pressingpro_expenses', expenses), [expenses]);
   useEffect(() => persistState('pressingpro_expense_categories', expenseCategories), [expenseCategories]);
+  useEffect(() => persistState(SHOP_SETTINGS_STORAGE_KEY, shopSettings), [shopSettings]);
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(customers[0] || INITIAL_CUSTOMERS[0]);
   const [pickupOption, setPickupOption] = useState<PickupOption>('standard');
@@ -1074,6 +1087,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         theme,
         setTheme,
         toggleTheme,
+        shopSettings,
+        updateShopSettings,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,
