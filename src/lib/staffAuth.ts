@@ -64,7 +64,7 @@ export const mapStaffAuthError = (error: unknown): string => {
   if (
     normalized.includes('user already registered') ||
     normalized.includes('already been registered') ||
-    normalized.includes('already exists'
+    normalized.includes('already exists')
   )) {
     return 'Un compte existe déjà avec cette adresse. Essayez de vous connecter.';
   }
