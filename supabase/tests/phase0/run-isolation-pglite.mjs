@@ -20,6 +20,9 @@ const users = {
   otherCustomer: '00000000-0000-4000-8000-000000000302',
 };
 
+let createdOrderId;
+let createdPaymentId;
+
 const idsOf = (rows, key = 'id') => rows.map((row) => row[key]).sort();
 
 let passed = 0;
@@ -102,8 +105,8 @@ try {
       join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'public' and c.relkind = 'r'
     `);
-    assert.equal(result.rows[0].total, 37);
-    assert.equal(result.rows[0].protected, 37);
+    assert.equal(result.rows[0].total, 38);
+    assert.equal(result.rows[0].protected, 38);
   });
 
   await check('chaque propriétaire ne voit que ses agences', async () => {
@@ -299,8 +302,8 @@ try {
     `);
   });
 
-  await check('le compteur attribue un ticket unique par agence et journalise l’événement', async () => {
-    const inserted = await queryAs(
+  await expectFailure('un INSERT PostgREST direct ne peut plus contourner create_order', async () => {
+    await queryAs(
       users.cashierA1,
       `
         insert into public.orders (
@@ -315,12 +318,41 @@ try {
           '[{"name":"Chemise","quantity":1,"unitPrice":500,"subtotal":500}]'::jsonb,
           500, 500, 'wave', now() + interval '2 days', $1
         )
-        returning id, ticket_number::text, ticket_label
       `,
       [users.cashierA1]
     );
+  }, /permission denied/i);
+
+  await check('create_order recalcule le catalogue, attribue le ticket et journalise la création', async () => {
+    const inserted = await queryAs(
+      users.cashierA1,
+      `
+        select
+          id,
+          ticket_number::text,
+          ticket_label,
+          subtotal_xof::int,
+          discount_xof::int,
+          total_xof::int,
+          deposit_paid_xof::int,
+          lines -> 0 ->> 'unitPrice' as server_unit_price
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000001'::uuid,
+          '[{"legacyKey":"chemise","quantity":2,"unitPrice":1,"subtotal":2}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-001'
+        )
+      `
+    );
     assert.equal(inserted.rows[0].ticket_number, '2');
     assert.equal(inserted.rows[0].ticket_label, '#TK-2');
+    assert.equal(inserted.rows[0].server_unit_price, '500');
+    assert.equal(inserted.rows[0].subtotal_xof, 1000);
+    assert.equal(inserted.rows[0].discount_xof, 50);
+    assert.equal(inserted.rows[0].total_xof, 950);
+    assert.equal(inserted.rows[0].deposit_paid_xof, 0);
+    createdOrderId = inserted.rows[0].id;
     const events = await db.query(
       'select count(*)::int as count from public.order_events where order_id = $1',
       [inserted.rows[0].id]
@@ -543,6 +575,412 @@ try {
       `)
     );
   }, /permission denied/i);
+
+  await check('create_order est idempotent pour une même clé et un même contenu', async () => {
+    const repeated = await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000001'::uuid,
+          '[{"legacyKey":"chemise","quantity":2,"unitPrice":1,"subtotal":2}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-001'
+        )
+      `
+    );
+    const count = await db.query(
+      "select count(*)::int as count from public.orders where idempotency_key = 'phase0-create-order-001'"
+    );
+    assert.equal(repeated.rows[0].id, createdOrderId);
+    assert.equal(count.rows[0].count, 1);
+  });
+
+  await expectFailure('create_order refuse de réutiliser une clé pour un contenu différent', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000001'::uuid,
+          '[{"legacyKey":"chemise","quantity":3}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-001'
+        )
+      `
+    );
+  }, /autre commande/i);
+
+  await expectFailure('create_order rejette une remise explicite supérieure à 100 pour cent', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000001'::uuid,
+          '[{"legacyKey":"chemise","quantity":1}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-invalid-discount',
+          'pressing',
+          'standard',
+          101
+        )
+      `
+    );
+  }, /remise doit être comprise/i);
+
+  await expectFailure('create_order exige les informations complètes d’un ramassage à domicile', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000001'::uuid,
+          '[{"legacyKey":"chemise","quantity":1}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-home-pickup-invalid',
+          'pressing',
+          'standard',
+          null,
+          null,
+          null,
+          null,
+          'home_pickup'
+        )
+      `
+    );
+  }, /ramassage sont requis/i);
+
+  await expectFailure('create_order rejette deux références catalogue incohérentes', async () => {
+    const catalog = await db.query(
+      "select id from public.service_catalog_items where shop_id = '20000000-0000-4000-8000-000000000001' and legacy_key = 'chemise'"
+    );
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000001'::uuid,
+          '[{"catalogItemId":"${catalog.rows[0].id}","legacyKey":"autre-prestation","quantity":1}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-catalog-mismatch'
+        )
+      `
+    );
+  }, /références catalogue.*incohérentes/i);
+
+  await expectFailure('un agent atelier ne peut pas créer une commande au comptoir', async () => {
+    await queryAs(
+      users.workshopA2,
+      `
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000002'::uuid,
+          '40000000-0000-4000-8000-000000000003'::uuid,
+          '[{"legacyKey":"chemise","quantity":1}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-workshop-denied'
+        )
+      `
+    );
+  }, /agence introuvable ou inaccessible/i);
+
+  await expectFailure('create_order refuse une cliente d’une autre organisation', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000002'::uuid,
+          '[{"legacyKey":"chemise","quantity":1}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-wrong-customer'
+        )
+      `
+    );
+  }, /cliente introuvable/i);
+
+  await expectFailure('anon ne peut pas exécuter create_order', async () => {
+    await asRole('anon', null, () =>
+      db.query(`
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000001'::uuid,
+          '[{"legacyKey":"chemise","quantity":1}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-anon-denied'
+        )
+      `)
+    );
+  }, /permission denied/i);
+
+  await check('record_order_payment écrit le journal et recalcule commande et cliente', async () => {
+    const payment = await queryAs(
+      users.cashierA1,
+      `
+        select id, amount_xof::int, method, provider, status
+        from public.record_order_payment(
+          $1::uuid,
+          400,
+          'mobile_money',
+          'wave',
+          'phase0-payment-001',
+          'WAVE-TEST-001'
+        )
+      `,
+      [createdOrderId]
+    );
+    createdPaymentId = payment.rows[0].id;
+    assert.deepEqual(payment.rows[0], {
+      id: createdPaymentId,
+      amount_xof: 400,
+      method: 'mobile_money',
+      provider: 'wave',
+      status: 'confirmed',
+    });
+
+    const order = await db.query(
+      'select deposit_paid_xof::int, remaining_balance_xof::int from public.orders where id = $1',
+      [createdOrderId]
+    );
+    assert.deepEqual(order.rows[0], {
+      deposit_paid_xof: 400,
+      remaining_balance_xof: 550,
+    });
+
+    const customer = await db.query(
+      "select deposits_count, balance_xof::int from public.customers where id = '40000000-0000-4000-8000-000000000001'"
+    );
+    assert.deepEqual(customer.rows[0], {
+      deposits_count: 2,
+      balance_xof: 2050,
+    });
+  });
+
+  await check('record_order_payment est idempotent et ne double pas l’encaissement', async () => {
+    const repeated = await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.record_order_payment(
+          $1::uuid,
+          400,
+          'mobile_money',
+          'wave',
+          'phase0-payment-001',
+          'WAVE-TEST-001'
+        )
+      `,
+      [createdOrderId]
+    );
+    const count = await db.query(
+      "select count(*)::int as count from public.payments where idempotency_key = 'phase0-payment-001'"
+    );
+    const order = await db.query(
+      'select deposit_paid_xof::int from public.orders where id = $1',
+      [createdOrderId]
+    );
+    assert.equal(repeated.rows[0].id, createdPaymentId);
+    assert.equal(count.rows[0].count, 1);
+    assert.equal(order.rows[0].deposit_paid_xof, 400);
+  });
+
+  await expectFailure('record_order_payment refuse un encaissement supérieur au total', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.record_order_payment(
+          $1::uuid,
+          551,
+          'cash',
+          'cash',
+          'phase0-payment-overpay'
+        )
+      `,
+      [createdOrderId]
+    );
+  }, /dépasserait le total/i);
+
+  await expectFailure('record_order_payment rejette des métadonnées arbitraires du navigateur', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.record_order_payment(
+          $1::uuid,
+          1,
+          'cash',
+          'cash',
+          'phase0-payment-metadata-denied',
+          null,
+          '{"secret":"ne-pas-stocker"}'::jsonb
+        )
+      `,
+      [createdOrderId]
+    );
+  }, /métadonnées de paiement non autorisées/i);
+
+  await expectFailure('un agent atelier ne peut pas enregistrer un paiement', async () => {
+    await queryAs(
+      users.workshopA2,
+      `
+        select id
+        from public.record_order_payment(
+          '50000000-0000-4000-8000-000000000002'::uuid,
+          100,
+          'cash',
+          'cash',
+          'phase0-payment-workshop-denied'
+        )
+      `
+    );
+  }, /commande introuvable ou inaccessible/i);
+
+  await expectFailure('le journal de paiements refuse un INSERT direct', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        insert into public.payments (
+          organization_id, shop_id, order_id, amount_xof,
+          method, provider, idempotency_key, confirmed_at
+        ) values (
+          '10000000-0000-4000-8000-000000000001',
+          '20000000-0000-4000-8000-000000000001',
+          $1,
+          100,
+          'cash',
+          'cash',
+          'phase0-payment-direct-insert',
+          now()
+        )
+      `,
+      [createdOrderId]
+    );
+  }, /permission denied/i);
+
+  await expectFailure('un UPDATE direct ne peut plus modifier l’acompte d’une commande', async () => {
+    await queryAs(
+      users.cashierA1,
+      'update public.orders set deposit_paid_xof = 950 where id = $1',
+      [createdOrderId]
+    );
+  }, /permission denied/i);
+
+  await check('les clientes ne voient que les paiements de leurs commandes liées', async () => {
+    const own = await queryAs(
+      users.sharedCustomer,
+      'select id from public.payments where id = $1',
+      [createdPaymentId]
+    );
+    const other = await queryAs(
+      users.otherCustomer,
+      'select id from public.payments where id = $1',
+      [createdPaymentId]
+    );
+    assert.equal(own.rows.length, 1);
+    assert.equal(other.rows.length, 0);
+  });
+
+  await expectFailure('un caissier ne peut pas rembourser sans rôle de responsable', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.refund_order_payment(
+          $1::uuid,
+          100,
+          'phase0-refund-cashier-denied',
+          'Remboursement fictif refusé',
+          'WAVE-REF-DENIED'
+        )
+      `,
+      [createdPaymentId]
+    );
+  }, /remboursement non autorisé/i);
+
+  await check('refund_order_payment crée une contre-écriture et recalcule les soldes', async () => {
+    const refund = await queryAs(
+      users.ownerA,
+      `
+        select id, amount_xof::int, kind, reverses_payment_id
+        from public.refund_order_payment(
+          $1::uuid,
+          100,
+          'phase0-refund-001',
+          'Remboursement fictif partiel',
+          'WAVE-REF-001'
+        )
+      `,
+      [createdPaymentId]
+    );
+    assert.equal(refund.rows[0].amount_xof, 100);
+    assert.equal(refund.rows[0].kind, 'refund');
+    assert.equal(refund.rows[0].reverses_payment_id, createdPaymentId);
+
+    const order = await db.query(
+      'select deposit_paid_xof::int, remaining_balance_xof::int from public.orders where id = $1',
+      [createdOrderId]
+    );
+    assert.deepEqual(order.rows[0], {
+      deposit_paid_xof: 300,
+      remaining_balance_xof: 650,
+    });
+
+    const customer = await db.query(
+      "select balance_xof::int from public.customers where id = '40000000-0000-4000-8000-000000000001'"
+    );
+    assert.equal(customer.rows[0].balance_xof, 2150);
+  });
+
+  await expectFailure('refund_order_payment refuse un remboursement supérieur au paiement initial', async () => {
+    await queryAs(
+      users.ownerA,
+      `
+        select id
+        from public.refund_order_payment(
+          $1::uuid,
+          301,
+          'phase0-refund-too-much',
+          'Remboursement fictif excessif',
+          'WAVE-REF-TOO-MUCH'
+        )
+      `,
+      [createdPaymentId]
+    );
+  }, /dépasserait le montant du paiement initial/i);
+
+  await check('les totaux de caisse distinguent brut, remboursements et net par fournisseur', async () => {
+    const result = await queryAs(
+      users.cashierA1,
+      `
+        select public.get_payment_totals(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          (now() at time zone 'Africa/Abidjan')::date
+        ) as totals
+      `
+    );
+    const rawTotals = result.rows[0].totals;
+    const totals = typeof rawTotals === 'string' ? JSON.parse(rawTotals) : rawTotals;
+    const wave = totals.rows.find((row) => row.provider === 'wave');
+    assert.equal(totals.gross_xof, 400);
+    assert.equal(totals.refunds_xof, 100);
+    assert.equal(totals.net_xof, 300);
+    assert.deepEqual(wave, {
+      method: 'mobile_money',
+      provider: 'wave',
+      gross_xof: 400,
+      refunds_xof: 100,
+      net_xof: 300,
+    });
+  });
 
   await check('l’inscription e-mail conserve le nom et le téléphone déclaré dans le profil', async () => {
     await db.query(`
