@@ -77,6 +77,37 @@ test.describe('PressingPro — parcours critiques', () => {
     await expect(page.getByRole('button', { name: 'Créer mon compte client' })).toBeDisabled();
   });
 
+  test('les pages connexion, inscription et onboarding du personnel sont accessibles', async ({ page }) => {
+    await page.goto('/connexion');
+
+    await expect(page).toHaveURL(/\/connexion$/);
+    await expect(
+      page.getByRole('heading', { name: 'Connexion du personnel' })
+    ).toBeVisible();
+    await expect(
+      page.getByText('Le service de connexion n’est pas configuré')
+    ).toBeVisible();
+    await expect(page.getByLabel('Adresse e-mail')).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Se connecter' })).toBeDisabled();
+
+    await page.getByRole('link', { name: 'Créer un compte propriétaire' }).click();
+
+    await expect(page).toHaveURL(/\/inscription$/);
+    await expect(
+      page.getByRole('heading', { name: 'Créer un compte propriétaire' })
+    ).toBeVisible();
+    await expect(page.getByLabel('Nom complet')).toBeVisible();
+    await expect(page.getByLabel('Adresse e-mail')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Créer mon compte' })).toBeDisabled();
+
+    await page.goto('/bienvenue');
+
+    await expect(
+      page.getByRole('heading', { name: 'Bienvenue — créons votre pressing' })
+    ).toBeVisible();
+    await expect(page.getByText('impossible de créer un pressing ici')).toBeVisible();
+  });
+
   test('l’onglet Sauvegarde affiche l’export chiffré local', async ({ page }) => {
     await page.getByRole('button', { name: /Paramètres/ }).click();
     await page.getByRole('tab', { name: /Sauvegarde/ }).click();

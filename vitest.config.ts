@@ -17,6 +17,7 @@ export default defineConfig({
         'src/lib/orderTracking.ts',
         'src/lib/customerAuth.ts',
         'src/lib/staffAccess.ts',
+        'src/lib/staffAuth.ts',
       ],
       thresholds: {
         statements: 70,

@@ -46,6 +46,18 @@
     {
       "source": "/espace-client/(.*)",
       "destination": "/index.html"
+    },
+    {
+      "source": "/connexion",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/inscription",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/bienvenue",
+      "destination": "/index.html"
     }
   ]
 }

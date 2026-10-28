@@ -12,11 +12,27 @@ const CustomerPortalApp = lazy(() =>
     default: module.CustomerPortalApp,
   }))
 );
+const StaffLoginPage = lazy(() =>
+  import('./components/auth/StaffLoginPage').then((module) => ({
+    default: module.StaffLoginPage,
+  }))
+);
+const StaffRegisterPage = lazy(() =>
+  import('./components/auth/StaffRegisterPage').then((module) => ({
+    default: module.StaffRegisterPage,
+  }))
+);
+const StaffOnboardingPage = lazy(() =>
+  import('./components/auth/StaffOnboardingPage').then((module) => ({
+    default: module.StaffOnboardingPage,
+  }))
+);
 import {
   getCanonicalCustomerPath,
   isCustomerPath,
   parseCustomerRoute,
 } from './lib/customerAuth';
+import { parseStaffRoute } from './lib/staffAuth';
 import { AppSidebar } from './components/layout/AppSidebar';
 
 // Les écrans métier sont chargés à la demande : ouvrir le tableau de bord ne
@@ -215,6 +231,21 @@ export default function App() {
           route={parseCustomerRoute(pathname)}
           onNavigate={navigate}
         />
+      </Suspense>
+    );
+  }
+
+  // Pages publiques du personnel : également hors AppProvider, pour ne
+  // charger ni l'état local ni les données de démonstration avant connexion.
+  const staffRoute = parseStaffRoute(pathname);
+  if (staffRoute) {
+    return (
+      <Suspense fallback={<ScreenLoadingFallback />}>
+        {staffRoute === 'login' && <StaffLoginPage onNavigate={navigate} />}
+        {staffRoute === 'register' && <StaffRegisterPage onNavigate={navigate} />}
+        {staffRoute === 'onboarding' && (
+          <StaffOnboardingPage onNavigate={navigate} />
+        )}
       </Suspense>
     );
   }
