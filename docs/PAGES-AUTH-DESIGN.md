@@ -167,9 +167,10 @@ ajoutée.
 | Routes servies | **RÉUSSI** — HTTP 200 sur `/connexion`, `/inscription`, `/bienvenue`, `/conditions`, `/confidentialite`, `/client/connexion`, `/client/inscription`, `/client/nouveau-mot-de-passe` |
 | Rendu structurel (SSR ponctuel via Vite, hors production) | **RÉUSSI** — 6 écrans rendus sans exception ; libellés liés (`for`/`id`), aucun fragment de code affiché, textes conformes |
 | `npx playwright test --list` | **RÉUSSI** — 11 tests découverts (dont 1 nouveau : absence de défilement horizontal en 390 px sur les 4 pages d’accès) |
-| Playwright local | **NON EXÉCUTÉ** — Chromium absent du bac à sable, téléchargement bloqué par le réseau ; l’exécution revient à la CI |
-| `npm run test:phase0` | **NON EXÉCUTÉ** — aucune modification SQL dans ce lot |
-| Recette visuelle (captures) | **NON FAITE** — pas de navigateur disponible ici ; à valider sur l’aperçu (390 px, 768 px, 1440 px, clair et sombre) |
+| Playwright local | **NON EXÉCUTÉ** — Chromium absent du bac à sable, téléchargement bloqué par le réseau |
+| CI GitHub Actions (run `40755102071`) | **RÉUSSI** — « Lint, tests et build » et « Smoke tests navigateur » : **11/11** tests Chromium au vert |
+| `npm run test:phase0` | **NON EXÉCUTÉ en local** — aucune modification SQL ; exécuté avec succès par la CI (PGlite) |
+| Recette visuelle (captures) | **NON FAITE** — aucun navigateur dans cet environnement ; à valider sur l’aperçu (390 px, 768 px, 1440 px, clair et sombre) |
 
 ## 7. Critères d’acceptation
 
@@ -182,7 +183,7 @@ ajoutée.
 | Accessibilité de base | RÉUSSI | Labels, `aria-describedby`, `aria-live`, focus visibles, contrastes documentés |
 | Aucun privilège automatique | RÉUSSI | Garde, memberships, RLS inchangés |
 | Aucune régression de routes | RÉUSSI | `vercel.json` inchangé ; 8 URLs en 200 |
-| Tests à jour | RÉUSSI (unitaires) | 87/87 ; e2e réécrits, exécution CI |
+| Tests à jour | RÉUSSI | 87/87 unitaires ; 11/11 e2e dans la CI (run `40755102071`) |
 | TypeScript et build | RÉUSSI | Voir §6 |
 | Aucun secret exposé | RÉUSSI | Aucune variable ajoutée |
 
@@ -204,5 +205,8 @@ ajoutée.
 6. **Compte de recette** : aucune inscription réelle n’a été tentée ici ; la
    preuve de bout en bout (confirmation, connexion, réinitialisation, liaison
    par le pressing) reste à faire avec un compte de test.
-7. **CI** : vérifier le run GitHub Actions de la branche (lint, tests, build,
-   smoke navigateur) après publication.
+7. **CI** : verte au commit `b236019` (run `40755102071`) — lint, tests
+   unitaires, PGlite, build et 11 smoke tests navigateur. Le premier run du lot
+   (`40754729655`) a d’ailleurs révélé une ambiguïté de sélecteur entre le lien
+   légal du formulaire et celui du pied de page ; elle est corrigée et couverte
+   par le run vert.
