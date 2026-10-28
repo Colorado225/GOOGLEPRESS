@@ -39,6 +39,15 @@ test.describe('PressingPro — parcours critiques', () => {
     await expect(page.getByText('Machines : L1')).toHaveCount(0);
   });
 
+  test('l’onglet Sauvegarde affiche l’export chiffré local', async ({ page }) => {
+    await page.getByRole('button', { name: /Paramètres/ }).click();
+    await page.getByRole('button', { name: /Sauvegarde/ }).click();
+
+    await expect(page.getByRole('heading', { name: 'Sauvegarde locale chiffrée' })).toBeVisible();
+    await expect(page.getByText('Non renseignée')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Télécharger la sauvegarde chiffrée' })).toBeVisible();
+  });
+
   test('l’onglet Backend affiche l’état non configuré sans variables VITE', async ({ page }) => {
     await page.getByRole('button', { name: /Paramètres/ }).click();
     await page.getByRole('button', { name: /Backend Supabase/ }).click();
