@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Loader2, LogIn, MailQuestion } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, LogIn, Mail, MailCheck, ShieldCheck } from 'lucide-react';
 import {
   CUSTOMER_HOME_PATH,
+  CUSTOMER_LOGIN_PATH,
   CUSTOMER_PASSWORD_PATH,
   CUSTOMER_REGISTER_PATH,
   isValidEmail,
@@ -10,224 +11,306 @@ import {
 } from '../../lib/customerAuth';
 import { getSupabaseConfigStatus, supabase } from '../../lib/supabase';
 import {
-  CustomerAuthLayout,
-  CustomerFormAlerts,
-  CustomerNavLink,
-  PasswordField,
-  customerInputClassName,
-  customerPrimaryButtonClassName,
-  customerSecondaryButtonClassName,
-  type CustomerNavigate,
-} from './CustomerAuthLayout';
+  AuthAlert,
+  AuthButton,
+  AuthLink,
+  AuthPasswordField,
+  AuthShell,
+  AuthSpaceSwitch,
+  AuthTabs,
+  AuthTextField,
+  AuthUnconfiguredNotice,
+  authLinkClassName,
+  type AuthNavigate,
+} from '../auth/AuthShell';
 
 interface CustomerLoginPageProps {
-  onNavigate: CustomerNavigate;
+  onNavigate: AuthNavigate;
 }
+
+type AuthView = 'login' | 'forgot';
+
+const UNCONFIGURED_ERROR =
+  'Aucune vérification n’a été effectuée : le service d’authentification n’est pas configuré dans cet environnement.';
+
+const inlineActionClassName =
+  'rounded text-[12px] font-bold text-[#1D4ED8] underline-offset-4 transition hover:underline focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1D4ED8]/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-blue-300';
+
+const VIEW_TITLES: Record<AuthView, string> = {
+  login: 'Connexion — Espace client PressingPro CI',
+  forgot: 'Mot de passe oublié — Espace client PressingPro CI',
+};
 
 export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ onNavigate }) => {
   const config = getSupabaseConfigStatus();
-  const [mode, setMode] = useState<'login' | 'reset'>('login');
+  const [view, setView] = useState<AuthView>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetSentTo, setResetSentTo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.title = VIEW_TITLES[view];
+  }, [view]);
+
+  const resetFeedback = () => {
+    setError(null);
+  };
+
+  const switchTo = (next: AuthView) => {
+    resetFeedback();
+    setResetSentTo(null);
+    setBusy(false);
+    setView(next);
+  };
 
   const submitLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!supabase || busy) return;
+    resetFeedback();
 
     const validationError = validateCustomerLogin({ email, password });
     if (validationError) {
       setError(validationError);
-      setMessage(null);
+      return;
+    }
+    if (!supabase) {
+      setError(UNCONFIGURED_ERROR);
       return;
     }
 
     setBusy(true);
-    setError(null);
-    setMessage(null);
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-    setBusy(false);
-    setPassword('');
-
-    if (signInError) {
-      setError(mapSupabaseAuthError(signInError));
-      return;
+    try {
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (signInError) {
+        setError(mapSupabaseAuthError(signInError));
+        return;
+      }
+      setPassword('');
+      if (data.session) onNavigate(CUSTOMER_HOME_PATH, { replace: true });
+    } catch (unexpectedError) {
+      setError(mapSupabaseAuthError(unexpectedError));
+    } finally {
+      setBusy(false);
     }
-
-    if (data.session) onNavigate(CUSTOMER_HOME_PATH, { replace: true });
   };
 
-  const submitReset = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!supabase || busy) return;
-
+  const sendResetLink = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+    resetFeedback();
     if (!isValidEmail(email)) {
       setError('Saisissez l’adresse e-mail de votre compte.');
-      setMessage(null);
+      return;
+    }
+    if (!supabase) {
+      setError(UNCONFIGURED_ERROR);
       return;
     }
 
     setBusy(true);
-    setError(null);
-    setMessage(null);
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      email.trim().toLowerCase(),
-      { redirectTo: `${window.location.origin}${CUSTOMER_PASSWORD_PATH}` }
-    );
-    setBusy(false);
-
-    if (resetError) {
-      setError(mapSupabaseAuthError(resetError));
-      return;
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        { redirectTo: `${window.location.origin}${CUSTOMER_PASSWORD_PATH}` }
+      );
+      if (resetError) {
+        setError(mapSupabaseAuthError(resetError));
+        return;
+      }
+      setResetSentTo(email.trim().toLowerCase());
+    } catch (unexpectedError) {
+      setError(mapSupabaseAuthError(unexpectedError));
+    } finally {
+      setBusy(false);
     }
-
-    setMessage(
-      'Si un compte existe avec cette adresse, un e-mail de réinitialisation vient d’être demandé. Vérifiez votre boîte de réception et vos courriers indésirables.'
-    );
   };
 
-  return (
-    <CustomerAuthLayout
-      title={mode === 'login' ? 'Connexion' : 'Mot de passe oublié'}
-      subtitle={
-        mode === 'login'
-          ? 'Connectez-vous pour consulter les commandes liées à votre numéro de téléphone vérifié.'
-          : 'Saisissez l’e-mail de votre compte : Supabase vous enverra un lien pour choisir un nouveau mot de passe.'
-      }
-      active="login"
+  const tabs = (
+    <AuthTabs
+      items={[
+        { label: 'Connexion', href: CUSTOMER_LOGIN_PATH, active: true },
+        { label: 'Inscription', href: CUSTOMER_REGISTER_PATH, active: false },
+      ]}
       onNavigate={onNavigate}
-    >
-      {!config.configured && (
-        <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
-          Le service de connexion n’est pas configuré dans cet environnement.
-          Les formulaires sont visibles, mais aucune demande ne sera envoyée.
-        </p>
-      )}
+    />
+  );
 
-      {mode === 'login' ? (
-        <form onSubmit={(event) => void submitLogin(event)} className="space-y-4" noValidate>
-          <div>
-            <label
-              htmlFor="customer-login-email"
-              className="mb-1.5 block text-[12px] font-black uppercase tracking-wide text-zinc-600 dark:text-zinc-300"
-            >
-              Adresse e-mail
-            </label>
-            <input
-              id="customer-login-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              inputMode="email"
-              placeholder="vous@exemple.com"
-              disabled={!config.configured || busy}
-              className={customerInputClassName}
-            />
-          </div>
+  const footer = (
+    <div className="space-y-4">
+      <p className="text-center text-[12.5px] leading-relaxed text-[#6B7280] dark:text-zinc-400">
+        Pas encore de compte ?{' '}
+        <AuthLink
+          href={CUSTOMER_REGISTER_PATH}
+          onNavigate={onNavigate}
+          className={authLinkClassName}
+        >
+          Créer un compte client
+        </AuthLink>
+      </p>
+      <AuthSpaceSwitch
+        audience="customer"
+        onNavigate={onNavigate}
+        note="Le personnel du pressing utilise un compte distinct pour son espace de gestion."
+      />
+    </div>
+  );
 
-          <PasswordField
-            id="customer-login-password"
-            label="Mot de passe"
-            value={password}
-            onChange={setPassword}
-            autoComplete="current-password"
-            disabled={!config.configured || busy}
-          />
-
-          <CustomerFormAlerts error={error} message={message} />
-
-          <button
-            type="submit"
-            disabled={!config.configured || busy || !email.trim() || !password}
-            className={customerPrimaryButtonClassName}
+  if (view === 'forgot' && resetSentTo) {
+    return (
+      <AuthShell
+        audience="customer"
+        title="Vérifiez votre boîte de réception."
+        subtitle="Par sécurité, le message n’indique jamais si un compte existe : suivez le lien reçu pour choisir un nouveau mot de passe."
+        footer={
+          <AuthButton
+            type="button"
+            variant="secondary"
+            icon={ArrowLeft}
+            onClick={() => switchTo('login')}
           >
-            {busy ? (
-              <Loader2 className="h-4.5 w-4.5 animate-spin" aria-hidden="true" />
-            ) : (
-              <LogIn className="h-4.5 w-4.5" aria-hidden="true" />
-            )}
-            Se connecter
-          </button>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-[13px]">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('reset');
-                setError(null);
-                setMessage(null);
-                setPassword('');
-              }}
-              className="font-bold text-blue-700 underline-offset-4 hover:underline focus:outline-none focus:ring-4 focus:ring-blue-600/20 dark:text-blue-300"
-            >
-              Mot de passe oublié ?
-            </button>
-            <CustomerNavLink
-              href={CUSTOMER_REGISTER_PATH}
-              onNavigate={onNavigate}
-              className="font-bold text-zinc-900 underline-offset-4 hover:text-blue-700 hover:underline focus:outline-none focus:ring-4 focus:ring-blue-600/20 dark:text-zinc-100 dark:hover:text-blue-300"
-            >
-              Créer un compte client
-            </CustomerNavLink>
-          </div>
-        </form>
-      ) : (
-        <form onSubmit={(event) => void submitReset(event)} className="space-y-4" noValidate>
-          <div>
-            <label
-              htmlFor="customer-reset-email"
-              className="mb-1.5 block text-[12px] font-black uppercase tracking-wide text-zinc-600 dark:text-zinc-300"
-            >
-              Adresse e-mail du compte
-            </label>
-            <input
-              id="customer-reset-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              inputMode="email"
-              placeholder="vous@exemple.com"
-              disabled={!config.configured || busy}
-              className={customerInputClassName}
-            />
-          </div>
-
-          <CustomerFormAlerts error={error} message={message} />
-
-          <button
-            type="submit"
-            disabled={!config.configured || busy || !email.trim()}
-            className={customerPrimaryButtonClassName}
+            Retour à la connexion
+          </AuthButton>
+        }
+      >
+        <div className="space-y-4">
+          {error ? <AuthAlert tone="error">{error}</AuthAlert> : null}
+          <AuthAlert tone="info" title="Lien de réinitialisation">
+            Si un compte existe pour <span className="font-bold">{resetSentTo}</span>, un e-mail
+            vient d’être demandé. Le lien est temporaire : vérifiez aussi vos courriers
+            indésirables.
+          </AuthAlert>
+          <AuthButton
+            type="button"
+            variant="secondary"
+            icon={Mail}
+            busy={busy}
+            onClick={() => void sendResetLink()}
           >
-            {busy ? (
-              <Loader2 className="h-4.5 w-4.5 animate-spin" aria-hidden="true" />
-            ) : (
-              <MailQuestion className="h-4.5 w-4.5" aria-hidden="true" />
-            )}
-            Envoyer le lien de réinitialisation
-          </button>
-
+            Renvoyer le lien
+          </AuthButton>
           <button
             type="button"
             onClick={() => {
-              setMode('login');
-              setError(null);
-              setMessage(null);
+              resetFeedback();
+              setResetSentTo(null);
             }}
-            className={`${customerSecondaryButtonClassName} w-full`}
+            className="mx-auto block rounded text-[12px] font-bold text-[#5C6472] underline-offset-4 transition hover:underline focus:outline-none focus-visible:ring-4 focus-visible:ring-[#111827]/10 dark:text-zinc-400"
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Retour à la connexion
+            Utiliser une autre adresse
           </button>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  if (view === 'forgot') {
+    return (
+      <AuthShell
+        audience="customer"
+        title="Mot de passe oublié ?"
+        subtitle="Saisissez l’adresse e-mail de votre compte client : un lien vous permettra de choisir un nouveau mot de passe."
+        notice={!config.configured ? <AuthUnconfiguredNotice audience="customer" /> : undefined}
+        footer={
+          <AuthButton
+            type="button"
+            variant="secondary"
+            icon={ArrowLeft}
+            onClick={() => switchTo('login')}
+          >
+            Retour à la connexion
+          </AuthButton>
+        }
+      >
+        <form onSubmit={(event) => void sendResetLink(event)} className="space-y-4" noValidate>
+          {error ? <AuthAlert tone="error">{error}</AuthAlert> : null}
+          <AuthAlert tone="info">
+            Le lien reçu doit être ouvert sur cet appareil : il ouvre la page qui permet de
+            choisir un nouveau mot de passe.
+          </AuthAlert>
+          <AuthTextField
+            id="customer-reset-email"
+            label="Adresse e-mail du compte"
+            icon={Mail}
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="vous@exemple.com"
+            value={email}
+            onChange={setEmail}
+            disabled={busy}
+            required
+          />
+          <AuthButton type="submit" busy={busy} icon={Mail}>
+            Envoyer le lien de réinitialisation
+          </AuthButton>
         </form>
-      )}
-    </CustomerAuthLayout>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell
+      audience="customer"
+      title="Bon retour parmi nous."
+      subtitle="Connectez-vous pour suivre vos commandes et retrouver l’historique de vos dépôts."
+      tabs={tabs}
+      notice={!config.configured ? <AuthUnconfiguredNotice audience="customer" /> : undefined}
+      footer={footer}
+    >
+      <form onSubmit={(event) => void submitLogin(event)} className="space-y-4" noValidate>
+        {error ? <AuthAlert tone="error">{error}</AuthAlert> : null}
+
+        <AuthTextField
+          id="customer-login-email"
+          label="Adresse e-mail"
+          icon={Mail}
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          placeholder="vous@exemple.com"
+          value={email}
+          onChange={setEmail}
+          disabled={busy}
+          required
+          autoFocus
+        />
+
+        <AuthPasswordField
+          id="customer-login-password"
+          label="Mot de passe"
+          value={password}
+          onChange={setPassword}
+          autoComplete="current-password"
+          disabled={busy}
+          trailing={
+            <button
+              type="button"
+              onClick={() => switchTo('forgot')}
+              disabled={busy}
+              className={inlineActionClassName}
+            >
+              Mot de passe oublié ?
+            </button>
+          }
+        />
+
+        <AuthButton type="submit" busy={busy} icon={LogIn}>
+          Se connecter
+        </AuthButton>
+
+        <p className="flex items-start gap-2 pt-1 text-[11.5px] leading-relaxed text-[#6B665D] dark:text-zinc-400">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          Vos commandes restent invisibles tant que le pressing n’a pas vérifié votre numéro et
+          relié votre fiche.
+        </p>
+        <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-[#6B665D] dark:text-zinc-400">
+          <MailCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          Compte non confirmé ? Ouvrez l’e-mail de confirmation reçu à l’inscription.
+        </p>
+      </form>
+    </AuthShell>
   );
 };

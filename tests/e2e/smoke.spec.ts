@@ -95,19 +95,43 @@ test.describe('PressingPro — parcours critiques', () => {
     await page.getByRole('link', { name: /Espace client/ }).click();
 
     await expect(page).toHaveURL(/\/client\/connexion$/);
-    await expect(page.getByRole('heading', { name: 'Connexion' })).toBeVisible();
-    await expect(page.getByText('Le service de connexion n’est pas configuré')).toBeVisible();
-    await expect(page.getByLabel('Adresse e-mail')).toBeDisabled();
-    await expect(page.getByLabel('Mot de passe', { exact: true })).toBeDisabled();
+    await expect(page.getByRole('heading', { name: 'Bon retour parmi nous.' })).toBeVisible();
+    await expect(
+      page.getByText('Service d’authentification non configuré', { exact: true })
+    ).toBeVisible();
+    await expect(page.getByLabel('Adresse e-mail')).toBeEnabled();
+    await expect(page.getByLabel('Mot de passe', { exact: true })).toBeEnabled();
+
+    // La validation de saisie fonctionne même sans backend configuré.
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await expect(page.getByText('Saisissez une adresse e-mail valide.')).toBeVisible();
+
+    // Mot de passe oublié : vue dédiée, puis retour.
+    await page.getByRole('button', { name: 'Mot de passe oublié ?' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Mot de passe oublié ?', exact: true })
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Envoyer le lien de réinitialisation' }).click();
+    await expect(page.getByText('Saisissez l’adresse e-mail de votre compte.')).toBeVisible();
+    await page.getByRole('button', { name: 'Retour à la connexion' }).click();
 
     await page.getByRole('link', { name: 'Inscription', exact: true }).click();
 
     await expect(page).toHaveURL(/\/client\/inscription$/);
-    await expect(page.getByRole('heading', { name: 'Créer un compte client' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Créez votre compte client.' })).toBeVisible();
     await expect(page.getByLabel('Nom complet')).toBeVisible();
     await expect(page.getByLabel('Téléphone utilisé pour vos dépôts')).toBeVisible();
     await expect(page.getByLabel('Adresse e-mail')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Créer mon compte client' })).toBeDisabled();
+    await expect(
+      page.getByLabel(/Je confirme que ce numéro est celui utilisé pour mes dépôts/)
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Créer mon compte client' }).click();
+    await expect(page.getByText('Saisissez votre nom complet.')).toBeVisible();
+
+    // La jauge de robustesse accompagne la saisie du mot de passe.
+    await page.getByLabel('Mot de passe', { exact: true }).fill('Motdepasse1!solide');
+    await expect(page.getByText(/Robustesse du mot de passe/)).toBeVisible();
   });
 
   test('les pages connexion, inscription et onboarding du personnel sont accessibles', async ({ page }) => {
@@ -115,24 +139,49 @@ test.describe('PressingPro — parcours critiques', () => {
 
     await expect(page).toHaveURL(/\/connexion$/);
     await expect(
-      page.getByRole('heading', { name: 'Heureux de vous retrouver' })
+      page.getByRole('heading', { name: 'Heureux de vous retrouver.' })
     ).toBeVisible();
     await expect(
-      page.getByText('Le service de connexion n’est pas configuré')
+      page.getByText('Service d’authentification non configuré', { exact: true })
     ).toBeVisible();
-    await expect(page.getByLabel('Adresse e-mail')).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Se connecter' })).toBeDisabled();
+    await expect(page.getByLabel('Adresse e-mail')).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: 'Se connecter' }).first()
+    ).toBeEnabled();
+
+    await page.getByRole('button', { name: 'Se connecter' }).first().click();
+    await expect(page.getByText('Saisissez une adresse e-mail valide.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Mot de passe oublié ?' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Mot de passe oublié ?', exact: true })
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Retour à la connexion' }).click();
 
     await page.getByRole('link', { name: 'Créer un compte propriétaire' }).click();
 
     await expect(page).toHaveURL(/\/inscription$/);
     await expect(
-      page.getByRole('heading', { name: 'Créez votre espace professionnel' })
+      page.getByRole('heading', { name: 'Créez votre espace professionnel.' })
     ).toBeVisible();
     await expect(page.getByLabel('Nom complet')).toBeVisible();
     await expect(page.getByLabel('Adresse e-mail')).toBeVisible();
     await expect(page.getByLabel(/J’accepte les/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Créer mon compte' })).toBeDisabled();
+    await expect(
+      page.getByRole('link', { name: 'conditions d’utilisation' })
+    ).toHaveAttribute('href', '/conditions');
+    await expect(
+      page.getByRole('link', { name: 'politique de confidentialité' })
+    ).toHaveAttribute('href', '/confidentialite');
+
+    await page.getByRole('button', { name: 'Créer mon compte' }).click();
+    await expect(page.getByText('Saisissez votre nom complet.')).toBeVisible();
+
+    // Chaque espace d'accès renvoie vers l'autre sans ambiguïté.
+    await expect(page.getByRole('link', { name: /Ouvrir l’espace client/ })).toHaveAttribute(
+      'href',
+      '/client/connexion'
+    );
 
     await page.goto('/bienvenue');
 
@@ -140,6 +189,25 @@ test.describe('PressingPro — parcours critiques', () => {
       page.getByRole('heading', { name: 'Bienvenue — créons votre pressing' })
     ).toBeVisible();
     await expect(page.getByText('impossible de créer un pressing ici')).toBeVisible();
+  });
+
+  test('les pages d’accès tiennent dans un écran mobile sans défilement horizontal', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    for (const path of [
+      '/connexion',
+      '/inscription',
+      '/client/connexion',
+      '/client/inscription',
+    ]) {
+      await page.goto(path);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+      );
+      expect(overflow, `${path} ne doit pas défiler horizontalement`).toBeLessThanOrEqual(1);
+    }
   });
 
   test('les pages légales publiques sont accessibles sans configuration', async ({ page }) => {

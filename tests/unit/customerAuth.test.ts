@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getPasswordStrength } from '../../src/lib/passwordStrength';
 import {
   getCanonicalCustomerPath,
   getCustomerRouteTitle,
@@ -100,5 +101,23 @@ describe('customerAuth erreurs et métadonnées', () => {
       getMetadataString({ name: '  Awa Koné ', phone_e164: '+2250700000301' }, ['full_name', 'name'])
     ).toBe('Awa Koné');
     expect(getMetadataString({ full_name: 42 }, ['full_name'])).toBeNull();
+  });
+});
+
+describe('passwordStrength partagé', () => {
+  it('est la même jauge pour les deux espaces', () => {
+    expect(getPasswordStrength('')).toEqual({ score: 0, label: 'Très faible' });
+    expect(getPasswordStrength('abcdefgh')).toEqual({ score: 1, label: 'Faible' });
+    expect(getPasswordStrength('Motdepasse1')).toEqual({ score: 3, label: 'Fort' });
+    expect(getPasswordStrength('Motdepasse1!solide')).toEqual({
+      score: 4,
+      label: 'Très fort',
+    });
+  });
+
+  it('ne dépasse jamais l’échelle de quatre segments', () => {
+    const score = getPasswordStrength('Une-Phrase-Très-Longue-2026!').score;
+    expect(score).toBeGreaterThanOrEqual(0);
+    expect(score).toBeLessThanOrEqual(4);
   });
 });

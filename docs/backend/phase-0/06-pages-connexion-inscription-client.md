@@ -1,5 +1,12 @@
 # Pages de connexion et d’inscription client — mise en œuvre
 
+> **Design des pages d’accès :** depuis la reprise intégrale du 28 octobre 2026,
+> les pages de connexion et d’inscription du personnel **et** de l’espace client
+> partagent une composition unique (`AuthShell`). Les comportements décrits
+> ci-dessous restent valables ; la direction visuelle, l’accessibilité et les
+> vérifications de cette reprise sont documentées dans
+> [`docs/PAGES-AUTH-DESIGN.md`](../../PAGES-AUTH-DESIGN.md).
+
 > **État au 28 octobre 2026 : pages livrées et reliées à Supabase Auth.**
 > La connexion des comptes déjà créés et confirmés est fonctionnelle dans le
 > code. En revanche, **l’inscription publique reste volontairement fermée sur

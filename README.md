@@ -273,7 +273,7 @@ preuves de l’intervention dans
 [`docs/VALIDATION-TECHNIQUE.md`](docs/VALIDATION-TECHNIQUE.md) ; le chantier
 d’accès du personnel est détaillé dans
 [`docs/ACCES-PERSONNEL-ONBOARDING.md`](docs/ACCES-PERSONNEL-ONBOARDING.md),
-la refonte visuelle des pages d’accès dans
+la reprise des pages de connexion et d’inscription dans
 [`docs/PAGES-AUTH-DESIGN.md`](docs/PAGES-AUTH-DESIGN.md) et la carte des
 routes par contexte (client, personnel, ERP) dans
 [`docs/ROUTES.md`](docs/ROUTES.md).

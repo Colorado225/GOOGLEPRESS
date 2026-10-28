@@ -8,6 +8,7 @@ import {
   parseStaffRoute,
   resolveStaffPostAuthPath,
   validateOnboardingInput,
+  validateStaffLogin,
   validateStaffRegistration,
   type OnboardingFormInput,
 } from '../../src/lib/staffAuth';
@@ -63,6 +64,19 @@ describe('resolveStaffPostAuthPath', () => {
     );
     expect(resolveStaffPostAuthPath([membership({ role: 'customer' })])).toBe(
       STAFF_ONBOARDING_PATH
+    );
+  });
+});
+
+describe('validateStaffLogin', () => {
+  it('accepte un couple e-mail et mot de passe renseigné', () => {
+    expect(validateStaffLogin({ email: 'awa@pressing.ci', password: 'secret' })).toBeNull();
+  });
+
+  it('nomme précisément le champ à corriger', () => {
+    expect(validateStaffLogin({ email: 'awa', password: 'secret' })).toMatch(/e-mail valide/i);
+    expect(validateStaffLogin({ email: 'awa@pressing.ci', password: '' })).toMatch(
+      /mot de passe/i
     );
   });
 });

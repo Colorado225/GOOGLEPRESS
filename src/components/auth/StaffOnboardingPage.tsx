@@ -32,15 +32,13 @@ import {
   StaffAuthHeader,
   StaffAuthLink,
   StaffAuthLoading,
+  staffInputClassName,
   staffLabelClassName,
+  staffPrimaryButtonClassName,
+  staffSecondaryButtonClassName,
   staffShellClassName,
   staffWidePanelClassName,
 } from './StaffAuthCommon';
-import {
-  staffInputClassName,
-  staffPrimaryButtonClassName,
-  staffSecondaryButtonClassName,
-} from './StaffAuthLayout';
 
 interface StaffOnboardingPageProps {
   onNavigate: (path: string, options?: { replace?: boolean }) => void;
@@ -378,10 +376,10 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                 aria-current={isCurrent ? 'step' : undefined}
                 className={`flex flex-1 items-center gap-2 rounded-2xl border px-3 py-2.5 text-[12px] font-bold ${
                   isCurrent
-                    ? 'border-orange-300 bg-orange-50 text-orange-900 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-100'
+                    ? 'border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100'
                     : isDone
                       ? 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-200'
-                      : 'border-zinc-200 text-zinc-400 dark:border-zinc-800 dark:text-zinc-500'
+                      : 'border-zinc-200 text-zinc-400 dark:border-zinc-800 dark:text-zinc-400'
                 }`}
               >
                 {isDone ? (
@@ -598,7 +596,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                   type="checkbox"
                   checked={seedCatalog}
                   onChange={(event) => setSeedCatalog(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-[#C2410C] focus:outline-none focus:ring-4 focus:ring-orange-600/20"
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-[#1D4ED8] focus:outline-none focus:ring-4 focus:ring-[#1D4ED8]/20"
                   disabled={busy}
                 />
                 <span>
@@ -703,7 +701,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
 
         <button
           type="button"
-          className="mt-5 inline-flex items-center gap-2 text-[12.5px] font-semibold text-zinc-500 underline-offset-2 hover:underline focus:outline-none focus:ring-4 focus:ring-orange-600/20 dark:text-zinc-400"
+          className="mt-5 inline-flex items-center gap-2 text-[12.5px] font-semibold text-zinc-500 underline-offset-2 hover:underline focus:outline-none focus:ring-4 focus:ring-[#1D4ED8]/20 dark:text-zinc-400"
           onClick={() => void signOut()}
           disabled={busy}
         >

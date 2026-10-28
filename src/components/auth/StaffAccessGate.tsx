@@ -18,11 +18,11 @@ import {
   listCurrentMemberships,
   type RemoteMembership,
 } from '../../lib/supabaseOrders';
+import { AuthPasswordField } from './AuthFields';
 import {
-  PasswordField,
-  customerPrimaryButtonClassName,
-  customerSecondaryButtonClassName,
-} from '../customer/CustomerAuthLayout';
+  authPrimaryButtonClassName,
+  authSecondaryButtonClassName,
+} from './authStyles';
 import {
   StaffAuthAlert,
   StaffAuthHeader,
@@ -253,7 +253,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
           >
             {error && <StaffAuthAlert tone="error">{error}</StaffAuthAlert>}
             {message && <StaffAuthAlert tone="success">{message}</StaffAuthAlert>}
-            <PasswordField
+            <AuthPasswordField
               id="staff-new-password"
               label="Nouveau mot de passe"
               value={newPassword}
@@ -264,7 +264,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
             <p className="-mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
               Au moins 8 caractères.
             </p>
-            <PasswordField
+            <AuthPasswordField
               id="staff-confirm-password"
               label="Confirmer le mot de passe"
               value={confirmPassword}
@@ -274,7 +274,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
             />
             <button
               type="submit"
-              className={customerPrimaryButtonClassName}
+              className={authPrimaryButtonClassName}
               disabled={busy}
             >
               {busy ? (
@@ -286,7 +286,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
             </button>
             <button
               type="button"
-              className={customerSecondaryButtonClassName}
+              className={authSecondaryButtonClassName}
               onClick={() => void signOut()}
               disabled={busy}
             >
@@ -336,14 +336,14 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
                   : 'Aucun'}
               </dd>
             </dl>
-            <a href={STAFF_ONBOARDING_PATH} className={customerPrimaryButtonClassName}>
+            <a href={STAFF_ONBOARDING_PATH} className={authPrimaryButtonClassName}>
               <Store className="h-4 w-4" aria-hidden="true" />
               Créer mon pressing
             </a>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
-                className={customerSecondaryButtonClassName}
+                className={authSecondaryButtonClassName}
                 onClick={() => setRefreshTick((value) => value + 1)}
                 disabled={busy || checkingMemberships}
               >
@@ -352,7 +352,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
               </button>
               <button
                 type="button"
-                className={customerSecondaryButtonClassName}
+                className={authSecondaryButtonClassName}
                 onClick={() => void signOut()}
                 disabled={busy}
               >
