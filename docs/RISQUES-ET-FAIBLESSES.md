@@ -148,9 +148,10 @@ pures dans `src/lib` et des tests de transition avant déplacement.
 - 50 vérifications Supabase sous PGlite, dont isolation, RLS, transitions,
   création de commande tarifée côté serveur, paiements, remboursements et
   profil créé à l’inscription ;
-- 7 smoke tests navigateur Playwright découverts ; leur exécution locale de
-  cette branche reste bloquée par l’absence de Chromium dans le bac à sable,
-  donc seule la CI peut la démontrer.
+- 7 smoke tests navigateur Playwright ; leur exécution locale de cette
+  branche reste bloquée par l’absence de Chromium dans le bac à sable, mais
+  le run CI `40702372372` de la PR #5 les a exécutés avec succès au commit
+  `3effa2a`.
 
 **Angles encore faibles.** Transitions complètes d’`AppContext`, rapports,
 clôture de caisse, périodes, inventaire et parcours longs POS/atelier restent
@@ -161,7 +162,8 @@ sans chercher un pourcentage décoratif.
 
 **Constat corrigé.** `.github/workflows/ci.yml` exécute installation, typage,
 tests unitaires avec couverture des cœurs, tests Supabase Phase 0, build et
-smoke tests navigateur. La PR #3 a démontré un run complet vert.
+smoke tests navigateur. Les PR #3 et #5 ont démontré des runs complets verts ;
+pour la PR #5, le run `40702372372` couvre le commit `3effa2a`.
 
 **Reste à prouver.** La protection de `main` imposant ces checks avant merge
 est un réglage d’administration GitHub non démontré dans le code. Le

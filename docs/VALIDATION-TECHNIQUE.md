@@ -31,6 +31,16 @@ La recherche de secrets est un contrôle par motifs sur l’arbre versionné, pa
 un audit exhaustif de tout l’historique Git ni des tableaux de bord Vercel /
 Supabase.
 
+### CI GitHub de la PR #5
+
+Au commit `3effa2a84ce17dce630d5692dd5944691ccd005f`, le run de pull request
+`40702372372` est vert : « Lint, tests et build » et « Smoke tests
+navigateur » réussissent. Le run de push `40702341290` est également vert.
+Les smoke tests Playwright sont donc **RÉUSSI en CI**, tout en restant
+**BLOQUÉ dans le bac à sable local** faute d’exécutable Chromium. Tout commit
+ultérieur doit être jugé sur son propre run ; ce paragraphe constate le
+commit fonctionnel et documentaire initial de la PR.
+
 ## Couverture unitaire
 
 Le périmètre de couverture reste volontairement limité aux bibliothèques

@@ -236,7 +236,7 @@ les cinq fonctions publiques attendues.
 | Tests unitaires et couverture des cœurs | RÉUSSI | 57/57, seuils Vitest respectés |
 | Tests base/RLS/RPC | RÉUSSI | 50/50 sous PGlite |
 | Smoke tests navigateur dans ce bac à sable | BLOQUÉ | exécutable Chromium absent, échec avant lancement applicatif |
-| CI complète de cette branche | NON VÉRIFIÉ | à constater sur le run GitHub de la branche/PR |
+| CI complète de cette branche | RÉUSSI | PR #5, run GitHub Actions `40702372372` vert au commit `3effa2a` (lint/tests/build et smoke navigateur) |
 | Recette Realtime deux appareils | NON VÉRIFIÉ | aucun tenant ni commande hébergée |
 
 ## Ordre recommandé pour la suite
