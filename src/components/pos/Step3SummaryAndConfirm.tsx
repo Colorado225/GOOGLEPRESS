@@ -157,7 +157,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               <p className="text-zinc-500 dark:text-zinc-400 text-[12px]">Quartier : {selectedCustomer?.address || 'Abidjan'}</p>
               {(selectedCustomer?.loyaltyDiscountPercent || 0) > 0 && (
                 <span className="inline-block mt-2 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                  🎁 Carte fidélité −{selectedCustomer.loyaltyDiscountPercent}%
+                  🎁 Carte fidélité −{selectedCustomer?.loyaltyDiscountPercent ?? 0}%
                 </span>
               )}
             </div>

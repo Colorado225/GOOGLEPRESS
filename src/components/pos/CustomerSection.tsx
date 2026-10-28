@@ -46,7 +46,13 @@ export const CustomerSection: React.FC = () => {
           <input
             type="text"
             disabled={customerLocked}
-            value={dropdownOpen ? filterQuery : `${selectedCustomer.name} — ${selectedCustomer.phone}`}
+            value={
+              dropdownOpen
+                ? filterQuery
+                : selectedCustomer
+                  ? `${selectedCustomer.name} — ${selectedCustomer.phone}`
+                  : ''
+            }
             onFocus={() => {
               setDropdownOpen(true);
               setFilterQuery('');
@@ -75,7 +81,7 @@ export const CustomerSection: React.FC = () => {
                       setDropdownOpen(false);
                     }}
                     className={`w-full text-left p-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between ${
-                      cust.id === selectedCustomer.id ? 'bg-blue-50/70 dark:bg-blue-950/70 font-semibold' : ''
+                      cust.id === selectedCustomer?.id ? 'bg-blue-50/70 dark:bg-blue-950/70 font-semibold' : ''
                     }`}
                   >
                     <div>
@@ -117,29 +123,37 @@ export const CustomerSection: React.FC = () => {
         </button>
       </div>
 
-      {/* Customer summary chips */}
-      <div className="flex flex-wrap gap-2 mt-2.5 text-[12px]">
-        <span className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-full px-3 py-1 font-medium">
-          📍 {selectedCustomer.address}
-        </span>
-        <span className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-full px-3 py-1 font-medium">
-          ⭐ {selectedCustomer.depositsCount > 20 ? 'Fidèle' : 'Client'} — {selectedCustomer.depositsCount} dépôts
-        </span>
-        <span
-          className={`border rounded-full px-3 py-1 font-semibold ${
-            selectedCustomer.balance > 0
-              ? 'bg-amber-100 dark:bg-amber-900 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100'
-              : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
-          }`}
-        >
-          💳 Solde : {formatFCFA(selectedCustomer.balance)}
-        </span>
-        {selectedCustomer.loyaltyDiscountPercent > 0 && (
-          <span className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-full px-3 py-1 font-semibold">
-            🎁 Remise fidélité {selectedCustomer.loyaltyDiscountPercent}%
+      {/* Fiche du client actif. Sur un espace réel encore vide, aucun client
+          n'existe : on n'affiche aucune fiche plutôt qu'un dossier fictif. */}
+      {selectedCustomer ? (
+        <div className="flex flex-wrap gap-2 mt-2.5 text-[12px]">
+          <span className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-full px-3 py-1 font-medium">
+            📍 {selectedCustomer.address}
           </span>
-        )}
-      </div>
+          <span className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-full px-3 py-1 font-medium">
+            ⭐ {selectedCustomer.depositsCount > 20 ? 'Fidèle' : 'Client'} — {selectedCustomer.depositsCount} dépôts
+          </span>
+          <span
+            className={`border rounded-full px-3 py-1 font-semibold ${
+              selectedCustomer.balance > 0
+                ? 'bg-amber-100 dark:bg-amber-900 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100'
+                : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+            }`}
+          >
+            💳 Solde : {formatFCFA(selectedCustomer.balance)}
+          </span>
+          {selectedCustomer.loyaltyDiscountPercent > 0 && (
+            <span className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-full px-3 py-1 font-semibold">
+              🎁 Remise fidélité {selectedCustomer.loyaltyDiscountPercent}%
+            </span>
+          )}
+        </div>
+      ) : (
+        <p className="mt-2.5 text-[12px] text-zinc-500 dark:text-zinc-400">
+          Aucun client sélectionné. Recherchez un dossier existant ou créez le premier client
+          du pressing avant d’enregistrer une réception.
+        </p>
+      )}
     </div>
   );
 };

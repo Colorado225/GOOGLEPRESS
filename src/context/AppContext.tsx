@@ -16,6 +16,12 @@ import {
   INITIAL_EXPENSES, INITIAL_EXPENSE_CATEGORIES,
 } from '../data/demoData';
 import { fireOrderCelebration } from '../registry/magicui/confetti';
+import {
+  isLiveWorkspace,
+  scopeStorageKey,
+  type WorkspaceScope,
+} from '../lib/workspaceScope';
+import { useWorkspaceScope } from './WorkspaceScopeContext';
 import { calculateOrderTotals, calculateLineSubtotal } from '../lib/pricing';
 import {
   formatPromised, getPromisedDate, isValidISODate, nowDateTime, nowISODateTime, toISODate, todayISO,
@@ -76,6 +82,8 @@ export type StoragePanelView = 'orders' | 'locations';
 export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices' | 'backend' | 'backup';
 
 interface AppContextType {
+  /** Portée courante : démonstration locale amorcée ou organisation réelle vide. */
+  workspace: WorkspaceScope;
   activeScreen: ScreenId;
   setActiveScreen: (screen: ScreenId) => void;
   orders: LaundryOrder[];
@@ -83,7 +91,8 @@ interface AppContextType {
   cashRegister: CashRegisterData;
   activeHandoverOrder: LaundryOrder | null;
   setActiveHandoverOrder: (order: LaundryOrder | null) => void;
-  selectedCustomer: Customer;
+  /** Client actif du POS ; `null` tant qu'aucun client n'existe (espace réel vide). */
+  selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer) => void;
   cartLines: OrderLine[];
   addCartItem: (item: ClothingItem, serviceType?: string, quantity?: number, weightKg?: number) => void;
@@ -226,9 +235,33 @@ interface AppContextType {
   setExpenseCategoryActive: (id: string, isActive: boolean) => void;
 }
 
+/** Caisse vierge du jour pour un espace réel : aucun montant inventé. */
+const createEmptyCashRegister = (): CashRegisterData => ({
+  date: todayISO(),
+  cashAmount: 0,
+  waveAmount: 0,
+  momoAmount: 0,
+  totalAmount: 0,
+  floatAmount: 0,
+  targetGoal: 0,
+  monthAchieved: 0,
+});
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Portée des données (lib/workspaceScope.ts) :
+  // - démonstration locale explicite → amorçage avec les jeux d'exemple ;
+  // - compte réel rattaché à une organisation → aucune donnée inventée, les
+  //   écrans démarrent vides et se remplissent des seules saisies réelles.
+  const workspace = useWorkspaceScope();
+  const liveWorkspace = isLiveWorkspace(workspace);
+  /** Clé de persistance isolée par organisation en espace réel. */
+  const storageKey = (name: string) => scopeStorageKey(workspace, name);
+  /** Jeu d'exemple en démonstration, liste vide sur un compte réel. */
+  const seedList = <T,>(demoValue: readonly T[]): T[] =>
+    liveWorkspace ? [] : [...demoValue];
+
   const [activeScreen, setActiveScreen] = useState<ScreenId>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   // Thème d'interface clair/sombre (lib/theme.ts) : classe `dark` sur <html>,
@@ -259,27 +292,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Tous les accès passent par lib/localPersistence afin de centraliser la
   // gestion des JSON illisibles et des écritures refusées par le navigateur.
   const [orders, setOrders] = useState<LaundryOrder[]>(() =>
-    loadPersistedState('pressingpro_orders', INITIAL_ORDERS)
+    loadPersistedState(storageKey('pressingpro_orders'), seedList(INITIAL_ORDERS))
   );
 
   const [customers, setCustomers] = useState<Customer[]>(() =>
-    loadPersistedState('pressingpro_customers', INITIAL_CUSTOMERS)
+    loadPersistedState(storageKey('pressingpro_customers'), seedList(INITIAL_CUSTOMERS))
   );
 
+  // Caisse du jour : montants réels uniquement. Aucun objectif ni fond de
+  // caisse d'exemple n'est repris sur un compte réel.
   const [cashRegister, setCashRegister] = useState<CashRegisterData>(() =>
-    loadPersistedState('pressingpro_cash_register', INITIAL_CASH_REGISTER)
+    loadPersistedState(
+      storageKey('pressingpro_cash_register'),
+      liveWorkspace ? createEmptyCashRegister() : INITIAL_CASH_REGISTER
+    )
   );
 
   useEffect(() => {
-    persistState('pressingpro_orders', orders);
+    persistState(storageKey('pressingpro_orders'), orders);
   }, [orders]);
 
   useEffect(() => {
-    persistState('pressingpro_customers', customers);
+    persistState(storageKey('pressingpro_customers'), customers);
   }, [customers]);
 
   useEffect(() => {
-    persistState('pressingpro_cash_register', cashRegister);
+    persistState(storageKey('pressingpro_cash_register'), cashRegister);
   }, [cashRegister]);
 
   // Compteur séquentiel de tickets, persisté dans localStorage.
@@ -290,34 +328,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [nextTicketNumber, setNextTicketNumber] = useState<number>(() => {
     const fallback =
       orders.reduce((max, o) => Math.max(max, parseTicketNumber(o.ticketNumber)), 0) + 1;
-    const saved = parseInt(loadPersistedString(TICKET_COUNTER_KEY) || '', 10);
+    const saved = parseInt(loadPersistedString(storageKey(TICKET_COUNTER_KEY)) || '', 10);
     return Number.isNaN(saved) ? fallback : Math.max(saved, fallback);
   });
 
   useEffect(() => {
-    persistString(TICKET_COUNTER_KEY, String(nextTicketNumber));
+    persistString(storageKey(TICKET_COUNTER_KEY), String(nextTicketNumber));
   }, [nextTicketNumber]);
 
   // --- États des modules Personnel / Stocks / Dépenses ---
   // Même modèle de persistance que le reste de l'application : localStorage
   // du navigateur uniquement, données de démonstration au premier lancement.
   const [employees, setEmployees] = useState<Employee[]>(() =>
-    loadPersistedState('pressingpro_employees', INITIAL_EMPLOYEES)
+    loadPersistedState(storageKey('pressingpro_employees'), seedList(INITIAL_EMPLOYEES))
   );
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() =>
-    loadPersistedState('pressingpro_attendance', INITIAL_ATTENDANCE)
+    loadPersistedState(storageKey('pressingpro_attendance'), seedList(INITIAL_ATTENDANCE))
   );
   const [products, setProducts] = useState<InventoryProduct[]>(() =>
-    loadPersistedState('pressingpro_inventory_products', INITIAL_PRODUCTS)
+    loadPersistedState(storageKey('pressingpro_inventory_products'), seedList(INITIAL_PRODUCTS))
   );
   const [stockMovements, setStockMovements] = useState<StockMovement[]>(() =>
-    loadPersistedState('pressingpro_stock_movements', INITIAL_STOCK_MOVEMENTS)
+    loadPersistedState(storageKey('pressingpro_stock_movements'), seedList(INITIAL_STOCK_MOVEMENTS))
   );
   const [expenses, setExpenses] = useState<Expense[]>(() =>
-    loadPersistedState('pressingpro_expenses', INITIAL_EXPENSES)
+    loadPersistedState(storageKey('pressingpro_expenses'), seedList(INITIAL_EXPENSES))
   );
+  // Catégories : nomenclature de paramétrage (et non des écritures), donc
+  // conservée dans les deux modes ; la liste reste éditable dans Paramètres.
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>(() =>
-    loadPersistedState('pressingpro_expense_categories', INITIAL_EXPENSE_CATEGORIES)
+    loadPersistedState(storageKey('pressingpro_expense_categories'), [
+      ...INITIAL_EXPENSE_CATEGORIES,
+    ])
   );
 
   // Tournées ramassage/livraison. Une première installation reçoit tous les
@@ -327,11 +369,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // liés à un ticket de démonstration.
   const [logisticsTasks, setLogisticsTasks] = useState<LogisticsTask[]>(() => {
     const saved = loadPersistedState<LogisticsTask[] | null>(
-      LOGISTICS_TASKS_STORAGE_KEY,
+      storageKey(LOGISTICS_TASKS_STORAGE_KEY),
       null
     );
     if (saved) return saved;
-    if (hasPersistedValue('pressingpro_orders')) {
+    // Espace réel : aucune tournée fictive, même sur un poste où la
+    // démonstration a déjà été utilisée.
+    if (liveWorkspace) return [];
+    if (hasPersistedValue(storageKey('pressingpro_orders'))) {
       return INITIAL_LOGISTICS_TASKS.filter((task) => task.kind === 'pickup' && !task.orderId);
     }
     return INITIAL_LOGISTICS_TASKS;
@@ -339,9 +384,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Emplacements physiques des commandes terminées. Le plan proposé par
   // défaut est éditable pour correspondre au local réel ; persistance locale.
+  // Plan de rangement : configuration matérielle éditable, conservée dans les
+  // deux modes (elle ne contient aucun dossier client ni aucune commande).
   const [storageLocations, setStorageLocations] = useState<StorageLocation[]>(() =>
     normalizeStorageLocations(
-      loadPersistedState<unknown>(STORAGE_LOCATIONS_STORAGE_KEY, INITIAL_STORAGE_LOCATIONS),
+      loadPersistedState<unknown>(
+        storageKey(STORAGE_LOCATIONS_STORAGE_KEY),
+        INITIAL_STORAGE_LOCATIONS
+      ),
       INITIAL_STORAGE_LOCATIONS
     )
   );
@@ -354,7 +404,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [shopSettings, setShopSettings] = useState<ShopSettings>(() => {
     const merged = {
       ...DEFAULT_SHOP_SETTINGS,
-      ...loadPersistedState<Partial<ShopSettings>>(SHOP_SETTINGS_STORAGE_KEY, {}),
+      ...loadPersistedState<Partial<ShopSettings>>(storageKey(SHOP_SETTINGS_STORAGE_KEY), {}),
     };
     return {
       ...merged,
@@ -380,34 +430,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
   useEffect(() => {
-    persistState(LOGISTICS_TASKS_STORAGE_KEY, logisticsTasks);
+    persistState(storageKey(LOGISTICS_TASKS_STORAGE_KEY), logisticsTasks);
   }, [logisticsTasks]);
   useEffect(() => {
-    persistState(STORAGE_LOCATIONS_STORAGE_KEY, storageLocations);
+    persistState(storageKey(STORAGE_LOCATIONS_STORAGE_KEY), storageLocations);
   }, [storageLocations]);
   useEffect(() => {
-    persistState('pressingpro_employees', employees);
+    persistState(storageKey('pressingpro_employees'), employees);
   }, [employees]);
   useEffect(() => {
-    persistState('pressingpro_attendance', attendanceRecords);
+    persistState(storageKey('pressingpro_attendance'), attendanceRecords);
   }, [attendanceRecords]);
   useEffect(() => {
-    persistState('pressingpro_inventory_products', products);
+    persistState(storageKey('pressingpro_inventory_products'), products);
   }, [products]);
   useEffect(() => {
-    persistState('pressingpro_stock_movements', stockMovements);
+    persistState(storageKey('pressingpro_stock_movements'), stockMovements);
   }, [stockMovements]);
   useEffect(() => {
-    persistState('pressingpro_expenses', expenses);
+    persistState(storageKey('pressingpro_expenses'), expenses);
   }, [expenses]);
   useEffect(() => {
-    persistState('pressingpro_expense_categories', expenseCategories);
+    persistState(storageKey('pressingpro_expense_categories'), expenseCategories);
   }, [expenseCategories]);
   useEffect(() => {
-    persistState(SHOP_SETTINGS_STORAGE_KEY, shopSettings);
+    persistState(storageKey(SHOP_SETTINGS_STORAGE_KEY), shopSettings);
   }, [shopSettings]);
 
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer>(customers[0] || INITIAL_CUSTOMERS[0]);
+  // Aucun repli fictif : sur un espace réel sans client, la sélection est
+  // vide et le POS invite à créer le premier dossier.
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    customers[0] ?? null
+  );
   const [pickupOption, setPickupOption] = useState<PickupOption>('standard');
 
   // Brouillon logistique du POS : mode de restitution et, si livraison,
@@ -415,7 +469,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orderFulfillmentMethod, setOrderFulfillmentMethod] =
     useState<FulfillmentMethod>('counter_pickup');
   const [deliveryAddress, setDeliveryAddress] = useState<string>(
-    (customers[0] || INITIAL_CUSTOMERS[0]).address || ''
+    customers[0]?.address || ''
   );
   const [deliveryAddressDetails, setDeliveryAddressDetails] = useState<string>('');
   const [deliveryDateISO, setDeliveryDateISOState] = useState<string>(() =>
@@ -466,7 +520,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetLogisticsDraft = (option: PickupOption = pickupOption) => {
     setOrderFulfillmentMethod('counter_pickup');
-    setDeliveryAddress(selectedCustomer.address || '');
+    setDeliveryAddress(selectedCustomer?.address || '');
     setDeliveryAddressDetails('');
     setDeliveryScheduleManual(false);
     setDeliveryDateISOState(toISODate(getPromisedDate(option)));
@@ -477,8 +531,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // L'adresse proposée suit le client sélectionné, sauf pendant la conversion
   // d'un ramassage où l'adresse de collecte fait foi par défaut.
   useEffect(() => {
-    if (!pendingPickupTaskId) setDeliveryAddress(selectedCustomer.address || '');
-  }, [selectedCustomer.id, pendingPickupTaskId]);
+    if (!pendingPickupTaskId) setDeliveryAddress(selectedCustomer?.address || '');
+  }, [selectedCustomer?.id, pendingPickupTaskId]);
 
   // Tant que le créneau n'a pas été choisi manuellement, la livraison suit la
   // date promise par l'option standard/express/différé.
@@ -676,6 +730,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     }
 
+    // Sur un espace réel vide, aucun client fictif n'est pré-sélectionné :
+    // la commande ne peut pas être enregistrée sans dossier client.
+    const customer = selectedCustomer;
+    if (!customer) {
+      showToast('Sélectionnez ou créez un client avant d’enregistrer la commande.');
+      return null;
+    }
+
     // Conversion d'un ramassage : la course doit être collectée, non encore
     // convertie, et appartenir au client actuellement sélectionné.
     const sourcePickupTask = pendingPickupTask;
@@ -685,7 +747,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sourcePickupTask.kind !== 'pickup' ||
         sourcePickupTask.status !== 'completed' ||
         sourcePickupTask.orderId ||
-        sourcePickupTask.customerId !== selectedCustomer.id
+        sourcePickupTask.customerId !== customer.id
       ) {
         showToast('Ce ramassage ne peut pas être converti pour le client sélectionné.');
         return null;
@@ -714,7 +776,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { subtotal, expressFee, discountAmount: discount, total, deposit, remaining } =
       calculateOrderTotals(cartLines, {
         pickupOption,
-        loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
+        loyaltyDiscountPercent: customer.loyaltyDiscountPercent,
         depositAmount,
         collectionFee,
         deliveryFee,
@@ -730,9 +792,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: genId('log'),
           kind: 'delivery',
           status: 'scheduled',
-          customerId: selectedCustomer.id,
-          customerName: selectedCustomer.name,
-          customerPhone: selectedCustomer.phone,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerPhone: customer.phone,
           address: cleanDeliveryAddress,
           addressDetails: cleanDeliveryDetails || undefined,
           scheduledDate: deliveryDateISO,
@@ -749,10 +811,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: orderId,
       ticketNumber: nextTicketNum,
       serviceCategory: selectedServiceCategory || 'pressing',
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.name,
-      customerPhone: selectedCustomer.phone,
-      customerAddress: selectedCustomer.address,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      customerAddress: customer.address,
       lines: [...cartLines],
       subtotal,
       serviceFees: expressFee,
@@ -821,7 +883,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Update customer deposits
     setCustomers((prev) =>
       prev.map((c) =>
-        c.id === selectedCustomer.id
+        c.id === customer.id
           ? { ...c, depositsCount: c.depositsCount + 1, balance: c.balance + remaining }
           : c
       )
@@ -1689,7 +1751,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!pendingPickupTaskId) return;
     setPendingPickupTaskId(null);
     setOrderFulfillmentMethod('counter_pickup');
-    setDeliveryAddress(selectedCustomer.address || '');
+    setDeliveryAddress(selectedCustomer?.address || '');
     setDeliveryAddressDetails('');
     showToast('Ramassage détaché : la saisie redevient une commande comptoir.');
   };
@@ -2117,6 +2179,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        workspace,
         activeScreen,
         setActiveScreen,
         orders,

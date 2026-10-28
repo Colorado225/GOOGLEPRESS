@@ -274,8 +274,10 @@ preuves de l’intervention dans
 d’accès du personnel est détaillé dans
 [`docs/ACCES-PERSONNEL-ONBOARDING.md`](docs/ACCES-PERSONNEL-ONBOARDING.md),
 la reprise des pages de connexion et d’inscription dans
-[`docs/PAGES-AUTH-DESIGN.md`](docs/PAGES-AUTH-DESIGN.md) et la carte des
-routes par contexte (client, personnel, ERP) dans
+[`docs/PAGES-AUTH-DESIGN.md`](docs/PAGES-AUTH-DESIGN.md), le principe
+« aucune donnée de démonstration sur un compte réel » dans
+[`docs/DONNEES-DEMO-ET-ESPACE-REEL.md`](docs/DONNEES-DEMO-ET-ESPACE-REEL.md) et
+la carte des routes par contexte (client, personnel, ERP) dans
 [`docs/ROUTES.md`](docs/ROUTES.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.

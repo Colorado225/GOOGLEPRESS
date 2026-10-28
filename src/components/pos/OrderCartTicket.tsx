@@ -44,7 +44,7 @@ export const OrderCartTicket: React.FC = () => {
     remaining,
   } = calculateOrderTotals(cartLines, {
     pickupOption,
-    loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
+    loyaltyDiscountPercent: selectedCustomer?.loyaltyDiscountPercent,
     depositAmount,
     collectionFee: pendingPickupTask?.fee ?? 0,
     deliveryFee: wantsHomeDelivery ? shopSettings.deliveryFee : 0,
@@ -84,7 +84,7 @@ export const OrderCartTicket: React.FC = () => {
         <div>
           <p className="font-bold text-[15px] tracking-tight">Ticket #TK-{nextTicketNumber}</p>
           <p className="text-[12px] text-zinc-400 dark:text-zinc-500 mt-0.5">
-            {selectedCustomer.name} • {ticketDateTime}
+            {selectedCustomer?.name ?? 'Client à définir'} • {ticketDateTime}
           </p>
         </div>
         <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-400 text-black dark:text-zinc-50 tracking-wide">
@@ -335,7 +335,7 @@ export const OrderCartTicket: React.FC = () => {
 
         {/* Message client à copier manuellement après validation */}
         <p className="text-center text-[11.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed bg-zinc-50 dark:bg-zinc-800 p-2 rounded-md border border-zinc-200 dark:border-zinc-700">
-          Message à copier après validation : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}.{' '}
+          Message à copier après validation : « Merci {selectedCustomer?.name?.split(' ')[0] ?? 'cher client'} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}.{' '}
           {wantsHomeDelivery
             ? `Livraison ${formatLogisticsSchedule(deliveryDateISO, deliveryTimeSlot).toLowerCase()}`
             : `Retrait ${formatPromised(getPromisedDate(pickupOption)).toLowerCase()}`}

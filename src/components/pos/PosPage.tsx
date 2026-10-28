@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { getWorkspaceLabel } from '../../lib/workspaceScope';
 import { ServiceTypeSelectionScreen } from './ServiceTypeSelectionScreen';
 import { OrderStepperHeader } from './OrderStepperHeader';
 import { Step1ClientAndDates } from './Step1ClientAndDates';
@@ -25,6 +26,7 @@ export const PosPage: React.FC = () => {
     orders,
     setActiveScreen,
     cartLines,
+    workspace,
   } = useApp();
 
   // Mode: 'stepper' (new multi-step flow) or 'classic' (single-view all-in-one POS)
@@ -192,7 +194,9 @@ export const PosPage: React.FC = () => {
         <p>
           PressingPro CI • Système d’encaissement & de gestion pressing conforme Côte d'Ivoire • Raccourcis : F1 Accueil, F2 Réception, F3 Atelier, F4 Caisse
         </p>
-        <span className="font-semibold text-zinc-700 dark:text-zinc-300">Abidjan, Cocody • Devise FCFA</span>
+        <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+          {getWorkspaceLabel(workspace)} • Devise FCFA
+        </span>
       </div>
     </div>
   );

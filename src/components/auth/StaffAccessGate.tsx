@@ -15,9 +15,13 @@ import {
   resolveStaffAccessMode,
 } from '../../lib/staffAccess';
 import {
+  listAccessibleOrganizations,
+  listAccessibleShops,
   listCurrentMemberships,
   type RemoteMembership,
 } from '../../lib/supabaseOrders';
+import type { WorkspaceScope } from '../../lib/workspaceScope';
+import { WorkspaceScopeProvider } from '../../context/WorkspaceScopeContext';
 import { AuthPasswordField } from './AuthFields';
 import {
   authPrimaryButtonClassName,
@@ -58,6 +62,10 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
   const [membershipCheckComplete, setMembershipCheckComplete] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  // Portée réelle transmise au shell ERP : organisation et agence effectives.
+  // Tant qu'elle n'est pas résolue, l'ERP n'est pas monté — sans quoi il
+  // choisirait la portée de démonstration (données d'exemple).
+  const [workspaceScope, setWorkspaceScope] = useState<WorkspaceScope | null>(null);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -94,6 +102,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
         setMemberships([]);
         setMembershipCheckComplete(false);
         setRecoveryMode(false);
+        setWorkspaceScope(null);
       }
     });
 
@@ -111,8 +120,47 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
     try {
       const remoteMemberships = await listCurrentMemberships(session.user.id);
       setMemberships(remoteMemberships);
+
+      const activeMemberships = getActiveStaffMemberships(remoteMemberships);
+      if (activeMemberships.length === 0) {
+        setWorkspaceScope(null);
+        return;
+      }
+
+      // Le nom de l'enseigne ne conditionne jamais l'accès : si la lecture
+      // échoue, l'ERP s'ouvre avec un libellé neutre, mais la portée reste
+      // « réelle » et donc vide de toute donnée d'exemple.
+      const primary = activeMemberships[0];
+      let organizationName: string | null = null;
+      let shopName: string | null = null;
+      try {
+        const [organizations, shops] = await Promise.all([
+          listAccessibleOrganizations(),
+          listAccessibleShops(),
+        ]);
+        organizationName =
+          organizations.find((entry) => entry.id === primary.organization_id)?.name ?? null;
+        const organizationShops = shops.filter(
+          (shop) => shop.organization_id === primary.organization_id
+        );
+        shopName =
+          organizationShops.find((shop) => shop.id === primary.shop_id)?.name ??
+          organizationShops[0]?.name ??
+          null;
+      } catch {
+        organizationName = null;
+        shopName = null;
+      }
+
+      setWorkspaceScope({
+        mode: 'live',
+        organizationId: primary.organization_id,
+        organizationName,
+        shopName,
+      });
     } catch (membershipError) {
       setMemberships([]);
+      setWorkspaceScope(null);
       setError(
         membershipError instanceof Error
           ? membershipError.message
@@ -181,8 +229,14 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
   const authClient = supabase;
   const activeMemberships = getActiveStaffMemberships(memberships);
 
-  if (!recoveryMode && session && membershipCheckComplete && activeMemberships.length > 0) {
-    return <>{children}</>;
+  if (
+    !recoveryMode &&
+    session &&
+    membershipCheckComplete &&
+    activeMemberships.length > 0 &&
+    workspaceScope
+  ) {
+    return <WorkspaceScopeProvider scope={workspaceScope}>{children}</WorkspaceScopeProvider>;
   }
 
   const signOut = async () => {
@@ -231,7 +285,11 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
 
   if (
     loadingSession ||
-    (session && (checkingMemberships || !membershipCheckComplete) && !recoveryMode)
+    (session &&
+      (checkingMemberships ||
+        !membershipCheckComplete ||
+        (activeMemberships.length > 0 && !workspaceScope)) &&
+      !recoveryMode)
   ) {
     return (
       <StaffAuthLoading label="Vérification de la session et des autorisations…" />
