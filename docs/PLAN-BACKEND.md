@@ -31,8 +31,8 @@ on peut remplacer *l'implémentation* du contexte (localStorage → Supabase)
 
 ```
 Poste comptoir (POS) ─┐
-Poste atelier (Kanban) ┼─ HTTPS ─► Supabase (projet « Pressing_Pro », eu-west-1)
-Poste/tablette gérance┘            ├─ PostgreSQL 17 (données ci-dessous)
+Poste atelier (Kanban) ┼─ HTTPS ─► Supabase (projet `waalxvtncxcpbyozhhhp`, us-east-1)
+Poste/tablette gérance┘            ├─ PostgreSQL (données ci-dessous)
                                    ├─ Auth (comptes employés, JWT)
                                    ├─ Row Level Security (règles d'accès par rôle)
                                    └─ Realtime (mises à jour entre postes)
@@ -40,9 +40,14 @@ Interface hébergée sur Vercel (build Vite actuel, inchangé)
 ```
 
 - **Supabase** fournit base + authentification + temps réel sans serveur à administrer.
-- Un projet **« Pressing_Pro »** (région eu-west-1, PostgreSQL 17, état sain)
-  **existe déjà** sur le compte connecté — le plan propose de le réutiliser
-  après vérification de son contenu.
+- **Projet Supabase cible (rectifié le 28 octobre 2026)** : Project ID
+  `waalxvtncxcpbyozhhhp`, région `us-east-1`. Le compte Supabase actuellement
+  connecté à cette session ne peut pas y accéder (refus 403 lors du contrôle) :
+  il ne voit que le projet « Pressing_Pro » repéré initialement en eu-west-1.
+  Avant la phase 0, il faudra donc connecter le compte disposant des droits
+  sur le projet cible ou accorder l'accès à son organisation, puis vérifier
+  son état, sa version PostgreSQL et son contenu. Aucune opération n'a été
+  effectuée sur le projet `waalxvtncxcpbyozhhhp`.
 - **Vercel** sert l'application statique (même `npm run build`), HTTPS natif —
   la PWA existante devient pleinement exploitable (installation + hors ligne).
 
@@ -90,9 +95,13 @@ RLS). Même si un poste contourne l'interface, la base reste cohérente.
   e-mail). Sessions longues sur les postes de la boutique ; déconnexion
   manuelle ; option ultérieure : verrouillage rapide par code PIN entre
   utilisateurs d'un même poste.
-- Données personnelles (clients, employés) hébergées en **UE (eu-west-1)** ;
-  penser à l'information des personnes conformément à la loi ivoirienne
-  n°2013-450 sur la protection des données personnelles.
+- Données personnelles (clients, employés) hébergées aux **États-Unis
+  (région `us-east-1`, Virginie du Nord)**. Avant la phase 0, évaluer les
+  implications de cet hébergement international et l'information des
+  personnes conformément à la loi ivoirienne n°2013-450 sur la protection
+  des données personnelles. La distance depuis Abidjan peut aussi augmenter
+  la latence par rapport à une région européenne : requêtes et Realtime
+  devront être mesurés pendant la phase 0.
 
 ## 5. Temps réel et gestion des conflits
 
@@ -138,8 +147,9 @@ RLS). Même si un poste contourne l'interface, la base reste cohérente.
 - **Front** : projet Vercel lié au dépôt GitHub ; `npm run build` inchangé ;
   variables `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` ; chaque
   branche Git = un aperçu automatique (utile pour valider chaque phase).
-- **Base** : projet Supabase existant « Pressing_Pro » (à confirmer) ;
-  schéma géré par **migrations SQL versionnées** dans le dépôt.
+- **Base** : projet Supabase cible `waalxvtncxcpbyozhhhp` (`us-east-1`),
+  sous réserve de l'alignement des accès décrit au §2 ; schéma géré par
+  **migrations SQL versionnées** dans le dépôt.
 - **Coûts indicatifs** (à confirmer au moment du lancement) : démarrage
   possible en offres gratuites (Supabase Free, Vercel Hobby) pour une
   boutique ; prévoir ~20–25 $/mois par service en formule « Pro » si usage
@@ -149,7 +159,7 @@ RLS). Même si un poste contourne l'interface, la base reste cohérente.
 
 | Phase | Contenu | Jalon de validation | Effort estimé |
 |---|---|---|---|
-| 0 | Fondations : projet cible confirmé, schéma SQL v1, RLS de base, comptes de test | Base interrogeable, schéma relu ensemble | 1–2 sessions |
+| 0 | Fondations : accès au projet cible aligné et vérifié, schéma SQL v1, RLS de base, comptes de test | Base interrogeable, schéma relu ensemble | 1–2 sessions |
 | 1 | Couche données : client Supabase, AppContext rebranché (11 collections), compteur atomique, fonction SQL stock | L'app fonctionne à l'identique, données distantes, 1 poste | 3–4 sessions |
 | 2 | Authentification : écran de connexion, profils, rôles + RLS fine, `created_by` | Chaque rôle ne voit/fait que ce qui lui est permis | ~2 sessions |
 | 3 | Temps réel : abonnements, indicateur de connexion, tests à 2 navigateurs | Comptoir ↔ atelier synchronisés en direct | ~2 sessions |
@@ -176,7 +186,7 @@ rapports relationnels et aux contraintes) ; backend Node sur mesure
 **Décisions demandées avant la phase 0** :
 
 1. Feu vert global sur ce plan ?
-2. Projet Supabase cible : le projet existant « Pressing_Pro » (eu-west-1) ?
+2. Accès au projet cible `waalxvtncxcpbyozhhhp` (`us-east-1`) : quel compte ou quelle organisation doit être connecté/autorisé avant la phase 0 ?
 3. Comptes **par personne** (recommandé, traçabilité) ou **par poste** ?
 4. Mono-boutique en v1 avec `shop_id` prévu partout (recommandé) ?
 5. Hors ligne POS : v1 en ligne uniquement (recommandé) ou exigé d'emblée ?
