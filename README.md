@@ -286,8 +286,11 @@ blanchisserie au forfait par nombre de vêtements dans
 prestations du pressing et le type de service express dans
 [`docs/PRESTATIONS-PRESSING.md`](docs/PRESTATIONS-PRESSING.md), le catalogue de
 vêtements créé, modifié ou masqué depuis les Paramètres dans
-[`docs/CATALOGUE-VETEMENTS.md`](docs/CATALOGUE-VETEMENTS.md) et la carte des
+[`docs/CATALOGUE-VETEMENTS.md`](docs/CATALOGUE-VETEMENTS.md), la carte des
 routes par contexte (client, personnel, ERP) dans
-[`docs/ROUTES.md`](docs/ROUTES.md).
+[`docs/ROUTES.md`](docs/ROUTES.md), et la note de conception du suivi GPS des
+tournées et de la preuve de remise dans
+[`docs/SUIVI-GPS-LIVRAISON.md`](docs/SUIVI-GPS-LIVRAISON.md) (proposition,
+aucun code écrit).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.
