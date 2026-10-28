@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -26,11 +26,7 @@ import {
   createMyOrganization,
   type CreatedOrganization,
 } from '../../lib/supabaseTenant';
-import {
-  customerInputClassName,
-  customerPrimaryButtonClassName,
-  customerSecondaryButtonClassName,
-} from '../customer/CustomerAuthLayout';
+import { fireOnboardingCelebration } from '../../registry/magicui/confetti';
 import {
   StaffAuthAlert,
   StaffAuthHeader,
@@ -40,6 +36,11 @@ import {
   staffShellClassName,
   staffWidePanelClassName,
 } from './StaffAuthCommon';
+import {
+  staffInputClassName,
+  staffPrimaryButtonClassName,
+  staffSecondaryButtonClassName,
+} from './StaffAuthLayout';
 
 interface StaffOnboardingPageProps {
   onNavigate: (path: string, options?: { replace?: boolean }) => void;
@@ -55,7 +56,7 @@ type Phase =
 
 const STEPS = [
   { number: 1, label: 'Votre pressing', icon: Store },
-  { number: 2, label: 'Réglages de départ', icon: Wallet },
+  { number: 2, label: 'Mode de fonctionnement', icon: Wallet },
   { number: 3, label: 'Récapitulatif', icon: ClipboardList },
 ] as const;
 
@@ -87,6 +88,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const celebrationFired = useRef(false);
 
   useEffect(() => {
     document.title = 'Créer votre pressing — PressingPro CI';
@@ -125,6 +127,14 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
     };
   }, [authClient]);
 
+  // Le pressing vient d'être créé côté serveur : on célèbre la validation
+  // de la configuration avant l'entrée au tableau de bord (une seule fois).
+  useEffect(() => {
+    if (phase !== 'success' || celebrationFired.current) return;
+    celebrationFired.current = true;
+    fireOnboardingCelebration();
+  }, [phase]);
+
   const signOut = async () => {
     if (!authClient || busy) return;
     setBusy(true);
@@ -154,7 +164,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
             <StaffAuthLink
               path="/"
               onNavigate={onNavigate}
-              className={customerSecondaryButtonClassName}
+              className={staffSecondaryButtonClassName}
             >
               Retour à l’accueil
             </StaffAuthLink>
@@ -182,7 +192,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
               <StaffAuthLink
                 path={STAFF_LOGIN_PATH}
                 onNavigate={onNavigate}
-                className={customerPrimaryButtonClassName}
+                className={staffPrimaryButtonClassName}
               >
                 <LogIn className="h-4 w-4" aria-hidden="true" />
                 Se connecter
@@ -190,7 +200,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
               <StaffAuthLink
                 path={STAFF_REGISTER_PATH}
                 onNavigate={onNavigate}
-                className={customerSecondaryButtonClassName}
+                className={staffSecondaryButtonClassName}
               >
                 <UserPlus className="h-4 w-4" aria-hidden="true" />
                 Créer un compte propriétaire
@@ -222,13 +232,13 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
               <StaffAuthLink
                 path="/"
                 onNavigate={onNavigate}
-                className={customerPrimaryButtonClassName}
+                className={staffPrimaryButtonClassName}
               >
-                Ouvrir l’ERP
+                Accéder au tableau de bord
               </StaffAuthLink>
               <button
                 type="button"
-                className={customerSecondaryButtonClassName}
+                className={staffSecondaryButtonClassName}
                 onClick={() => void signOut()}
                 disabled={busy}
               >
@@ -278,9 +288,9 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
             <StaffAuthLink
               path="/"
               onNavigate={onNavigate}
-              className={customerPrimaryButtonClassName}
+              className={staffPrimaryButtonClassName}
             >
-              Ouvrir l’ERP
+              Accéder au tableau de bord
             </StaffAuthLink>
           </div>
         </section>
@@ -368,7 +378,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                 aria-current={isCurrent ? 'step' : undefined}
                 className={`flex flex-1 items-center gap-2 rounded-2xl border px-3 py-2.5 text-[12px] font-bold ${
                   isCurrent
-                    ? 'border-teal-300 bg-teal-50 text-teal-900 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100'
+                    ? 'border-orange-300 bg-orange-50 text-orange-900 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-100'
                     : isDone
                       ? 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-200'
                       : 'border-zinc-200 text-zinc-400 dark:border-zinc-800 dark:text-zinc-500'
@@ -405,7 +415,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                   autoComplete="organization"
                   value={organizationName}
                   onChange={(event) => setOrganizationName(event.target.value)}
-                  className={customerInputClassName}
+                  className={`${staffInputClassName} px-3.5`}
                   placeholder="Ex. Pressing Éclat SARL"
                   disabled={busy}
                   required
@@ -425,7 +435,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                   type="text"
                   value={shopName}
                   onChange={(event) => setShopName(event.target.value)}
-                  className={customerInputClassName}
+                  className={`${staffInputClassName} px-3.5`}
                   placeholder="Ex. Éclat Cocody"
                   disabled={busy}
                   required
@@ -446,7 +456,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                     autoComplete="address-level2"
                     value={city}
                     onChange={(event) => setCity(event.target.value)}
-                    className={customerInputClassName}
+                    className={`${staffInputClassName} px-3.5`}
                     placeholder="Abidjan"
                     disabled={busy}
                   />
@@ -462,7 +472,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                     inputMode="tel"
                     value={phoneDisplay}
                     onChange={(event) => setPhoneDisplay(event.target.value)}
-                    className={customerInputClassName}
+                    className={`${staffInputClassName} px-3.5`}
                     placeholder="07 00 00 00 00"
                     disabled={busy}
                   />
@@ -479,7 +489,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                   autoComplete="street-address"
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
-                  className={customerInputClassName}
+                  className={`${staffInputClassName} px-3.5`}
                   placeholder="Quartier, rue, repère…"
                   disabled={busy}
                 />
@@ -496,14 +506,14 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                   inputMode="email"
                   value={shopEmail}
                   onChange={(event) => setShopEmail(event.target.value)}
-                  className={customerInputClassName}
+                  className={`${staffInputClassName} px-3.5`}
                   disabled={busy}
                 />
               </div>
 
               <button
                 type="button"
-                className={customerPrimaryButtonClassName}
+                className={staffPrimaryButtonClassName}
                 onClick={goNext}
                 disabled={busy}
               >
@@ -515,6 +525,13 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
 
           {step === 2 && (
             <>
+              <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Ces réglages définissent le fonctionnement de départ de votre
+                agence : frais de ramassage et de livraison appliqués aux
+                commandes, et catalogue initial. Tout reste modifiable ensuite
+                dans les paramètres de l’ERP.
+              </p>
+
               <div>
                 <label htmlFor="onboarding-tagline" className={staffLabelClassName}>
                   Accroche de l’agence (optionnel)
@@ -524,7 +541,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                   type="text"
                   value={tagline}
                   onChange={(event) => setTagline(event.target.value)}
-                  className={customerInputClassName}
+                  className={`${staffInputClassName} px-3.5`}
                   placeholder="Ex. Propre, repassé, prêt à temps"
                   disabled={busy}
                   maxLength={160}
@@ -542,7 +559,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                     inputMode="numeric"
                     value={pickupFeeXof}
                     onChange={(event) => setPickupFeeXof(event.target.value)}
-                    className={customerInputClassName}
+                    className={`${staffInputClassName} px-3.5`}
                     disabled={busy}
                     required
                   />
@@ -561,7 +578,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                     inputMode="numeric"
                     value={deliveryFeeXof}
                     onChange={(event) => setDeliveryFeeXof(event.target.value)}
-                    className={customerInputClassName}
+                    className={`${staffInputClassName} px-3.5`}
                     disabled={busy}
                     required
                   />
@@ -581,7 +598,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                   type="checkbox"
                   checked={seedCatalog}
                   onChange={(event) => setSeedCatalog(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-teal-600 focus:outline-none focus:ring-4 focus:ring-teal-600/20"
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-[#C2410C] focus:outline-none focus:ring-4 focus:ring-orange-600/20"
                   disabled={busy}
                 />
                 <span>
@@ -600,7 +617,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
               <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
-                  className={customerSecondaryButtonClassName}
+                  className={staffSecondaryButtonClassName}
                   onClick={() => setStep(1)}
                   disabled={busy}
                 >
@@ -609,7 +626,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                 </button>
                 <button
                   type="button"
-                  className={customerPrimaryButtonClassName}
+                  className={staffPrimaryButtonClassName}
                   onClick={goNext}
                   disabled={busy}
                 >
@@ -660,7 +677,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
               <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
-                  className={customerSecondaryButtonClassName}
+                  className={staffSecondaryButtonClassName}
                   onClick={() => setStep(2)}
                   disabled={busy}
                 >
@@ -669,7 +686,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className={customerPrimaryButtonClassName}
+                  className={staffPrimaryButtonClassName}
                   disabled={busy}
                 >
                   {busy ? (
@@ -686,7 +703,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
 
         <button
           type="button"
-          className="mt-5 inline-flex items-center gap-2 text-[12.5px] font-semibold text-zinc-500 underline-offset-2 hover:underline focus:outline-none focus:ring-4 focus:ring-blue-600/20 dark:text-zinc-400"
+          className="mt-5 inline-flex items-center gap-2 text-[12.5px] font-semibold text-zinc-500 underline-offset-2 hover:underline focus:outline-none focus:ring-4 focus:ring-orange-600/20 dark:text-zinc-400"
           onClick={() => void signOut()}
           disabled={busy}
         >

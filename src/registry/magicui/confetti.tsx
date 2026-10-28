@@ -183,6 +183,44 @@ export function fireOrderCelebration(serviceCategory?: 'pressing' | 'blanchisser
   }, 250);
 }
 
+/**
+ * Célébration de la création d'un pressing (fin de l'onboarding
+ * propriétaire) : salves latérales puis bouquet central, aux couleurs
+ * orange/violet de PressingPro CI. `disableForReducedMotion` laisse la
+ * bibliothèque ne rien déclencher pour les personnes préférant réduire
+ * les animations.
+ */
+export function fireOnboardingCelebration() {
+  const colors = ['#F97316', '#EA580C', '#FDBA74', '#7C5CBF', '#FFFFFF'];
+  const base = { colors, zIndex: 99999, disableForReducedMotion: true };
+
+  confetti({
+    ...base,
+    particleCount: 70,
+    angle: 60,
+    spread: 60,
+    origin: { x: 0.08, y: 0.7 },
+  });
+
+  confetti({
+    ...base,
+    particleCount: 70,
+    angle: 120,
+    spread: 60,
+    origin: { x: 0.92, y: 0.7 },
+  });
+
+  setTimeout(() => {
+    confetti({
+      ...base,
+      particleCount: 90,
+      spread: 110,
+      origin: { y: 0.55 },
+      shapes: ['star', 'circle'],
+    });
+  }, 250);
+}
+
 export function ConfettiButtonDemo() {
   return (
     <div className="relative">

@@ -101,7 +101,42 @@ ERP sont acceptés ; URL absolue, `//domaine`, autre contexte
 Aucune redirection ouverte n'est possible. Sans rattachement actif, la
 destination reste l'onboarding `/bienvenue` (le `retour` est ignoré).
 
-## 5. Production (Vercel)
+## 5. Parcours d'entrée (du lancement au tableau de bord)
+
+Chaîne d'accès en configuration Supabase réelle (production) :
+
+1. **Lancement** — toute URL ERP (`/`, `/reception`, …) est gardée par le
+   portail d'accès personnel : sans session, redirection vers
+   `/connexion` (avec retour validé après connexion pour les liens
+   profonds) ; la page d'inscription `/inscription` est liée dans les
+   deux sens.
+2. **Inscription propriétaire** — création du compte sur `/inscription`,
+   confirmation par e-mail si elle est activée côté Supabase Auth, puis
+   connexion.
+3. **Onboarding `/bienvenue`** — un compte connecté sans rattachement
+   actif y est dirigé automatiquement pour configurer le pressing :
+   - étape 1 « Votre pressing » : organisation, agence, ville, adresse,
+     téléphone, e-mail de l'agence ;
+   - étape 2 « Mode de fonctionnement » : accroche, frais de ramassage et
+     de livraison (propositions 1 000 FCFA, 0 possible), catalogue de
+     départ optionnel (32 prestations proposées) ;
+   - étape 3 « Récapitulatif » : vérification puis création serveur
+     atomique (RPC `create_my_organization`, autorité RLS).
+4. **Validation célébrée** — l'écran de succès déclenche un confetti aux
+   couleurs de la marque (`fireOnboardingCelebration`, aucun tir si
+   `prefers-reduced-motion`) et récapitule organisation/agence/catalogue,
+   avec la limite honnête sur le comptoir distant encore en activation.
+5. **Tableau de bord** — le CTA « Accéder au tableau de bord » ouvre `/` ;
+   le portail reconnaît alors le rattachement actif et laisse entrer. Un
+   compte déjà rattaché arrive directement au tableau de bord après
+   connexion, sans repasser par l'onboarding.
+
+En environnement non configuré (aperçu de développement, tests e2e), le
+portail fonctionne en démonstration locale explicite : `/` ouvre l'ERP de
+démonstration et `/bienvenue` indique honnêtement qu'aucune création de
+pressing n'y est possible.
+
+## 6. Production (Vercel)
 
 `vercel.json` déclare les rewrites de chaque écran ERP (actualisation et
 lien profond servis par `index.html`) puis un filet `/(.*)` final pour que
@@ -109,7 +144,7 @@ les chemins inconnus aboutissent aussi dans l'application (404 interne,
 garde d'accès) plutôt que sur une erreur d'hébergeur. Les fichiers
 statiques existants restent servis en priorité par Vercel.
 
-## 6. Fichiers
+## 7. Fichiers
 
 | Fichier | Rôle |
 |---|---|
@@ -121,8 +156,10 @@ statiques existants restent servis en priorité par Vercel.
 | `vercel.json` | Rewrites des écrans ERP + filet SPA |
 | `tests/unit/routes.test.ts` (nouveau) | 10 tests : parseurs, aller-retour canonique, contextes, anti-redirection ouverte |
 | `tests/e2e/smoke.spec.ts` | Lien profond `/reception`, clic → `/atelier`, `goBack`, route inconnue → 404 → retour accueil |
+| `src/components/auth/StaffOnboardingPage.tsx` | Onboarding : étape « Mode de fonctionnement », palette orange du personnel, confetti de validation, CTA « Accéder au tableau de bord » |
+| `src/registry/magicui/confetti.tsx` | `fireOnboardingCelebration` (couleurs de la marque, `disableForReducedMotion`) |
 
-## 7. Vérifications exécutées
+## 8. Vérifications exécutées
 
 | Contrôle | Résultat |
 |---|---|
@@ -135,12 +172,21 @@ statiques existants restent servis en priorité par Vercel.
 | Serveur de développement (port 3000) | RÉUSSI — HTTP 200 sur les 10 chemins ERP + alias + route inconnue ; modules transformés sans erreur |
 | CI GitHub Actions (PR #7) | RÉUSSI — run `40719168109` au commit `d1cc020` : « Lint, tests et build » et « Smoke tests navigateur » (10 tests e2e, routage inclus) au vert |
 
+Mise à jour « parcours d'entrée » (section 5) : `npm run lint`,
+`npm run test:unit` (83/83) et `npm run build` RÉUSSIS ; le `git diff` de
+la page d'onboarding ne contient que les changements prévus (imports,
+palette, libellés, confetti). Le déclenchement visuel du confetti et la
+chaîne complète inscription → onboarding → tableau de bord restent
+**NON VÉRIFIÉS** avec un vrai compte (aucun compte réel n'existe encore ;
+l'environnement local sans Supabase affiche la phase « non configuré »
+de `/bienvenue`, couverte par le smoke e2e inchangé).
+
 Non vérifié à ce stade : le retour post-connexion de bout en bout avec un
 vrai compte (aucun compte réel n'existe encore ; la logique est couverte
 par tests unitaires et le flux de connexion lui-même est inchangé), et le
 comportement des rewrites sur le déploiement Vercel réel (après fusion).
 
-## 8. Limites et suites possibles
+## 9. Limites et suites possibles
 
 - Le titre du document des écrans ERP est désormais posé par la
   synchronisation ; les écrans de la garde (avant montage de l'ERP)
