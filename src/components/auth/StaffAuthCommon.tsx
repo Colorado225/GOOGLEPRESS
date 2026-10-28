@@ -1,5 +1,6 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, LogIn, Mail, ShieldCheck, UserPlus } from 'lucide-react';
+import { staffPrimaryButtonClassName } from './StaffAuthLayout';
 
 /**
  * Habillage commun des pages d'accès du personnel (connexion, inscription,
@@ -44,7 +45,8 @@ export const StaffAuthHeader: React.FC<{ title: string; description: string }> =
 export const StaffAuthAlert: React.FC<{
   tone: 'error' | 'success' | 'warning';
   children: React.ReactNode;
-}> = ({ tone, children }) => {
+  className?: string;
+}> = ({ tone, children, className }) => {
   const classes =
     tone === 'error'
       ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'
@@ -55,7 +57,7 @@ export const StaffAuthAlert: React.FC<{
   return (
     <p
       role={tone === 'error' ? 'alert' : 'status'}
-      className={`flex gap-2 rounded-2xl border px-3.5 py-3 text-[13px] font-medium ${classes}`}
+      className={`flex gap-2 rounded-2xl border px-3.5 py-3 text-[13px] font-medium ${classes}${className ? ' ' + className : ''}`}
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <span>{children}</span>
@@ -92,3 +94,66 @@ export const StaffAuthLink: React.FC<{
     {children}
   </a>
 );
+/** Bouton CTA principal (connexion / inscription / envoie de lien) */
+export const StaffAuthCTAButton: React.FC<{
+  type: 'login' | 'send' | 'register';
+  busy: boolean;
+  onLogin: () => void;
+  onSend: () => void;
+  onRegister: () => void;
+}> = ({ type, busy, onLogin, onSend, onRegister }) => {
+  if (busy) {
+    return (
+      <button type="submit" className={staffPrimaryButtonClassName} disabled>
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="submit"
+      className={staffPrimaryButtonClassName}
+      onClick={(e) => {
+        e.preventDefault();
+        if (type === 'login') onLogin();
+        else if (type === 'send') onSend();
+        else if (type === 'register') onRegister();
+      }}
+    >
+      {type === 'login' ? (
+        <>
+          <LogIn className="h-4 w-4" aria-hidden="true" />
+          Se connecter
+        </>
+      ) : type === 'send' ? (
+        <>
+          <Mail className="h-4 w-4" aria-hidden="true" />
+          Envoyer le lien
+        </>
+      ) : (
+        <>
+          <UserPlus className="h-4 w-4" aria-hidden="true" />
+          Créer mon compte
+        </>
+      )}
+    </button>
+  );
+};
+
+/** Textes CTA et messages publicitaires optimisés pour la diffusion du ERP. */
+export const StaffAuthCTATexts = {
+  login: 'Se connecter pour accéder à votre tableau de bord',
+  sendLink: 'Envoyer un lien de connexion sur votre adresse e-mail',
+  register: 'Créer votre compte propriétaire PressingPro CI',
+  forgotPassword: 'Entrez votre e-mail pour recevoir un lien de réinitialisation',
+  successLogin: 'Connexion réussie – Démarrez votre gestion de pressing',
+  successRegister: 'Votre compte est créé – Prêt à gérer vos premières commandes',
+  getStarted: 'Démarrez maintenant – Configurez votre pressing en 3 étapes',
+  feature1: 'Réception tickets sans ressaisie',
+  feature2: 'Atelier synchronisé : chaque étape tracée et horodatée',
+  feature3: 'Caisse claire : espèces, Wave, Orange Money, MTN MoMo',
+  trialPrompt: 'Essayez gratuitement pendant 14 jours – Aucune carte requise',
+};
+
+/** Lien de navigation interne des pages publiques (reste un vrai lien <a>). */

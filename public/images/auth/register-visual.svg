@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" fill="none">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#171936"/>
+      <stop offset="50%" stop-color="#33258E"/>
+      <stop offset="100%" stop-color="#5145E5"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bgGradient)"/>
+  <circle cx="1100" cy="-150" r="450" fill="rgba(81, 69, 229, 0.15)"/>
+  <circle cx="-150" cy="1100" r="450" fill="rgba(255, 150, 31, 0.1)"/>
+  <circle cx="300" cy="800" r="350" fill="rgba(255, 255, 255, 0.05)"/>
+
+  <!-- Modern pressing storefront -->
+  <rect x="200" y="300" width="800" height="400" rx="20" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+  <!-- Storefront windows -->
+  <rect x="240" y="340" width="140" height="220" rx="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <rect x="420" y="340" width="140" height="220" rx="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <rect x="600" y="340" width="140" height="220" rx="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <rect x="820" y="340" width="140" height="220" rx="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+  <!-- Window dividers -->
+  <line x1="310" y1="340" x2="310" y2="560" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+  <line x1="240" y1="450" x2="380" y2="450" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+  <line x1="490" y1="340" x2="490" y2="560" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+  <line x1="420" y1="450" x2="560" y2="450" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+
+  <!-- Door -->
+  <rect x="500" y="520" width="80" height="180" rx="6" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <circle cx="560" y="610" r="4" fill="#FF961F" opacity="0.6"/>
+
+  <!-- Awning -->
+  <rect x="200" y="300" width="800" height="30" rx="6" fill="#FF961F" opacity="0.9"/>
+
+  <!-- Signage -->
+  <text x="600" y="280" font-family="sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">PressingPro CI</text>
+  <text x="600" y="305" font-family="sans-serif" font-size="14" fill="rgba(255,255,255,0.7)" text-anchor="middle" letter-spacing="1">Pressing &amp; blanchisserie</text>
+
+  <!-- Garments in window -->
+  <g transform="translate(280, 460)">
+    <path d="M0 0 Q0 -15 15 -15 Q30 -15 30 0 L35 0 L35 100 L25 100 L25 0 Q25 -15 10 -15 Q-5 -15 -5 0 L-10 0 L-10 100 Z" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="15" cy="-8" r="2" fill="#FF961F"/>
+  </g>
+  <g transform="translate(460, 460)">
+    <path d="M0 0 Q0 -15 15 -15 Q30 -15 30 0 L35 0 L35 100 L25 100 L25 0 Q25 -15 10 -15 Q-5 -15 -5 0 L-10 0 L-10 100 Z" fill="#FFFFFF" opacity="0.85"/>
+    <circle cx="15" cy="-8" r="2" fill="#FF961F"/>
+  </g>
+  <g transform="translate(640, 460)">
+    <path d="M0 0 Q0 -15 15 -15 Q30 -15 30 0 L35 0 L35 100 L25 100 L25 0 Q25 -15 10 -15 Q-5 -15 -5 0 L-10 0 L-10 100 Z" fill="#FFFFFF" opacity="0.8"/>
+    <circle cx="15" cy="-8" r="2" fill="#FF961F"/>
+  </g>
+  <g transform="translate(860, 460)">
+    <path d="M0 0 Q0 -15 15 -15 Q30 -15 30 0 L35 0 L35 100 L25 100 L25 0 Q25 -15 10 -15 Q-5 -15 -5 0 L-10 0 L-10 100 Z" fill="#FFFFFF" opacity="0.95"/>
+    <circle cx="15" cy="-8" r="2" fill="#FF961F"/>
+  </g>
+
+  <!-- Delivery scooter -->
+  <g transform="translate(250, 700)">
+    <circle cx="40" cy="80" r="18" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+    <circle cx="40" cy="80" r="10" fill="rgba(255,255,255,0.1)"/>
+    <circle cx="100" cy="80" r="18" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+    <circle cx="100" cy="80" r="10" fill="rgba(255,255,255,0.1)"/>
+    <rect x="10" y="40" width="100" height="30" rx="6" fill="#FFFFFF" opacity="0.9"/>
+    <rect x="15" y="45" width="15" height="12" rx="2" fill="#FF961F" opacity="0.8"/>
+    <rect x="70" y="45" width="15" height="12" rx="2" fill="#FF961F" opacity="0.8"/>
+    <path d="M10 40 L10 25 Q10 15 25 15 Q40 15 40 25 L40 40 Z" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+    <path d="M10 40 Q10 15 25 15 Q40 15 40 25" fill="none" stroke="#FF961F" stroke-width="2"/>
+  </g>
+
+  <!-- Sparkles -->
+  <g fill="#FF961F" opacity="0.5">
+    <path d="M400 150 L405 155 L410 150 L405 145 Z"/>
+    <path d="M800 250 L805 255 L810 250 L805 245 Z"/>
+    <path d="M150 700 L155 705 L160 700 L155 695 Z"/>
+    <path d="M1050 500 L1055 505 L1060 500 L1055 495 Z"/>
+    <path d="M600 100 L605 105 L610 100 L605 95 Z"/>
+  </g>
+
+  <path d="M0 750 Q600 730 1200 750" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
+  <path d="M0 850 Q400 830 1200 850" stroke="rgba(255,255,255,0.02)" stroke-width="2"/>
+</svg>

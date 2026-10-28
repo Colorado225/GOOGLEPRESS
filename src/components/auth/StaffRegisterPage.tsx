@@ -287,9 +287,11 @@ export const StaffRegisterPage: React.FC<StaffRegisterPageProps> = ({ onNavigate
           {busy ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            <UserPlus className="h-4 w-4" aria-hidden="true" />
+            <span className="inline-flex items-center gap-2">
+              <UserPlus className="h-4 w-4" aria-hidden="true" />
+              Créer mon compte
+            </span>
           )}
-          Créer mon compte
         </button>
 
         <p className="text-center text-[13px] text-[#64748B] dark:text-zinc-400">
