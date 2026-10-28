@@ -2509,6 +2509,21 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      "create_my_organization": {
+        Args: {
+          "p_organization_name": string;
+          "p_shop_name": string;
+          "p_city"?: string | null;
+          "p_address"?: string | null;
+          "p_phone_display"?: string | null;
+          "p_shop_email"?: string | null;
+          "p_tagline"?: string | null;
+          "p_pickup_fee_xof"?: number | null;
+          "p_delivery_fee_xof"?: number | null;
+          "p_seed_catalog"?: boolean | null;
+        };
+        Returns: Json;
+      };
       "create_order": {
         Args: {
           "p_shop_id": string;

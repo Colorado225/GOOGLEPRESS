@@ -18,6 +18,8 @@ const users = {
   ownerB: '00000000-0000-4000-8000-000000000201',
   sharedCustomer: '00000000-0000-4000-8000-000000000301',
   otherCustomer: '00000000-0000-4000-8000-000000000302',
+  newOwner: '00000000-0000-4000-8000-000000000411',
+  newOwnerBis: '00000000-0000-4000-8000-000000000412',
 };
 
 let createdOrderId;
@@ -1096,6 +1098,126 @@ try {
 
   await expectFailure('authenticated ne peut pas lire l’outbox serveur', async () => {
     await queryAs(users.ownerA, 'select id from public.notification_outbox');
+  }, /permission denied/i);
+
+  let onboardedShopId;
+  await check('create_my_organization crée organisation, agence, propriétaire, paramètres, compteur et catalogue', async () => {
+    const created = await queryAs(
+      users.newOwner,
+      `
+        select
+          x.result ->> 'organization_id' as organization_id,
+          x.result ->> 'organization_slug' as organization_slug,
+          x.result ->> 'shop_id' as shop_id,
+          (x.result ->> 'catalog_seeded_items')::int as seeded
+        from (
+          select public.create_my_organization(
+            'Pressing Gamma Fictif',
+            'Gamma Treichville',
+            'Abidjan',
+            'Rue fictive 40',
+            '+225 07 00 00 04 01',
+            null,
+            'Propre et rapide',
+            1500,
+            2000,
+            true
+          ) as result
+        ) x
+      `
+    );
+    assert.equal(created.rows[0].organization_slug, 'pressing-gamma-fictif');
+    assert.equal(created.rows[0].seeded, 32);
+    onboardedShopId = created.rows[0].shop_id;
+
+    const membership = await db.query(
+      'select role, status, shop_id from public.memberships where user_id = $1',
+      [users.newOwner]
+    );
+    assert.deepEqual(membership.rows, [
+      { role: 'organization_owner', status: 'active', shop_id: null },
+    ]);
+
+    const settings = await db.query(
+      'select pickup_fee_xof::int, delivery_fee_xof::int, tagline from public.shop_settings where shop_id = $1',
+      [onboardedShopId]
+    );
+    assert.deepEqual(settings.rows[0], {
+      pickup_fee_xof: 1500,
+      delivery_fee_xof: 2000,
+      tagline: 'Propre et rapide',
+    });
+
+    const counter = await db.query(
+      'select next_number::int from public.ticket_counters where shop_id = $1',
+      [onboardedShopId]
+    );
+    assert.equal(counter.rows[0].next_number, 1);
+
+    const catalog = await db.query(
+      'select count(*)::int as count from public.service_catalog_items where shop_id = $1',
+      [onboardedShopId]
+    );
+    assert.equal(catalog.rows[0].count, 32);
+
+    const visibleShops = await queryAs(
+      users.newOwner,
+      'select id from public.shops order by id'
+    );
+    assert.equal(visibleShops.rows.length, 1);
+    assert.equal(visibleShops.rows[0].id, onboardedShopId);
+  });
+
+  await expectFailure('create_my_organization refuse un second rattachement du même compte', async () => {
+    await queryAs(
+      users.newOwner,
+      "select public.create_my_organization('Seconde Organisation Fictive', 'Agence Bis')"
+    );
+  }, /déjà rattaché/i);
+
+  await check('create_my_organization déduplique les slugs et peut démarrer sans catalogue', async () => {
+    const created = await queryAs(
+      users.newOwnerBis,
+      `
+        select
+          x.result ->> 'organization_slug' as organization_slug,
+          x.result ->> 'shop_id' as shop_id,
+          (x.result ->> 'catalog_seeded_items')::int as seeded
+        from (
+          select public.create_my_organization(
+            'Pressing Gamma Fictif', 'Gamma Cocody', null, null, null, null, '', 1000, 1000, false
+          ) as result
+        ) x
+      `
+    );
+    assert.equal(created.rows[0].organization_slug, 'pressing-gamma-fictif-2');
+    assert.equal(created.rows[0].seeded, 0);
+
+    const catalog = await db.query(
+      'select count(*)::int as count from public.service_catalog_items where shop_id = $1',
+      [created.rows[0].shop_id]
+    );
+    assert.equal(catalog.rows[0].count, 0);
+  });
+
+  await expectFailure('un membre actif existant ne peut pas utiliser l’onboarding', async () => {
+    await queryAs(
+      users.ownerA,
+      "select public.create_my_organization('Organisation Concurrente Fictive', 'Agence Concurrente')"
+    );
+  }, /déjà rattaché/i);
+
+  await expectFailure('create_my_organization valide le nom de l’organisation', async () => {
+    await queryAs(
+      users.sharedCustomer,
+      "select public.create_my_organization('X', 'Agence Fictive')"
+    );
+  }, /nom de l’organisation/i);
+
+  await expectFailure('anon ne peut pas exécuter create_my_organization', async () => {
+    await asRole('anon', null, () =>
+      db.query("select public.create_my_organization('Anon Fictif', 'Anon Agence')")
+    );
   }, /permission denied/i);
 
   console.log(`\nPhase 0 PGlite : ${passed} vérifications réussies.`);

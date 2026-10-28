@@ -12,7 +12,9 @@ insert into auth.users (id, email, phone, raw_user_meta_data) values
   ('00000000-0000-4000-8000-000000000104', 'coursier-a1@example.test', '+2250700000104', '{"full_name":"Coursier A1"}'::jsonb),
   ('00000000-0000-4000-8000-000000000201', 'proprietaire-b@example.test', '+2250700000201', '{"full_name":"Propriétaire B"}'::jsonb),
   ('00000000-0000-4000-8000-000000000301', 'cliente-partagee@example.test', '+2250700000301', '{"full_name":"Cliente Partagée"}'::jsonb),
-  ('00000000-0000-4000-8000-000000000302', 'autre-cliente@example.test', '+2250700000302', '{"full_name":"Autre Cliente"}'::jsonb);
+  ('00000000-0000-4000-8000-000000000302', 'autre-cliente@example.test', '+2250700000302', '{"full_name":"Autre Cliente"}'::jsonb),
+  ('00000000-0000-4000-8000-000000000411', 'nouveau-proprietaire@example.test', '+2250700000411', '{"full_name":"Nouveau Propriétaire Fictif"}'::jsonb),
+  ('00000000-0000-4000-8000-000000000412', 'nouveau-proprietaire-bis@example.test', '+2250700000412', '{"full_name":"Nouvelle Propriétaire Fictive"}'::jsonb);
 
 insert into public.platform_admins (user_id, note)
 values ('00000000-0000-4000-8000-000000000001', 'Fixture locale uniquement');
