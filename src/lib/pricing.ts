@@ -28,11 +28,17 @@ export interface OrderTotalsInput {
   pickupOption: PickupOption;
   loyaltyDiscountPercent?: number;
   depositAmount?: number;
+  /** Frais forfaitaires de ramassage et/ou de livraison à domicile (FCFA). */
+  collectionFee?: number;
+  deliveryFee?: number;
 }
 
 export interface OrderTotals {
   subtotal: number;
   expressFee: number;
+  /** Frais logistiques retenus (jamais négatifs, arrondis au FCFA). */
+  collectionFee: number;
+  deliveryFee: number;
   discountPercent: number;
   discountAmount: number;
   total: number;
@@ -41,17 +47,39 @@ export interface OrderTotals {
   remaining: number;
 }
 
+const sanitizeFee = (fee: number | undefined): number =>
+  Number.isFinite(fee) ? Math.max(0, Math.round(fee as number)) : 0;
+
 export function calculateOrderTotals(
   lines: Pick<OrderLine, 'subtotal'>[],
-  { pickupOption, loyaltyDiscountPercent = 0, depositAmount = 0 }: OrderTotalsInput
+  {
+    pickupOption,
+    loyaltyDiscountPercent = 0,
+    depositAmount = 0,
+    collectionFee = 0,
+    deliveryFee = 0,
+  }: OrderTotalsInput
 ): OrderTotals {
   const subtotal = calculateSubtotal(lines);
   const expressFee =
     pickupOption === 'express' ? Math.round(subtotal * EXPRESS_SURCHARGE_RATE) : 0;
+  const safeCollectionFee = sanitizeFee(collectionFee);
+  const safeDeliveryFee = sanitizeFee(deliveryFee);
   const discountPercent = loyaltyDiscountPercent || 0;
+  // La remise fidélité ne porte que sur les prestations, jamais sur le transport.
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
-  const total = subtotal + expressFee - discountAmount;
+  const total = subtotal + expressFee + safeCollectionFee + safeDeliveryFee - discountAmount;
   const deposit = Math.min(Math.max(0, depositAmount), total);
   const remaining = total - deposit;
-  return { subtotal, expressFee, discountPercent, discountAmount, total, deposit, remaining };
+  return {
+    subtotal,
+    expressFee,
+    collectionFee: safeCollectionFee,
+    deliveryFee: safeDeliveryFee,
+    discountPercent,
+    discountAmount,
+    total,
+    deposit,
+    remaining,
+  };
 }

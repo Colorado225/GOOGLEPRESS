@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ArrowLeft, Save, Sliders, Smartphone, Printer, Building2, Download, CheckCircle2, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Save, Sliders, Smartphone, Printer, Building2, Download, CheckCircle2, Moon, Sun, Truck } from 'lucide-react';
 import { Tabs } from '../common/Tabs';
 import { SegmentedControl, SegmentedOption } from '../common/SegmentedControl';
 import { AppTheme } from '../../lib/theme';
@@ -137,12 +137,28 @@ export const SettingsPage: React.FC = () => {
   const [currency, setCurrency] = useState(shopSettings.currency);
   const [enableSms, setEnableSms] = useState(shopSettings.enableSms);
   const [enableThermalPrinter, setEnableThermalPrinter] = useState(shopSettings.enableThermalPrinter);
-  const [tab, setTab] = useState<'shop' | 'devices'>('shop');
+  const [pickupFeeInput, setPickupFeeInput] = useState(String(shopSettings.pickupFee));
+  const [deliveryFeeInput, setDeliveryFeeInput] = useState(String(shopSettings.deliveryFee));
+  const [tab, setTab] = useState<'shop' | 'logistics' | 'devices'>('shop');
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!shopName.trim()) {
       showToast('Le nom commercial ne peut pas être vide.');
+      return;
+    }
+    const pickupFee = Number(pickupFeeInput.replace(/\s/g, ''));
+    const deliveryFee = Number(deliveryFeeInput.replace(/\s/g, ''));
+    if (
+      pickupFeeInput.trim() === '' ||
+      deliveryFeeInput.trim() === '' ||
+      !Number.isFinite(pickupFee) ||
+      !Number.isFinite(deliveryFee) ||
+      pickupFee < 0 ||
+      deliveryFee < 0
+    ) {
+      showToast('Les frais de ramassage et de livraison doivent être des montants valides (0 = offert).');
+      setTab('logistics');
       return;
     }
     updateShopSettings({
@@ -153,7 +169,11 @@ export const SettingsPage: React.FC = () => {
       currency,
       enableSms,
       enableThermalPrinter,
+      pickupFee,
+      deliveryFee,
     });
+    setPickupFeeInput(String(Math.round(pickupFee)));
+    setDeliveryFeeInput(String(Math.round(deliveryFee)));
     showToast('✓ Paramètres enregistrés sur cet appareil');
   };
 
@@ -186,6 +206,7 @@ export const SettingsPage: React.FC = () => {
           onChange={setTab}
           tabs={[
             { id: 'shop', label: 'Établissement', icon: <Building2 className="w-4 h-4" aria-hidden="true" /> },
+            { id: 'logistics', label: 'Ramassage & livraison', icon: <Truck className="w-4 h-4" aria-hidden="true" /> },
             { id: 'devices', label: 'Périphériques & passerelles', icon: <Sliders className="w-4 h-4" aria-hidden="true" /> },
           ]}
         />
@@ -257,6 +278,75 @@ export const SettingsPage: React.FC = () => {
               onChange={(e) => setShopTagline(e.target.value)}
               className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
             />
+          </div>
+        </div>
+        )}
+
+        {/* Ramassage & livraison */}
+        {tab === 'logistics' && (
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-5 shadow-2xs space-y-4 text-[13px]">
+          <div className="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
+            <Truck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <h2 className="font-bold text-[14.5px] text-zinc-900 dark:text-zinc-100">Forfaits ramassage & livraison</h2>
+          </div>
+
+          <p className="text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+            Ces montants forfaitaires s’appliquent uniquement aux demandes et commandes créées
+            après l’enregistrement. Le frais déjà annoncé sur une tournée ou un ticket ne change
+            jamais rétroactivement. Saisissez <strong className="text-zinc-900 dark:text-zinc-100">0</strong> pour offrir la course.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="settings-pickup-fee" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
+                Ramassage à domicile
+              </label>
+              <div className="relative">
+                <input
+                  id="settings-pickup-fee"
+                  type="number"
+                  min={0}
+                  step={100}
+                  inputMode="numeric"
+                  value={pickupFeeInput}
+                  onChange={(e) => setPickupFeeInput(e.target.value)}
+                  aria-describedby="settings-pickup-fee-help"
+                  className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 pr-14 text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-zinc-400 dark:text-zinc-500">FCFA</span>
+              </div>
+              <p id="settings-pickup-fee-help" className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                Ajouté à la commande après la collecte et le comptage des pièces.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="settings-delivery-fee" className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
+                Livraison à domicile
+              </label>
+              <div className="relative">
+                <input
+                  id="settings-delivery-fee"
+                  type="number"
+                  min={0}
+                  step={100}
+                  inputMode="numeric"
+                  value={deliveryFeeInput}
+                  onChange={(e) => setDeliveryFeeInput(e.target.value)}
+                  aria-describedby="settings-delivery-fee-help"
+                  className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 pr-14 text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-zinc-400 dark:text-zinc-500">FCFA</span>
+              </div>
+              <p id="settings-delivery-fee-help" className="mt-1 text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                Inclus au total du ticket ; le solde éventuel est encaissé à la livraison.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2.5 text-[12px] leading-relaxed text-blue-900 dark:text-blue-100">
+            Proposition de démarrage : 1 000 FCFA par course dans la zone habituelle. Ajustez ces
+            montants selon vos coûts réels de carburant et vos quartiers desservis.
           </div>
         </div>
         )}

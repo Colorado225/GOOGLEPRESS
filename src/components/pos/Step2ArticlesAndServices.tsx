@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { CurrentColorSelector, LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
-import { calculateSubtotal } from '../../lib/pricing';
+import { calculateOrderTotals } from '../../lib/pricing';
 import { ClothingItem, OrderLine } from '../../types';
 import {
   ArrowLeft,
@@ -30,6 +30,10 @@ export const Step2ArticlesAndServices: React.FC = () => {
     setSelectedServiceFilter,
     selectedCustomer,
     showToast,
+    pickupOption,
+    pendingPickupTask,
+    shopSettings,
+    orderFulfillmentMethod,
   } = useApp();
 
   const isPressing = selectedServiceCategory === 'pressing';
@@ -66,7 +70,21 @@ export const Step2ArticlesAndServices: React.FC = () => {
     return matchesCategory && matchesTab;
   });
 
-  const subtotal = calculateSubtotal(cartLines);
+  const wantsHomeDelivery = orderFulfillmentMethod === 'home_delivery';
+  const {
+    subtotal,
+    expressFee,
+    collectionFee,
+    deliveryFee,
+    discountPercent,
+    discountAmount,
+    total: estimatedTotal,
+  } = calculateOrderTotals(cartLines, {
+    pickupOption,
+    loyaltyDiscountPercent: selectedCustomer?.loyaltyDiscountPercent,
+    collectionFee: pendingPickupTask?.fee ?? 0,
+    deliveryFee: wantsHomeDelivery ? shopSettings.deliveryFee : 0,
+  });
 
   const getItemCount = (itemId: string) => {
     return cartLines
@@ -316,21 +334,37 @@ export const Step2ArticlesAndServices: React.FC = () => {
                   <span>Sous-total articles</span>
                   <span className="font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatFCFA(subtotal)}</span>
                 </div>
-                {(selectedCustomer?.loyaltyDiscountPercent || 0) > 0 && (
-                  <div className="flex justify-between text-blue-700 dark:text-blue-300">
-                    <span>Remise fidélité ({selectedCustomer?.loyaltyDiscountPercent}%)</span>
+                {expressFee > 0 && (
+                  <div className="flex justify-between text-amber-800 dark:text-amber-200">
+                    <span>Supplément express</span>
+                    <span className="font-bold tabular-nums">+{formatFCFA(expressFee)}</span>
+                  </div>
+                )}
+                {pendingPickupTask && (
+                  <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
+                    <span>Ramassage à domicile</span>
                     <span className="font-bold tabular-nums">
-                      −{formatFCFA(Math.round(subtotal * ((selectedCustomer?.loyaltyDiscountPercent || 0) / 100)))}
+                      {collectionFee > 0 ? `+${formatFCFA(collectionFee)}` : 'Offert'}
                     </span>
+                  </div>
+                )}
+                {wantsHomeDelivery && (
+                  <div className="flex justify-between text-blue-700 dark:text-blue-300">
+                    <span>Livraison à domicile</span>
+                    <span className="font-bold tabular-nums">
+                      {deliveryFee > 0 ? `+${formatFCFA(deliveryFee)}` : 'Offerte'}
+                    </span>
+                  </div>
+                )}
+                {discountAmount > 0 && discountPercent > 0 && (
+                  <div className="flex justify-between text-blue-700 dark:text-blue-300">
+                    <span>Remise fidélité ({discountPercent}%)</span>
+                    <span className="font-bold tabular-nums">−{formatFCFA(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-zinc-950 dark:text-zinc-50 font-black text-[15px] pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
                   <span>Montant estimé</span>
-                  <span className="tabular-nums">
-                    {formatFCFA(
-                      subtotal - Math.round(subtotal * ((selectedCustomer?.loyaltyDiscountPercent || 0) / 100))
-                    )}
-                  </span>
+                  <span className="tabular-nums">{formatFCFA(estimatedTotal)}</span>
                 </div>
               </div>
             )}

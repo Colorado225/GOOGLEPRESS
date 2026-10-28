@@ -2,7 +2,8 @@
 
 ERP de gestion pour pressing et blanchisserie à Abidjan (Côte d'Ivoire) :
 tableau de bord, réception comptoir (POS), suivi d'atelier en Kanban,
-fichier clients & fidélité, caisse et clôture journalière Z.
+ramassage et livraison à domicile, fichier clients & fidélité, caisse et
+clôture journalière Z.
 
 ## Fonctionnalités
 
@@ -13,9 +14,13 @@ fichier clients & fidélité, caisse et clôture journalière Z.
   (Client → Articles → Récapitulatif & paiement) ou vue classique tout-en-un.
   Deux univers : **Pressing** à la pièce et **Blanchisserie** à la pièce ou
   **au kilo**. Supplément express +50 %, remise fidélité, acompte, aperçu du
-  ticket et du SMS client.
+  ticket et du SMS client. Un ramassage déjà collecté peut y être compté puis
+  converti en commande ; la restitution se choisit entre retrait au comptoir
+  et livraison à domicile (adresse, date et créneau de tournée).
 - **Production & suivi** — Kanban atelier (Reçu → Lavage → Repassage → Prêt),
-  remise au client avec encaissement du solde, clôture de caisse Z.
+  onglet **Tournées** pour les ramassages/livraisons (programmation, coursier,
+  départ, échec/reprogrammation, encaissement du solde à la livraison),
+  remise au comptoir et clôture de caisse Z.
 - **Commandes & Clients** — historique filtrable, fichier clients avec
   fidélité (%), statut VIP et solde dû.
 - **Personnel & présences** — registre des employés (postes, téléphone,
@@ -63,7 +68,8 @@ src/
 ├── data/demoData.ts         catalogue, clients et commandes de démonstration
 ├── lib/
 │   ├── dates.ts             dates dynamiques + règles de délais de retrait
-│   ├── pricing.ts           calculs tarifaires uniques (totaux, express, remises)
+│   ├── logistics.ts         créneaux, statuts et règles des tournées domicile
+│   ├── pricing.ts           calculs tarifaires uniques (totaux, express, frais, remises)
 │   └── utils.ts             helper cn() (classes Tailwind)
 └── components/              écrans par domaine (dashboard, pos, workshop…)
 ```
@@ -71,9 +77,18 @@ src/
 **Règles métier centralisées** (ne pas les recopier dans les composants) :
 
 - Montants : `calculateOrderTotals()` dans `src/lib/pricing.ts`
-  (sous-total, supplément express +50 %, remise fidélité, acompte, reste).
+  (sous-total, supplément express +50 %, frais de ramassage/livraison,
+  remise fidélité, acompte, reste).
 - Délais de retrait : `getPromisedDate()` dans `src/lib/dates.ts`
   (express = lendemain 12h, standard = J+2 17h, différé = prochain samedi 10h).
+- Tournées : le ramassage est d'abord réservé et collecté, puis seulement
+  converti en commande après comptage à la boutique. La production reste
+  distincte de la course : une livraison ne part que si la commande est
+  prête, et sa confirmation solde la commande et encaisse le reste une
+  seule fois. Les frais sont figés sur la tournée/commande au moment de la
+  promesse ; les forfaits des nouvelles courses se règlent dans
+  Paramètres → « Ramassage & livraison » (proposition initiale : 1 000 FCFA
+  par course, 0 = offert).
 - Numérotation des tickets : compteur séquentiel persisté
   (`pressingpro_next_ticket_number`), initialisé au plus grand ticket
   existant + 1.
@@ -82,12 +97,16 @@ src/
 
 Sans backend, l'application stocke tout dans le **localStorage** du
 navigateur, sous les clés `pressingpro_orders`, `pressingpro_customers`,
-`pressingpro_cash_register`, `pressingpro_next_ticket_number` et
-`pressingpro_theme` (thème d'interface choisi sur l'appareil) et
-`pressingpro_shop_settings` (identité et réglages de la boutique saisis dans
-les Paramètres — affichés sur le ticket, la barre latérale et les rapports).
+`pressingpro_cash_register`, `pressingpro_logistics_tasks`,
+`pressingpro_next_ticket_number` et `pressingpro_theme` (thème d'interface
+choisi sur l'appareil) et `pressingpro_shop_settings` (identité, réglages
+et forfaits de ramassage/livraison saisis dans les Paramètres — affichés
+sur le ticket, la barre latérale et les rapports).
 Au premier lancement, des données de démonstration datées du jour courant
-sont chargées (dates relatives, voir `src/data/demoData.ts`).
+sont chargées (dates relatives, voir `src/data/demoData.ts`). Sur un
+navigateur contenant déjà des commandes, seuls deux exemples de ramassage
+non convertis sont ajoutés au premier affichage des Tournées ; aucun total
+de commande existante n'est modifié.
 
 > **Réinitialiser la démo** : vider les clés `pressingpro_*` du
 > localStorage (console du navigateur :
@@ -138,7 +157,9 @@ ticket reste blanc, comme le papier.
 - **Mono-poste** : les données vivent dans un seul navigateur — pas de
   synchronisation entre le comptoir et l'atelier, pas d'authentification.
 - **SMS et impression simulés** (aucun envoi réel, aucun pilote d'imprimante).
-- Paramètres de la boutique non persistés, statistiques 7 jours de démo.
+- **Tournées sans GPS ni réservation client en ligne** : réservation prise par
+  le personnel, suivi par statuts et créneaux dans ce navigateur uniquement.
+- Statistiques 7 jours de démo.
 
 Prochaine étape logique (P1) : brancher un backend (ex. Supabase) avec
 comptes employés et temps réel multi-postes, puis les vrais envois SMS.

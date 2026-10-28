@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { Check, Camera, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { isHomeDeliveryOrder } from '../../lib/logistics';
+import { Check, Camera, CheckCircle2, ShieldCheck, Truck, Eye } from 'lucide-react';
 
 export const HandoverSection: React.FC = () => {
-  const { activeHandoverOrder, settleAndDeliverOrder, showToast } = useApp();
+  const {
+    activeHandoverOrder,
+    orders,
+    settleAndDeliverOrder,
+    showToast,
+    focusLogisticsTask,
+    setPreviewTicket,
+  } = useApp();
 
   const [checkedItems, setCheckedItems] = useState<{ [id: string]: boolean }>({
     'l4': true,
@@ -18,7 +26,11 @@ export const HandoverSection: React.FC = () => {
     photo: false,
   });
 
-  const order = activeHandoverOrder;
+  // Toujours relire la version courante de la commande : l’objet sélectionné
+  // peut dater d’avant un encaissement ou une livraison.
+  const order = activeHandoverOrder
+    ? orders.find((o) => o.id === activeHandoverOrder.id) ?? activeHandoverOrder
+    : null;
 
   if (!order) {
     return (
@@ -27,6 +39,71 @@ export const HandoverSection: React.FC = () => {
         <p className="text-[12px] mt-1 text-zinc-400 dark:text-zinc-500">
           Choisissez une commande prête dans la liste ci-dessus, ou depuis l'onglet Production (colonne « Prêts à remettre »).
         </p>
+      </div>
+    );
+  }
+
+  if (isHomeDeliveryOrder(order)) {
+    return (
+      <div className="bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 rounded-xl p-5 shadow-2xs">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white" aria-hidden="true">
+              <Truck className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="font-bold text-[14.5px] text-zinc-900 dark:text-zinc-100">
+                {order.ticketNumber} est une livraison à domicile
+              </h2>
+              <p className="mt-1 max-w-xl text-[12.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Elle ne doit pas être encaissée dans l’écran de remise comptoir. Ouvrez sa tournée
+                pour démarrer la livraison puis confirmer la remise et le paiement éventuel.
+              </p>
+              <p className="mt-1 text-[12.5px] font-semibold text-zinc-800 dark:text-zinc-200">
+                Reste à encaisser : {formatFCFA(order.remainingBalance)}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {order.deliveryTaskId && (
+              <button
+                type="button"
+                onClick={() => focusLogisticsTask(order.deliveryTaskId as string)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-[12.5px] font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Truck className="h-4 w-4" aria-hidden="true" /> Ouvrir dans Tournées
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setPreviewTicket(order)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 px-3.5 py-2 text-[12.5px] font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+            >
+              <Eye className="h-4 w-4" aria-hidden="true" /> Voir le ticket
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (order.status !== 'ready') {
+    return (
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-6 text-center text-zinc-500 dark:text-zinc-400 shadow-2xs">
+        <p className="font-semibold text-[14px] text-zinc-800 dark:text-zinc-200">
+          {order.ticketNumber} n’est plus en attente de remise comptoir
+        </p>
+        <p className="mx-auto mt-1 max-w-md text-[12.5px]">
+          Son statut actuel ne permet plus un nouvel encaissement ici. Sélectionnez une autre
+          commande prête dans la liste ci-dessus.
+        </p>
+        <button
+          type="button"
+          onClick={() => setPreviewTicket(order)}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 px-3.5 py-2 text-[12.5px] font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+        >
+          <Eye className="h-4 w-4" aria-hidden="true" /> Voir le ticket
+        </button>
       </div>
     );
   }

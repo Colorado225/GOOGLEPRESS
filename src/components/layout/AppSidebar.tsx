@@ -1,5 +1,6 @@
 import React from 'react';
-import { useApp, ScreenId } from '../../context/AppContext';
+import { useApp, ScreenId, WorkshopTab } from '../../context/AppContext';
+import { isLogisticsTaskActionable } from '../../lib/logistics';
 import {
   Crown,
   ChevronLeft,
@@ -37,6 +38,8 @@ export const AppSidebar: React.FC = () => {
     nextTicketNumber,
     products,
     shopSettings,
+    logisticsTasks,
+    requestWorkshopTab,
   } = useApp();
 
   // En tiroir mobile, la barre est toujours rendue déployée (le repli ne concerne que le bureau)
@@ -44,6 +47,7 @@ export const AppSidebar: React.FC = () => {
 
   const receivedCount = orders.filter((o) => o.status === 'received').length;
   const stockAlertCount = getAlertProducts(products).length;
+  const logisticsActionCount = logisticsTasks.filter(isLogisticsTaskActionable).length;
 
   const navItems: {
     id: ScreenId;
@@ -52,6 +56,7 @@ export const AppSidebar: React.FC = () => {
     badge?: number;
     shortcut?: string;
     action?: () => void;
+    workshopTab?: WorkshopTab;
   }[] = [
     {
       id: 'dashboard',
@@ -71,11 +76,14 @@ export const AppSidebar: React.FC = () => {
       label: 'Production & Suivi',
       icon: <Cog className="w-[18px] h-[18px] shrink-0" />,
       shortcut: 'F3',
+      workshopTab: 'production',
     },
     {
       id: 'workshop',
       label: 'Remises & Livraisons',
       icon: <Truck className="w-[18px] h-[18px] shrink-0" />,
+      badge: logisticsActionCount || undefined,
+      workshopTab: 'logistics',
     },
     {
       id: 'dashboard',
@@ -178,7 +186,9 @@ export const AppSidebar: React.FC = () => {
             <button
               key={`${item.id}-${idx}`}
               onClick={() => {
-                if (item.action) {
+                if (item.workshopTab) {
+                  requestWorkshopTab(item.workshopTab);
+                } else if (item.action) {
                   item.action();
                 } else {
                   setActiveScreen(item.id);

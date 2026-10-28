@@ -3,7 +3,8 @@ import { LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { calculateOrderTotals } from '../../lib/pricing';
-import { formatPromised, getPromisedDate, nowDateTime } from '../../lib/dates';
+import { formatPromised, getPromisedDate, isValidISODate, nowDateTime, todayISO } from '../../lib/dates';
+import { formatLogisticsSchedule } from '../../lib/logistics';
 import { Trash2, Plus, Minus, Printer, MessageSquare, Check, ShieldAlert, Sparkles } from 'lucide-react';
 import { ConfettiButton } from '../../registry/magicui/confetti';
 
@@ -20,14 +21,34 @@ export const OrderCartTicket: React.FC = () => {
     setPaymentMethod,
     submitNewOrder,
     nextTicketNumber,
+    pendingPickupTask,
+    shopSettings,
+    orderFulfillmentMethod,
+    deliveryAddress,
+    deliveryDateISO,
+    deliveryTimeSlot,
   } = useApp();
 
-  const { subtotal, expressFee, discountPercent, discountAmount, total: finalTotal, remaining } =
-    calculateOrderTotals(cartLines, {
-      pickupOption,
-      loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
-      depositAmount,
-    });
+  const wantsHomeDelivery = orderFulfillmentMethod === 'home_delivery';
+  const deliveryDetailsMissing =
+    wantsHomeDelivery &&
+    (!deliveryAddress.trim() || !isValidISODate(deliveryDateISO) || deliveryDateISO < todayISO());
+  const {
+    subtotal,
+    expressFee,
+    collectionFee,
+    deliveryFee,
+    discountPercent,
+    discountAmount,
+    total: finalTotal,
+    remaining,
+  } = calculateOrderTotals(cartLines, {
+    pickupOption,
+    loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
+    depositAmount,
+    collectionFee: pendingPickupTask?.fee ?? 0,
+    deliveryFee: wantsHomeDelivery ? shopSettings.deliveryFee : 0,
+  });
 
   // Date/heure figées à l'ouverture du ticket (évite un affichage qui bouge à chaque rendu).
   const [ticketDateTime] = useState(() => nowDateTime());
@@ -49,6 +70,11 @@ export const OrderCartTicket: React.FC = () => {
     const half = Math.round(finalTotal / 2);
     setDepositAmount(half);
     setCustomDeposit(half.toString());
+  };
+
+  const handlePayOnDelivery = () => {
+    setDepositAmount(0);
+    setCustomDeposit('0');
   };
 
   return (
@@ -157,6 +183,22 @@ export const OrderCartTicket: React.FC = () => {
               <span className="font-semibold tabular-nums">+{formatFCFA(expressFee)}</span>
             </div>
           )}
+          {pendingPickupTask && (
+            <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
+              <span>Ramassage à domicile</span>
+              <span className="font-semibold tabular-nums">
+                {collectionFee > 0 ? `+${formatFCFA(collectionFee)}` : 'Offert'}
+              </span>
+            </div>
+          )}
+          {wantsHomeDelivery && (
+            <div className="flex justify-between text-blue-700 dark:text-blue-300">
+              <span>Livraison à domicile</span>
+              <span className="font-semibold tabular-nums">
+                {deliveryFee > 0 ? `+${formatFCFA(deliveryFee)}` : 'Offerte'}
+              </span>
+            </div>
+          )}
           {discountAmount > 0 && (
             <div className="flex justify-between text-blue-700 dark:text-blue-300">
               <span>Remise</span>
@@ -176,6 +218,15 @@ export const OrderCartTicket: React.FC = () => {
               Acompte reçu
             </p>
             <div className="flex gap-1">
+              {wantsHomeDelivery && (
+                <button
+                  type="button"
+                  onClick={handlePayOnDelivery}
+                  className="text-[10.5px] text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-100 bg-purple-50 dark:bg-purple-950 hover:bg-purple-100 dark:hover:bg-purple-900 px-1.5 py-0.5 rounded font-semibold"
+                >
+                  À la livraison
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleQuickDepositHalf}
@@ -245,7 +296,7 @@ export const OrderCartTicket: React.FC = () => {
               </span>
             </div>
             <div className="text-[12px] text-zinc-500 dark:text-zinc-400 self-center shrink-0 text-right">
-              <span>Reste :</span>
+              <span>{wantsHomeDelivery ? 'À la livraison :' : 'Reste :'}</span>
               <br />
               <b className={`text-[15px] tabular-nums ${remaining > 0 ? 'text-black dark:text-zinc-50' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {formatFCFA(remaining)}
@@ -254,18 +305,25 @@ export const OrderCartTicket: React.FC = () => {
           </div>
         </div>
 
+        {deliveryDetailsMissing && (
+          <p className="flex items-start gap-1.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 px-2.5 py-2 text-[11.5px] font-medium text-amber-800 dark:text-amber-200">
+            <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            Complétez l’adresse et une date de livraison valide dans l’onglet « Retrait &amp; livraison ».
+          </p>
+        )}
+
         {/* Validation CTA Button with Confetti */}
         <ConfettiButton
           type="button"
           onClick={() => submitNewOrder()}
-          disabled={cartLines.length === 0}
+          disabled={cartLines.length === 0 || deliveryDetailsMissing}
           options={{
             particleCount: 80,
             spread: 70,
             colors: ['#2563EB', '#0D9488', '#F59E0B', '#10B981'],
           }}
           className={`w-full font-bold rounded-lg py-3 text-[14.5px] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer ${
-            cartLines.length === 0
+            cartLines.length === 0 || deliveryDetailsMissing
               ? 'bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
               : 'bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 active:scale-[0.99]'
           }`}
@@ -277,7 +335,11 @@ export const OrderCartTicket: React.FC = () => {
 
         {/* SMS Preview footnote */}
         <p className="text-center text-[11.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed bg-zinc-50 dark:bg-zinc-800 p-2 rounded-md border border-zinc-200 dark:border-zinc-700">
-          Reçu SMS : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}. Retrait {formatPromised(getPromisedDate(pickupOption)).toLowerCase()}. Pressing Pro Cocody »
+          Reçu SMS : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}.{' '}
+          {wantsHomeDelivery
+            ? `Livraison ${formatLogisticsSchedule(deliveryDateISO, deliveryTimeSlot).toLowerCase()}`
+            : `Retrait ${formatPromised(getPromisedDate(pickupOption)).toLowerCase()}`}
+          . Pressing Pro Cocody »
         </p>
       </div>
     </div>

@@ -5,7 +5,14 @@ import { Search, Plus, CheckCircle, UserCheck } from 'lucide-react';
 import { formatFCFA } from '../../data/demoData';
 
 export const CustomerSection: React.FC = () => {
-  const { customers, selectedCustomer, setSelectedCustomer, setNewCustomerModalOpen } = useApp();
+  const {
+    customers,
+    selectedCustomer,
+    setSelectedCustomer,
+    setNewCustomerModalOpen,
+    pendingPickupTask,
+  } = useApp();
+  const customerLocked = Boolean(pendingPickupTask);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
 
@@ -23,14 +30,22 @@ export const CustomerSection: React.FC = () => {
           <span>1 • Client</span>
         </h2>
         <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-          <CheckCircle className="w-3 h-3" /> Fiche retrouvée
+          <CheckCircle className="w-3 h-3" /> {customerLocked ? 'Ramassage lié' : 'Fiche retrouvée'}
         </span>
       </div>
+
+      {customerLocked && (
+        <p className="mb-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950 px-3 py-2 text-[12px] text-emerald-900 dark:text-emerald-100">
+          Client verrouillé pendant la conversion du ramassage. Pour changer de client,
+          détachez d’abord la tournée depuis le bandeau en haut du POS.
+        </p>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-2 relative">
         <div className="flex-1 relative">
           <input
             type="text"
+            disabled={customerLocked}
             value={dropdownOpen ? filterQuery : `${selectedCustomer.name} — ${selectedCustomer.phone}`}
             onFocus={() => {
               setDropdownOpen(true);
@@ -83,17 +98,20 @@ export const CustomerSection: React.FC = () => {
 
         <button
           type="button"
+          disabled={customerLocked}
           onClick={() => setDropdownOpen(!dropdownOpen)}
-          className="border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 rounded-lg px-3 py-2 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-          title="Rechercher un client"
+          className="border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 rounded-lg px-3 py-2 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          title={customerLocked ? 'Client verrouillé par le ramassage en conversion' : 'Rechercher un client'}
         >
           <Search className="w-4 h-4" />
         </button>
 
         <button
           type="button"
+          disabled={customerLocked}
           onClick={() => setNewCustomerModalOpen(true)}
-          className="bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap"
+          className="bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 rounded-lg px-4 py-2 text-[13px] font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
+          title={customerLocked ? 'Détachez le ramassage avant de créer un autre client' : undefined}
         >
           <Plus className="w-3.5 h-3.5" /> Nouveau
         </button>

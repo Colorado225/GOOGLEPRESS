@@ -16,4 +16,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   currency: 'FCFA',
   enableSms: true,
   enableThermalPrinter: true,
+  // Proposition commerciale de démarrage, modifiable dans Paramètres.
+  pickupFee: 1000,
+  deliveryFee: 1000,
 };

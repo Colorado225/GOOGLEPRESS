@@ -8,6 +8,7 @@ import { Step3SummaryAndConfirm } from './Step3SummaryAndConfirm';
 import { CustomerSection } from './CustomerSection';
 import { ClothingCatalogSection } from './ClothingCatalogSection';
 import { PickupOptionsSection } from './PickupOptionsSection';
+import { LogisticsOptionsSection, PendingPickupBanner } from './LogisticsOptionsSection';
 import { PromoBanner } from './PromoBanner';
 import { OrderCartTicket } from './OrderCartTicket';
 import { Tabs } from '../common/Tabs';
@@ -118,6 +119,8 @@ export const PosPage: React.FC = () => {
         </div>
       </div>
 
+      <PendingPickupBanner />
+
       {/* Main Content Area */}
       {viewMode === 'stepper' ? (
         <div>
@@ -160,7 +163,7 @@ export const PosPage: React.FC = () => {
                     icon: <Shirt className="w-4 h-4" aria-hidden="true" />,
                     badge: cartLines.length > 0 ? cartLines.length : undefined,
                   },
-                  { id: 'retrait', label: 'Retrait', icon: <Clock className="w-4 h-4" aria-hidden="true" /> },
+                  { id: 'retrait', label: 'Retrait & livraison', icon: <Clock className="w-4 h-4" aria-hidden="true" /> },
                 ]}
               />
               <div className={classicTab === 'client' ? '' : 'hidden'}>
@@ -170,8 +173,9 @@ export const PosPage: React.FC = () => {
                 <ClothingCatalogSection />
                 <PromoBanner />
               </div>
-              <div className={classicTab === 'retrait' ? '' : 'hidden'}>
+              <div className={classicTab === 'retrait' ? 'space-y-3' : 'hidden'}>
                 <PickupOptionsSection />
+                <LogisticsOptionsSection />
               </div>
             </div>
 
