@@ -7,6 +7,7 @@ import { HandoverSection } from './HandoverSection';
 import { DailyClosingCard } from './DailyClosingCard';
 import { LogisticsPanel } from '../logistics/LogisticsPanel';
 import { StoragePanel } from './StoragePanel';
+import { RemoteOrderTrackingPanel } from './RemoteOrderTrackingPanel';
 import { StorageAssignmentModal, type StorageAssignmentMode } from './StorageAssignmentModal';
 import type { LaundryOrder, OrderStatus } from '../../types';
 import { isHomeDeliveryOrder, isLogisticsTaskActionable } from '../../lib/logistics';
@@ -18,7 +19,7 @@ import {
 } from '../../lib/storage';
 import { normalizeText } from '../../lib/utils';
 import { getReadyOrdersToMarkNotified } from '../../lib/alerts';
-import { Search, Smartphone, ArrowLeft, WashingMachine, PackageCheck, Wallet, Truck, Archive } from 'lucide-react';
+import { Search, Smartphone, ArrowLeft, WashingMachine, PackageCheck, Wallet, Truck, Archive, RadioTower } from 'lucide-react';
 
 export const WorkshopPage: React.FC = () => {
   const {
@@ -191,6 +192,12 @@ export const WorkshopPage: React.FC = () => {
             label: 'Caisse & clôture',
             icon: <Wallet className="w-4 h-4" aria-hidden="true" />,
           },
+          {
+            id: 'remote',
+            label: 'Suivi distant',
+            icon: <RadioTower className="w-4 h-4" aria-hidden="true" />,
+            badge: 'Supabase',
+          },
         ]}
       />
 
@@ -316,6 +323,8 @@ export const WorkshopPage: React.FC = () => {
         </div>
       )}
 
+      {tab === 'remote' && <RemoteOrderTrackingPanel />}
+
       {storageRequest && (
         <StorageAssignmentModal
           key={`${storageRequest.mode}-${storageRequest.order.id}`}
@@ -326,7 +335,7 @@ export const WorkshopPage: React.FC = () => {
       )}
 
       <p className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl mt-3 px-4 py-2 text-[11.5px] text-zinc-500 dark:text-zinc-400 shadow-2xs">
-        Kanban atelier + rangement par casier + tournées domicile + remise comptoir + caisse Mobile Money (Wave, MTN, Orange) • Données locales • FCFA
+        Kanban atelier + rangement par casier + tournées domicile + remise comptoir + caisse Mobile Money (Wave, MTN, Orange) • Données locales, sauf l’onglet séparé Suivi distant Supabase • FCFA
       </p>
     </div>
   );

@@ -3,8 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { CustomerPortalApp } from './components/customer/CustomerPortalApp';
+import {
+  getCanonicalCustomerPath,
+  isCustomerPath,
+  parseCustomerRoute,
+} from './lib/customerAuth';
 import { AppSidebar } from './components/layout/AppSidebar';
 import { DashboardPage } from './components/dashboard/DashboardPage';
 import { PosPage } from './components/pos/PosPage';
@@ -116,6 +122,43 @@ const MainLayout: React.FC = () => {
 };
 
 export default function App() {
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const onPopState = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigate = useCallback((path: string, options?: { replace?: boolean }) => {
+    if (options?.replace) window.history.replaceState({}, '', path);
+    else window.history.pushState({}, '', path);
+    setPathname(window.location.pathname);
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  useEffect(() => {
+    const canonicalPath = getCanonicalCustomerPath(pathname);
+    if (canonicalPath !== pathname) {
+      navigate(
+        `${canonicalPath}${window.location.search}${window.location.hash}`,
+        { replace: true }
+      );
+    }
+  }, [navigate, pathname]);
+
+  // L'espace client est volontairement hors du shell ERP et de son contexte
+  // local : un client ne doit ni voir la navigation métier ni charger les
+  // données de démonstration du poste du pressing.
+  if (isCustomerPath(pathname)) {
+    return (
+      <CustomerPortalApp
+        route={parseCustomerRoute(pathname)}
+        onNavigate={navigate}
+      />
+    );
+  }
+
   return (
     <AppProvider>
       <MainLayout />

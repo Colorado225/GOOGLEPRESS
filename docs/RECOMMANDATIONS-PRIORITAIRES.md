@@ -18,7 +18,7 @@ Wave/MTN/Orange.
 
 | # | Chantier | État au 28/10/2026 | Prochain livrable vérifiable |
 |---|---|---|---|
-| 1 | Finaliser Supabase | Préparé, non basculé | Premier tenant + premier domaine lu/écrit à distance |
+| 1 | Finaliser Supabase | Premier lot de suivi distant livré, métier historique non basculé | Premier tenant + création distante des commandes |
 | 2 | Sauvegarde/export | Livré en local chiffré | Restauration testée sur un second navigateur/appareil |
 | 3 | Sécuriser les paramètres | Non livré | Rôle propriétaire imposé côté serveur et interface |
 | 4 | Paiements mobiles | Saisie manuelle seulement | Journal de paiements rapprochable avec références |
@@ -36,6 +36,10 @@ Wave/MTN/Orange.
 - Domaine de production Supabase Auth configuré.
 - Client front progressif et onglet Paramètres → Backend Supabase pour session
   Auth et sonde PostgREST.
+- Premier lot de suivi distant : RPC atomique de transition, historique
+  `order_events`, publication Realtime des commandes/événements/tournées et
+  onglet Atelier → Suivi distant. Détail et recette restante dans
+  `docs/backend/phase-0/05-suivi-commandes-temps-reel.md`.
 
 ### Ce qui bloque la bascule métier
 
@@ -59,7 +63,9 @@ passe dans le dépôt ou dans le chat :
    clients, puis commandes/tournées/caisse.
 4. Vérifier à chaque domaine : RLS, erreurs réseau visibles, retour arrière,
    totaux avant/après et absence de double écriture.
-5. Ajouter Realtime seulement après stabilisation des écritures.
+5. Valider Realtime sur deux navigateurs/appareils avec des comptes réels ;
+   la publication et l’abonnement sont codés, mais la livraison effective
+   d’un événement n’est pas encore prouvée.
 6. Traiter séparément la file hors ligne du comptoir.
 
 Critère d’acceptation : un domaine n’est dit « Supabase » que si ses lectures
@@ -142,23 +148,33 @@ visible jusqu’à traitement.
 
 ## 5. Industrialiser les tests
 
-Socle livré avec Vitest (`npm run test:unit`) :
+Socle livré avec Vitest (`npm run test:unit`, ou `npm run test:coverage` pour
+la mesure et les seuils) :
 
 - `pricing.ts` : arrondis, express, remise hors transport, frais et acompte ;
 - `dates.ts` : format historique, délais promis, ISO et libellés relatifs ;
 - `logistics.ts` : valeurs par défaut, frais, actionnabilité, tri et coursiers ;
 - `storage.ts` : codes, séries tout-ou-rien, occupation et suggestions ;
-- `backup.ts` : allowlist, chiffrement/déchiffrement, restauration et rollback.
+- `backup.ts` : allowlist, chiffrement/déchiffrement, restauration et rollback ;
+- `localPersistence.ts` : lecture/écriture locale, repli et identifiants ;
+- `orderTracking.ts` : étapes adjacentes, visibilité, rôles de production et
+  fusion des versions distantes.
+
+La couverture V8 de ces cœurs est mesurée et protégée par des seuils
+anti-régression. Le détail vivant figure dans
+`docs/RISQUES-ET-FAIBLESSES.md`.
 
 À étendre ensuite : rapports financiers, clôture de caisse, périodes,
-inventaire, transitions d’état des commandes et règles de capacité strictes.
+inventaire, transitions complètes d’`AppContext` et règles de capacité
+strictes. Les transitions distantes pures et la RPC PostgreSQL sont déjà
+couvertes respectivement par Vitest et PGlite.
 Les smoke tests Playwright existent ; leur exécution est déléguée à la CI où
 Chromium peut être téléchargé.
 
 ## 6. CI/CD
 
 Workflow GitHub Actions livré : installation `npm ci`, `npm run lint`,
-`npm run test:unit`, `npm run test:phase0`, `npm run build`, puis job navigateur
+`npm run test:coverage`, `npm run test:phase0`, `npm run build`, puis job navigateur
 Playwright séparé avec publication des traces en cas d’échec.
 
 Reste une action d’administration GitHub : protéger `main` pour exiger les
@@ -170,7 +186,8 @@ déploiement Vercel existant n’est pas modifié par ce chantier.
 Fournir les données réelles du premier tenant, puis exécuter dans l’ordre :
 
 1. amorçage tenant + comptes de validation + test HTTP Auth/PostgREST ;
-2. couche d’accès et migration d’un premier domaine ;
+2. recette du Suivi distant sur deux appareils, puis création distante des
+   clientes et commandes ;
 3. rôles et verrouillage serveur des Paramètres ;
 4. journal de paiements et rapprochement manuel ;
-5. migration des domaines restants, Realtime et durcissement.
+5. migration des domaines restants et durcissement.

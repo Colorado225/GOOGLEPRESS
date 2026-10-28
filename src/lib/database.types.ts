@@ -2421,7 +2421,16 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      "transition_order_status": {
+        Args: {
+          "p_order_id": string;
+          "p_target_status": string;
+          "p_expected_status"?: string | null;
+          "p_note"?: string | null;
+          "p_visibility"?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["orders"]["Row"];
+      };
     };
     Enums: {
       [_ in never]: never;

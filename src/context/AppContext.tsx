@@ -34,18 +34,16 @@ import {
   wouldExceedKnownStorageCapacity,
 } from '../lib/storage';
 
-/** Clé localStorage du compteur séquentiel de tickets (voir plus bas). */
 import { AppTheme, applyTheme, getInitialTheme, persistTheme } from '../lib/theme';
 import { DEFAULT_SHOP_SETTINGS, SHOP_SETTINGS_STORAGE_KEY } from '../lib/shopSettings';
 import { ShopSettings } from '../types';
-
-const TICKET_COUNTER_KEY = 'pressingpro_next_ticket_number';
-
-/** Extrait le numéro d'un libellé de ticket ("#TK-2854" → 2854), 0 si illisible. */
-const parseTicketNumber = (ticketNumber: string): number => {
-  const match = ticketNumber.match(/(\d+)\s*$/);
-  return match ? parseInt(match[1], 10) : 0;
-};
+import {
+  TICKET_COUNTER_STORAGE_KEY as TICKET_COUNTER_KEY,
+  createLocalId as genId,
+  loadPersistedState,
+  parseTicketNumber,
+  persistState,
+} from '../lib/localPersistence';
 
 export type ScreenId =
   | 'dashboard'
@@ -60,35 +58,19 @@ export type ScreenId =
   | 'settings';
 
 /** Onglets de l’écran Production & remises. */
-export type WorkshopTab = 'production' | 'storage' | 'logistics' | 'handover' | 'cash';
+export type WorkshopTab =
+  | 'production'
+  | 'storage'
+  | 'logistics'
+  | 'handover'
+  | 'cash'
+  | 'remote';
 
 /** Sous-vues du panneau Rangement (commandes prêtes ou plan des emplacements). */
 export type StoragePanelView = 'orders' | 'locations';
 
 /** Onglets de l’écran Paramètres. */
 export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices' | 'backend' | 'backup';
-
-/** Chargement localStorage avec repli sur les données initiales (même convention que commandes/clients/caisse). */
-function loadPersistedState<T>(key: string, fallback: T): T {
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) return JSON.parse(saved) as T;
-  } catch (e) {
-    console.warn('LocalStorage load error', e);
-  }
-  return fallback;
-}
-
-function persistState(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.warn('LocalStorage save error', e);
-  }
-}
-
-const genId = (prefix: string): string =>
-  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
 interface AppContextType {
   activeScreen: ScreenId;
@@ -433,18 +415,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
     });
 
-  useEffect(() => persistState(LOGISTICS_TASKS_STORAGE_KEY, logisticsTasks), [logisticsTasks]);
-  useEffect(
-    () => persistState(STORAGE_LOCATIONS_STORAGE_KEY, storageLocations),
-    [storageLocations]
-  );
-  useEffect(() => persistState('pressingpro_employees', employees), [employees]);
-  useEffect(() => persistState('pressingpro_attendance', attendanceRecords), [attendanceRecords]);
-  useEffect(() => persistState('pressingpro_inventory_products', products), [products]);
-  useEffect(() => persistState('pressingpro_stock_movements', stockMovements), [stockMovements]);
-  useEffect(() => persistState('pressingpro_expenses', expenses), [expenses]);
-  useEffect(() => persistState('pressingpro_expense_categories', expenseCategories), [expenseCategories]);
-  useEffect(() => persistState(SHOP_SETTINGS_STORAGE_KEY, shopSettings), [shopSettings]);
+  useEffect(() => {
+    persistState(LOGISTICS_TASKS_STORAGE_KEY, logisticsTasks);
+  }, [logisticsTasks]);
+  useEffect(() => {
+    persistState(STORAGE_LOCATIONS_STORAGE_KEY, storageLocations);
+  }, [storageLocations]);
+  useEffect(() => {
+    persistState('pressingpro_employees', employees);
+  }, [employees]);
+  useEffect(() => {
+    persistState('pressingpro_attendance', attendanceRecords);
+  }, [attendanceRecords]);
+  useEffect(() => {
+    persistState('pressingpro_inventory_products', products);
+  }, [products]);
+  useEffect(() => {
+    persistState('pressingpro_stock_movements', stockMovements);
+  }, [stockMovements]);
+  useEffect(() => {
+    persistState('pressingpro_expenses', expenses);
+  }, [expenses]);
+  useEffect(() => {
+    persistState('pressingpro_expense_categories', expenseCategories);
+  }, [expenseCategories]);
+  useEffect(() => {
+    persistState(SHOP_SETTINGS_STORAGE_KEY, shopSettings);
+  }, [shopSettings]);
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(customers[0] || INITIAL_CUSTOMERS[0]);
   const [pickupOption, setPickupOption] = useState<PickupOption>('standard');

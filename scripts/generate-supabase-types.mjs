@@ -225,6 +225,76 @@ ${renderRelationships(relationshipsByTable.get(table) ?? [])}
     .map(([name, values]) => `      ${q(name)}: ${values.map(q).join(' | ')};`)
     .join('\n');
 
+  const functionRows = (
+    await db.query(`
+      select
+        r.routine_name,
+        r.data_type,
+        r.type_udt_name,
+        coalesce(
+          json_agg(
+            json_build_object(
+              'name', p.parameter_name,
+              'data_type', p.data_type,
+              'udt_name', p.udt_name,
+              'has_default', p.parameter_default is not null
+            )
+            order by p.ordinal_position
+          ) filter (where p.parameter_name is not null and p.parameter_mode = 'IN'),
+          '[]'::json
+        ) as args
+      from information_schema.routines r
+      left join information_schema.parameters p
+        on p.specific_schema = r.specific_schema
+       and p.specific_name = r.specific_name
+      where r.routine_schema = 'public'
+        and r.routine_type = 'FUNCTION'
+      group by r.routine_name, r.data_type, r.type_udt_name
+      order by r.routine_name
+    `)
+  ).rows;
+
+  const tableSet = new Set(tables);
+  const mapFunctionReturnType = (row) => {
+    if (row.data_type === 'USER-DEFINED' && tableSet.has(row.type_udt_name)) {
+      return `Database["public"]["Tables"][${q(row.type_udt_name)}]["Row"]`;
+    }
+    return mapColumnType({ data_type: row.data_type, udt_name: row.type_udt_name });
+  };
+
+  const parseFunctionArgs = (value) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const functionBlocks = functionRows
+    .map((row) => {
+      const args = parseFunctionArgs(row.args);
+      const renderedArgs = args
+        .map((arg) => {
+          const baseType = mapColumnType({ data_type: arg.data_type, udt_name: arg.udt_name });
+          const argType = arg.has_default ? `${baseType} | null` : baseType;
+          return `          ${q(arg.name)}${arg.has_default ? '?' : ''}: ${argType};`;
+        })
+        .join('\n');
+
+      return `      ${q(row.routine_name)}: {
+        Args: {
+${renderedArgs || '          [_ in never]: never;'}
+        };
+        Returns: ${mapFunctionReturnType(row)};
+      };`;
+    })
+    .join('\n');
+
   const content = `// Généré par scripts/generate-supabase-types.mjs.
 // Source : application locale PGlite des migrations supabase/migrations/*.sql.
 // Ne pas modifier manuellement ; régénérer après toute nouvelle migration.
@@ -246,7 +316,7 @@ ${tableBlocks}
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+${functionBlocks || '      [_ in never]: never;'}
     };
     Enums: {
 ${enumBlocks || '      [_ in never]: never;'}
@@ -273,7 +343,7 @@ export type Enums<T extends keyof Database["public"]["Enums"]> =
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, content, 'utf8');
   console.log(
-    `Types Supabase générés : ${tables.length} tables, ${columns.length} colonnes, ${enums.size} enums → ${outputPath}`
+    `Types Supabase générés : ${tables.length} tables, ${columns.length} colonnes, ${functionRows.length} fonction(s), ${enums.size} enums → ${outputPath}`
   );
 } finally {
   await db.close();
