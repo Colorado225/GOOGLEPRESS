@@ -6,10 +6,13 @@
 > également confirmé qu’aucun site, application ou client réel n’utilise
 > l’ancien contenu de Pressing_Pro.
 >
-> **Périmètre livré : dépôt et PostgreSQL local éphémère uniquement.**
-> Aucune migration n’a été appliquée à Pressing_Pro ni à un autre projet
-> Supabase externe. Aucune donnée, fonction, configuration Auth ou Edge
-> Function externe n’a été modifiée.
+> **Périmètre livré à l’époque : dépôt et PostgreSQL local éphémère
+> uniquement.** Aucune migration n’avait encore été appliquée à Pressing_Pro
+> ni à un autre projet Supabase externe.
+>
+> **Remplacé depuis : voir
+> `03-purge-pressing-pro-et-installation.md`.** Le propriétaire a ensuite
+> autorisé la purge de Pressing_Pro et l’installation hébergée de ce socle.
 
 ---
 
@@ -185,26 +188,23 @@ Ce socle n’est pas encore un backend déployé.
 - Les définitions TypeScript Supabase ne sont pas générées tant qu’un
   environnement propre n’a pas rejoué les migrations.
 
-## 6. Prochaine porte avant phase 1
+## 6. Porte exécutée depuis ce rapport
 
-1. Désigner ou créer un **environnement Supabase de validation propre**, séparé
-   de l’héritage désynchronisé relevé dans Pressing_Pro, après confirmation de
-   la formule et du coût éventuel.
-2. Y appliquer uniquement les migrations versionnées de `supabase/migrations/`
-   avec la CLI Supabase.
-3. Rejouer les contrôles d’isolation via PostgreSQL et l’API REST avec de vrais
-   jetons Auth de test, puis examiner les advisors de sécurité/performance.
-4. Générer les types TypeScript depuis cet environnement validé.
-5. Décider ensuite séparément du sort de production : nouvel environnement
-   propre ou réinitialisation explicitement autorisée d’un projet existant
-   après archive/sauvegarde. Aucune de ces actions n’est implicite dans la
-   présente livraison.
-6. Commencer la phase 1 : couche d’accès Supabase/Auth et branchement
-   progressif des écrans existants, sans reconstruire l’interface.
+Le propriétaire a ensuite autorisé une autre trajectoire : **purge complète de
+Pressing_Pro et installation de ce socle dans le projet nettoyé**. Voir
+`03-purge-pressing-pro-et-installation.md` pour les opérations, versions
+distantes, contrôles catalogue et limites restantes.
 
-## 7. État externe inchangé
+Restent notamment à faire avant la phase 1 :
 
-Pressing_Pro reste dans l’état décrit par
-`01-inventaire-et-porte-de-decision.md` : ancien historique et fonctions
-toujours présents, aucune table du nouveau socle créée et aucune écriture
-effectuée pendant cette étape.
+1. supprimer physiquement les deux enveloppes Edge désactivées ;
+2. tester Auth/PostgREST avec de vrais jetons ;
+3. générer les types TypeScript ;
+4. définir les domaines, la politique d’inscription et le statut
+   développement/validation/production de Pressing_Pro.
+
+## 7. État externe à la date de ce rapport local
+
+À la fin de l’étape décrite ici, Pressing_Pro était encore inchangé. Cet état
+est désormais historique et a été remplacé par celui documenté dans le
+rapport `03-purge-pressing-pro-et-installation.md`.

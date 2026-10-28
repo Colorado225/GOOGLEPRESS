@@ -15,8 +15,12 @@
 > **Décision postérieure du propriétaire : Option B, avec confirmation
 > qu’aucun usage réel ne dépend de cet existant.** Le socle neuf, ses tests
 > locaux et ses limites sont documentés dans
-> `02-socle-option-b-et-validation-locale.md`. Cette décision n’a entraîné
-> aucune écriture dans Pressing_Pro.
+> `02-socle-option-b-et-validation-locale.md`.
+>
+> **Suite exécutée le même jour : le propriétaire a ensuite autorisé la purge
+> complète de Pressing_Pro et l’installation du nouveau socle.** Voir
+> `03-purge-pressing-pro-et-installation.md`. Le présent document conserve
+> l’état constaté avant cette purge.
 
 ---
 
@@ -434,11 +438,12 @@ encore de l’existant.
 | Matrice des rôles | **Proposée ci-dessus** |
 | Menaces et principes RLS | **Proposés ci-dessus** |
 | Trajectoire de l’existant Pressing_Pro | **Option B retenue ; aucun usage réel confirmé par le propriétaire** |
-| Choix d’environnement Supabase de validation | **En attente — aucun environnement externe créé** |
+| Choix d’environnement Supabase de validation | **Remplacé par la purge et la réutilisation de Pressing_Pro** |
 | Schéma SQL v1 versionné | **Terminé localement — quatre migrations sous `supabase/migrations/`** |
-| Schéma SQL v1 appliqué à Pressing_Pro | **Non — aucune écriture externe** |
-| Prototype de deux tenants fictifs | **Terminé localement — 19 vérifications PGlite** |
+| Purge de l’héritage Pressing_Pro | **Exécutée — base/Auth/secrets ; deux enveloppes Edge neutralisées restent à supprimer physiquement** |
+| Schéma SQL v1 appliqué à Pressing_Pro | **Oui — versions distantes `20261028094613` à `20261028095008`** |
+| Prototype de deux tenants fictifs | **Terminé localement — 19 vérifications PGlite ; aucune fixture chargée dans Pressing_Pro** |
 
-La prochaine porte est la désignation d’un environnement Supabase propre de
-validation pour y rejouer les migrations avec Auth/PostgREST réels. Voir
-`02-socle-option-b-et-validation-locale.md`.
+La prochaine porte est la validation Auth/PostgREST avec de vrais jetons, la
+génération des types TypeScript et la suppression physique des deux enveloppes
+Edge désactivées. Voir `03-purge-pressing-pro-et-installation.md`.
