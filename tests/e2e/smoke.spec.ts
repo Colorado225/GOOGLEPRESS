@@ -167,11 +167,12 @@ test.describe('PressingPro — parcours critiques', () => {
     await expect(page.getByLabel('Nom complet')).toBeVisible();
     await expect(page.getByLabel('Adresse e-mail')).toBeVisible();
     await expect(page.getByLabel(/J’accepte les/)).toBeVisible();
+    // `exact` : le pied de page propose aussi « Conditions d’utilisation ».
     await expect(
-      page.getByRole('link', { name: 'conditions d’utilisation' })
+      page.getByRole('link', { name: 'conditions d’utilisation', exact: true })
     ).toHaveAttribute('href', '/conditions');
     await expect(
-      page.getByRole('link', { name: 'politique de confidentialité' })
+      page.getByRole('link', { name: 'politique de confidentialité', exact: true })
     ).toHaveAttribute('href', '/confidentialite');
 
     await page.getByRole('button', { name: 'Créer mon compte' }).click();
