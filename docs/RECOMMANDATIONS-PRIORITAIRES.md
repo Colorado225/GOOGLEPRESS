@@ -142,13 +142,19 @@ visible jusqu’à traitement.
 
 ## 5. Industrialiser les tests
 
-Socle livré avec Vitest (`npm run test:unit`) :
+Socle livré avec Vitest (`npm run test:unit`, ou `npm run test:coverage` pour
+la mesure et les seuils) :
 
 - `pricing.ts` : arrondis, express, remise hors transport, frais et acompte ;
 - `dates.ts` : format historique, délais promis, ISO et libellés relatifs ;
 - `logistics.ts` : valeurs par défaut, frais, actionnabilité, tri et coursiers ;
 - `storage.ts` : codes, séries tout-ou-rien, occupation et suggestions ;
-- `backup.ts` : allowlist, chiffrement/déchiffrement, restauration et rollback.
+- `backup.ts` : allowlist, chiffrement/déchiffrement, restauration et rollback ;
+- `localPersistence.ts` : lecture/écriture locale, repli et identifiants.
+
+La couverture V8 de ces cœurs est mesurée et protégée par des seuils
+anti-régression. Le détail vivant figure dans
+`docs/RISQUES-ET-FAIBLESSES.md`.
 
 À étendre ensuite : rapports financiers, clôture de caisse, périodes,
 inventaire, transitions d’état des commandes et règles de capacité strictes.
@@ -158,7 +164,7 @@ Chromium peut être téléchargé.
 ## 6. CI/CD
 
 Workflow GitHub Actions livré : installation `npm ci`, `npm run lint`,
-`npm run test:unit`, `npm run test:phase0`, `npm run build`, puis job navigateur
+`npm run test:coverage`, `npm run test:phase0`, `npm run build`, puis job navigateur
 Playwright séparé avec publication des traces en cas d’échec.
 
 Reste une action d’administration GitHub : protéger `main` pour exiger les

@@ -696,8 +696,8 @@ export const SettingsPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Printer className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
                 <div>
-                  <p className="font-bold text-zinc-900 dark:text-zinc-100">Imprimante thermique de tickets (80mm)</p>
-                  <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">Impression automatique du ticket lors de la validation</p>
+                  <p className="font-bold text-zinc-900 dark:text-zinc-100">Imprimante thermique de tickets (80 mm)</p>
+                  <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">Préférence conservée localement : l’impression passe par la boîte de dialogue du navigateur, sans pilote direct ni déclenchement automatique.</p>
                 </div>
               </div>
               <input

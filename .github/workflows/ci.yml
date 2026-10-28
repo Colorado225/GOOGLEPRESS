@@ -32,8 +32,8 @@ jobs:
       - name: Vérification TypeScript
         run: npm run lint
 
-      - name: Tests unitaires métier
-        run: npm run test:unit
+      - name: Tests unitaires métier et couverture des cœurs
+        run: npm run test:coverage
 
       - name: Tests Supabase Phase 0 (PGlite)
         run: npm run test:phase0

@@ -14,7 +14,7 @@ clôture journalière Z.
   (Client → Articles → Récapitulatif & paiement) ou vue classique tout-en-un.
   Deux univers : **Pressing** à la pièce et **Blanchisserie** à la pièce ou
   **au kilo**. Supplément express +50 %, remise fidélité, acompte, aperçu du
-  ticket et du SMS client. Un ramassage déjà collecté peut y être compté puis
+  ticket et message client à copier manuellement. Un ramassage déjà collecté peut y être compté puis
   converti en commande ; la restitution se choisit entre retrait au comptoir
   et livraison à domicile (adresse, date et créneau de tournée).
 - **Production & suivi** — Kanban atelier (Reçu → Lavage → Repassage → Prêt),
@@ -46,7 +46,9 @@ clôture journalière Z.
 ## Stack technique
 
 React 19 · TypeScript · Vite 8 · Tailwind CSS v4 · lucide-react ·
-canvas-confetti. Application 100 % front-end (SPA), sans backend.
+canvas-confetti. SPA dont les écrans métier restent pour l’instant locaux ;
+une fondation Supabase multi-tenant et une sonde Auth/PostgREST existent,
+mais elles ne portent pas encore les données métier.
 
 ## Démarrage
 
@@ -59,11 +61,25 @@ npm run build      # build de production dans dist/
 npm run preview    # prévisualiser le build de production
 npm run lint       # vérification TypeScript (tsc --noEmit)
 npm run test:unit  # tests unitaires des cœurs métier (Vitest)
+npm run test:coverage # unitaires + couverture/seuils des cœurs ciblés
 npm run test:phase0 # tests d’isolation Supabase Phase 0 (PGlite)
 npm run test:e2e   # smoke tests navigateur (Playwright)
 ```
 
 Aucune variable d'environnement n'est requise (voir `.env.example`).
+
+## Qualité et CI
+
+- **Tests unitaires** : Vitest couvre les cœurs `pricing`, `dates`,
+  `logistics`, `storage`, `backup` et `localPersistence` ; `test:coverage`
+  applique des seuils anti-régression sur ce périmètre précis.
+- **Backend** : `test:phase0` vérifie l’isolation multi-tenant et la RLS sous
+  PGlite.
+- **Navigateur** : `test:e2e` lance les smoke tests Playwright des parcours
+  critiques.
+- **CI GitHub Actions** : `.github/workflows/ci.yml` exécute typage,
+  couverture des cœurs, tests Phase 0, build et smoke tests. L’obligation de
+  ces checks avant merge reste un réglage de protection de branche GitHub.
 
 ## Structure du projet
 
@@ -78,6 +94,8 @@ src/
 │   ├── logistics.ts         créneaux, statuts et règles des tournées domicile
 │   ├── storage.ts           zones, occupation et recherche des casiers de commandes prêtes
 │   ├── pricing.ts           calculs tarifaires uniques (totaux, express, frais, remises)
+│   ├── localPersistence.ts  lecture/écriture JSON locale et identifiants locaux
+│   ├── backup.ts            export/import local chiffré et allowlist des clés
 │   └── utils.ts             helper cn() (classes Tailwind)
 └── components/              écrans par domaine (dashboard, pos, workshop…)
 ```
@@ -118,14 +136,12 @@ src/
 
 ## Données
 
-Sans backend, l'application stocke tout dans le **localStorage** du
-navigateur, sous les clés `pressingpro_orders`, `pressingpro_customers`,
-`pressingpro_cash_register`, `pressingpro_logistics_tasks`,
-`pressingpro_storage_locations` (plan des casiers de l'atelier),
-`pressingpro_next_ticket_number` et `pressingpro_theme` (thème d'interface
-choisi sur l'appareil) et `pressingpro_shop_settings` (identité, réglages,
-forfaits de ramassage/livraison et règles de rangement saisis dans les
-Paramètres — affichés sur le ticket, la barre latérale et les rapports).
+Tant que la bascule métier Supabase n’est pas livrée, les écrans stockent
+leurs données dans le **localStorage** du navigateur, sous des clés
+`pressingpro_*` : commandes, clients, caisse, tournées, personnel, stocks,
+dépenses, emplacements, paramètres, compteur de tickets et préférences de
+l’appareil. La liste exacte reprise par la sauvegarde fait foi dans
+`src/lib/backup.ts` (`BACKUP_KEYS`).
 Au premier lancement, des données de démonstration datées du jour courant
 sont chargées (dates relatives, voir `src/data/demoData.ts`). Sur un
 navigateur contenant déjà des commandes, seuls deux exemples de ramassage
@@ -184,18 +200,26 @@ ticket reste blanc, comme le papier.
 
 ## Limites actuelles
 
-- **Mono-poste** : les données vivent dans un seul navigateur — pas de
-  synchronisation entre le comptoir et l'atelier, pas d'authentification.
-- **SMS et impression simulés** (aucun envoi réel, aucun pilote d'imprimante).
-- **Tournées sans GPS ni réservation client en ligne** : réservation prise par
-  le personnel, suivi par statuts et créneaux dans ce navigateur uniquement.
-- **Rangement sans scan d'étiquettes ni rôle verrouillé** : la recherche se
-  fait par saisie du ticket, du client ou du code de casier ; les codes
-  doivent être reportés manuellement sur les étiquettes physiques du local.
-  Les règles dites « du propriétaire » ne sont pas encore protégées par un
-  compte ou un mot de passe : toute personne ayant accès à ce navigateur
-  peut les modifier, en attendant le backend et les rôles utilisateurs.
-- Statistiques 7 jours de démo.
+- **Mono-poste** : les données métier vivent dans un seul navigateur — pas de
+  synchronisation entre le comptoir et l'atelier. L’export chiffré manuel
+  atténue le risque de perte, sans créer de sauvegarde serveur.
+- **Aucune authentification applicative** : toute personne ayant accès à ce
+  navigateur peut modifier données et paramètres. La sonde Supabase Auth ne
+  verrouille pas encore l’application.
+- **Aucune notification externe envoyée** : les commandes prêtes sont
+  marquées localement et un message peut être copié, mais aucun fournisseur
+  SMS/WhatsApp ni accusé de livraison n’est branché.
+- **Impression via le navigateur uniquement** : `window.print()` peut utiliser
+  une imprimante installée dans le système, mais il n’y a ni pilote direct
+  thermique/ESC-POS, ni impression silencieuse, ni état du périphérique.
+- **Tournées sans GPS ni réservation client en ligne** : adresse, téléphone,
+  créneau, coursier et statuts sont suivis manuellement, sans coordonnées ni
+  optimisation géographique.
+- **Rangement sans scan d'étiquettes ni rôle verrouillé** : recherche par
+  ticket, client ou code de casier ; les codes doivent être reportés
+  manuellement sur les étiquettes physiques du local.
 
-Prochaine étape logique (P1) : brancher un backend (ex. Supabase) avec
-comptes employés et temps réel multi-postes, puis les vrais envois SMS.
+Le détail, la gravité résiduelle et les critères de clôture sont suivis dans
+[`docs/RISQUES-ET-FAIBLESSES.md`](docs/RISQUES-ET-FAIBLESSES.md). Prochaine
+étape structurante : créer le premier tenant Supabase réel, migrer les
+domaines un par un et imposer les rôles côté serveur.
