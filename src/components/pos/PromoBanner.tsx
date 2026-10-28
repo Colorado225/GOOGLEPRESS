@@ -30,7 +30,7 @@ export const PromoBanner: React.FC = () => {
             « Un vêtement bien entretenu, c'est une meilleure image ! »
           </p>
           <p className="text-[11.5px] text-zinc-300 mt-0.5">
-            Détachage expert fibres délicates, bazin riche & costumes d'affaires • Cocody & Plateau
+            Détachage expert fibres délicates, bazin riche & costumes d’affaires
           </p>
         </div>
 

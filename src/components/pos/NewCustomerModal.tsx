@@ -7,7 +7,9 @@ export const NewCustomerModal: React.FC = () => {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('07 ');
-  const [address, setAddress] = useState('Cocody, ');
+  // Aucune adresse pré-remplie : un quartier d'exemple se retrouverait
+  // enregistré tel quel dans le dossier d'un vrai client.
+  const [address, setAddress] = useState('');
   const [discount, setDiscount] = useState(0);
 
   if (!newCustomerModalOpen) return null;
