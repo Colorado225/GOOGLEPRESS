@@ -7,13 +7,30 @@
 > vérifications de cette reprise sont documentées dans
 > [`docs/PAGES-AUTH-DESIGN.md`](../../PAGES-AUTH-DESIGN.md).
 
-> **État au 28 octobre 2026 : pages livrées et reliées à Supabase Auth.**
-> La connexion des comptes déjà créés et confirmés est fonctionnelle dans le
-> code. En revanche, **l’inscription publique reste volontairement fermée sur
-> Pressing_Pro** (`disable_signup=true`) : la page d’inscription est complète,
-> mais Supabase refusera encore la création autonome d’un compte tant que
-> l’ouverture n’aura pas été explicitement autorisée. Aucun compte fictif,
-> tenant ou commande n’a été créé pour simuler une réussite.
+> **État au 28 octobre 2026 : pages livrées et reliées au projet Supabase
+> hébergé `Pressing_Pro` (`phjstsydxvggtduohfrl`).**
+>
+> Relevé réel des réglages Auth (et non plus l’état décrit lors de la
+> conception) :
+>
+> - `disable_signup` = **false** : l’inscription autonome est ouverte ;
+> - `mailer_autoconfirm` = **true, réglage temporaire de phase de test** :
+>   aucun SMTP de production n’étant configuré, un e-mail de confirmation ne
+>   serait pas délivré et l’inscription resterait une impasse. À repasser à
+>   `false` dès qu’un expéditeur du domaine est en place, avant toute
+>   ouverture commerciale ;
+> - `password_min_length` = **6** côté serveur alors que l’interface exige 8 :
+>   l’écart reste à corriger (réglage non exposé par l’API de gestion) ;
+> - origines de redirection autorisées : domaine Vercel, `localhost:3000`,
+>   `localhost:5173` et `https://*.e2b.app` (aperçu de développement) ;
+> - modèle d’e-mail encore en anglais, à traduire avant l’ouverture.
+>
+> La base est par ailleurs **vide** : 0 compte, 0 profil, 0 organisation,
+> 0 fiche cliente, 0 liaison vérifiée. Aucun compte fictif, tenant ou commande
+> n’a été créé pour simuler une réussite. Les 10 migrations sont appliquées et
+> les fonctions `create_my_organization`, `create_order` et
+> `transition_order_status` sont présentes, `security definer`, exécutables par
+> `authenticated` ; le déclencheur `on_auth_user_created` crée bien le profil.
 
 ## Pages livrées
 
@@ -139,23 +156,27 @@ Le portail ne contient ni bouton de fausse messagerie, ni demande
 d’enlèvement simulée, ni paiement fictif. Ces parcours restent des chantiers
 séparés.
 
-## Configuration Auth constatée — inchangée
+## Configuration Auth relevée sur le projet hébergé
 
-Au moment de la livraison, Pressing_Pro conserve :
+Relevé du 28 octobre 2026, après branchement de l’application sur
+`phjstsydxvggtduohfrl` :
 
 - e-mail/mot de passe activé ;
 - téléphone/SMS désactivé ;
-- **inscription publique désactivée** (`disable_signup=true`) ;
-- confirmation d’e-mail requise (`mailer_autoconfirm=false`) ;
+- **inscription publique ouverte** (`disable_signup=false`) ;
+- **confirmation d’e-mail court-circuitée** (`mailer_autoconfirm=true`) —
+  réglage **temporaire de test**, à refermer avant l’ouverture commerciale ;
 - aucun SMTP personnalisé ;
 - captcha désactivé ;
-- longueur minimale serveur du mot de passe : 6 ;
+- longueur minimale serveur du mot de passe : 6 (l’interface exige 8) ;
 - site : `https://laundrypressing.vercel.app` ;
-- redirections autorisées : domaine de production et `localhost:3000`.
+- redirections autorisées : domaine de production, `localhost:3000`,
+  `localhost:5173`, `https://*.e2b.app`.
 
-Conséquence assumée : le bouton **Créer mon compte client** envoie une vraie
-demande, puis affiche en français que les inscriptions ne sont pas encore
-ouvertes. Il ne simule pas un compte créé.
+Conséquence actuelle : **Créer un compte client** crée réellement le compte et
+ouvre la session, puis mène à `/client`. Ce compte reste vide de toute commande
+tant qu’une liaison `customer_account_links` n’a pas été vérifiée par un
+pressing.
 
 ## Tests ajoutés
 
