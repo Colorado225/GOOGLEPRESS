@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { Search, Plus, UserCheck, Phone, MapPin, ArrowLeft, ShoppingBag, Users, Star, Wallet } from 'lucide-react';
 import { Tabs } from '../common/Tabs';
+import { TablePaginationFooter } from '../common/DataTable';
+import { usePagination } from '../../lib/pagination';
 import { Customer } from '../../types';
 
 export const ClientsPage: React.FC = () => {
@@ -30,6 +32,8 @@ export const ClientsPage: React.FC = () => {
   };
   const countFor = (t: typeof tab) => searchedCustomers.filter((c) => inTab(c, t)).length;
   const filteredCustomers = searchedCustomers.filter((c) => inTab(c, tab));
+  // Grille 3 colonnes (2 en tablette) : 12 cartes par page = rangées complètes.
+  const { page, pageCount, setPage, pageItems: pagedCustomers, rangeStart, rangeEnd } = usePagination(filteredCustomers, 12, [searchTerm, tab]);
 
   const handleStartOrder = (cust: Customer) => {
     setSelectedCustomer(cust);
@@ -102,7 +106,7 @@ export const ClientsPage: React.FC = () => {
           </p>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-          {filteredCustomers.map((cust) => (
+          {pagedCustomers.map((cust) => (
             <div
               key={cust.id}
               className="border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 rounded-xl p-4 bg-zinc-50/40 dark:bg-zinc-800/40 hover:bg-white dark:hover:bg-zinc-900 transition-all shadow-2xs flex flex-col justify-between"
@@ -148,6 +152,18 @@ export const ClientsPage: React.FC = () => {
             </div>
           ))}
         </div>
+        {filteredCustomers.length > 0 && (
+          <TablePaginationFooter
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={filteredCustomers.length}
+            label="client(s)"
+            className="border-t border-zinc-200 dark:border-zinc-700"
+          />
+        )}
       </div>
     </div>
   );

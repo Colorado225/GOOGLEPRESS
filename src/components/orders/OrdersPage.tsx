@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2, Inbox, Shirt } from 'lucide-react';
+import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2, Inbox, Shirt, Truck, MapPin } from 'lucide-react';
 import { Tabs } from '../common/Tabs';
-import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, type BadgeVariant } from '../common/DataTable';
-import { getInitials } from '../../lib/utils';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, TablePaginationFooter, type BadgeVariant } from '../common/DataTable';
+import { usePagination } from '../../lib/pagination';
+import { getInitials, normalizeText } from '../../lib/utils';
 import { isOrderLate } from '../../lib/reports';
+import { formatLogisticsSchedule, isHomeDeliveryOrder, isHomePickupOrder } from '../../lib/logistics';
+import {
+  formatPackageCount,
+  getOrderStorageCode,
+  getOrderStorageSearchText,
+  getOrdersOutForDeliveryIds,
+  hasStructuredStorage,
+} from '../../lib/storage';
 import { LaundryOrder } from '../../types';
 
 const ORDER_STATUS_BADGE_VARIANT: Record<LaundryOrder['status'], BadgeVariant> = {
@@ -24,17 +33,43 @@ const ORDER_STATUS_LABEL: Record<LaundryOrder['status'], string> = {
   delivered: 'Remis ✓',
 };
 
+const getOrderStatusLabel = (order: LaundryOrder): string =>
+  order.status === 'delivered' && isHomeDeliveryOrder(order)
+    ? 'Livré ✓'
+    : ORDER_STATUS_LABEL[order.status];
+
 export const OrdersPage: React.FC = () => {
-  const { orders, setPreviewTicket, setActiveScreen } = useApp();
+  const {
+    orders,
+    logisticsTasks,
+    setPreviewTicket,
+    setActiveScreen,
+    focusStorageOrder,
+    focusLogisticsTask,
+  } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [tab, setTab] = useState<'all' | 'received' | 'washing' | 'ironing' | 'ready' | 'late' | 'delivered'>('all');
 
-  const searchedOrders = orders.filter(
-    (order) =>
-      order.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.lines.some((l) => l.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const searchedOrders = orders.filter((order) => {
+    const needle = normalizeText(searchTerm);
+    if (!needle) return true;
+    const haystack = normalizeText(
+      [
+        order.ticketNumber,
+        order.customerName,
+        order.customerPhone,
+        order.customerAddress ?? '',
+        order.deliveryAddress ?? '',
+        order.collectionAddress ?? '',
+        getOrderStorageSearchText(order),
+        order.storageNotes ?? '',
+        ...order.lines.map((line) => `${line.name} ${line.color ?? ''}`),
+      ].join(' ')
+    );
+    return haystack.includes(needle);
+  });
+
+  const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
 
   // Onglets par statut exact du workflow, plus la file transversale des retards à relancer
   const inTab = (order: LaundryOrder, t: typeof tab): boolean => {
@@ -44,6 +79,7 @@ export const OrdersPage: React.FC = () => {
   };
   const countFor = (t: typeof tab) => searchedOrders.filter((o) => inTab(o, t)).length;
   const filteredOrders = searchedOrders.filter((o) => inTab(o, tab));
+  const { page, pageCount, setPage, pageItems: pagedOrders, rangeStart, rangeEnd } = usePagination(filteredOrders, 10, [searchTerm, tab]);
 
   return (
     <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
@@ -86,7 +122,7 @@ export const OrdersPage: React.FC = () => {
           { id: 'ironing', label: 'Repassage', icon: <Shirt className="w-4 h-4" aria-hidden="true" />, badge: countFor('ironing') },
           { id: 'ready', label: 'Prêtes', icon: <PackageCheck className="w-4 h-4" aria-hidden="true" />, badge: countFor('ready') },
           { id: 'late', label: 'En retard', icon: <Clock className="w-4 h-4" aria-hidden="true" />, badge: countFor('late') },
-          { id: 'delivered', label: 'Livrées', icon: <CheckCircle2 className="w-4 h-4" aria-hidden="true" />, badge: countFor('delivered') },
+          { id: 'delivered', label: 'Remises / livrées', icon: <CheckCircle2 className="w-4 h-4" aria-hidden="true" />, badge: countFor('delivered') },
         ]}
       />
 
@@ -99,7 +135,7 @@ export const OrdersPage: React.FC = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Rechercher par ticket, client, vêtement..."
+                placeholder="Ticket, client, téléphone, casier, vêtement…"
                 className="border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-64 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               />
             </div>
@@ -126,7 +162,14 @@ export const OrdersPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-zinc-200 dark:divide-zinc-700">
-              {filteredOrders.map((order) => (
+              {pagedOrders.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="px-4 py-8 text-center text-zinc-500 dark:text-zinc-400">
+                    Aucune commande ne correspond à cette recherche.
+                  </TableCell>
+                </TableRow>
+              )}
+              {pagedOrders.map((order) => (
                 <TableRow
                   key={order.id}
                   onClick={() => setPreviewTicket(order)}
@@ -137,6 +180,20 @@ export const OrdersPage: React.FC = () => {
                       <span>{order.ticketNumber}</span>
                       <Badge variant={order.serviceCategory === 'blanchisserie' ? 'teal' : 'info'} size="sm" className="rounded-md px-1.5 text-[9.5px] uppercase">{order.serviceCategory === 'blanchisserie' ? 'Blanch.' : 'Press.'}</Badge>
                     </div>
+                    {(isHomePickupOrder(order) || isHomeDeliveryOrder(order)) && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {isHomePickupOrder(order) && (
+                          <Badge variant="success" size="sm" className="rounded-md px-1.5 text-[9.5px]">
+                            <PackageCheck className="h-3 w-3" aria-hidden="true" /> Ramassage
+                          </Badge>
+                        )}
+                        {isHomeDeliveryOrder(order) && (
+                          <Badge variant="info" size="sm" className="rounded-md px-1.5 text-[9.5px]">
+                            <Truck className="h-3 w-3" aria-hidden="true" /> Livraison
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
@@ -162,12 +219,56 @@ export const OrdersPage: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
-                    {order.promisedAt}
+                    <span>{order.promisedAt}</span>
+                    {isHomeDeliveryOrder(order) && order.deliveryDate && (
+                      <span className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                        <Truck className="h-3 w-3" aria-hidden="true" />
+                        {formatLogisticsSchedule(order.deliveryDate, order.deliveryTimeSlot)}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <Badge variant={ORDER_STATUS_BADGE_VARIANT[order.status]}>
-                      {ORDER_STATUS_LABEL[order.status]}
+                      {getOrderStatusLabel(order)}
                     </Badge>
+                    {order.status === 'ready' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (outForDeliveryIds.has(order.id) && order.deliveryTaskId) {
+                            focusLogisticsTask(order.deliveryTaskId);
+                          } else {
+                            focusStorageOrder(order.id);
+                          }
+                        }}
+                        className={`mt-1 flex items-center gap-1 rounded px-1 py-0.5 text-[11px] font-bold underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
+                          outForDeliveryIds.has(order.id)
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : hasStructuredStorage(order)
+                              ? 'text-emerald-700 dark:text-emerald-300'
+                              : getOrderStorageCode(order)
+                                ? 'text-zinc-600 dark:text-zinc-400'
+                                : 'text-amber-700 dark:text-amber-300'
+                        }`}
+                        title={
+                          outForDeliveryIds.has(order.id)
+                            ? 'Ouvrir la tournée en cours'
+                            : 'Ouvrir dans le rangement atelier'
+                        }
+                      >
+                        {outForDeliveryIds.has(order.id) ? (
+                          <Truck className="h-3 w-3" aria-hidden="true" />
+                        ) : (
+                          <MapPin className="h-3 w-3" aria-hidden="true" />
+                        )}
+                        {outForDeliveryIds.has(order.id)
+                          ? `En livraison • ${formatPackageCount(order)}`
+                          : getOrderStorageCode(order)
+                            ? `${getOrderStorageCode(order)}${hasStructuredStorage(order) ? ` • ${formatPackageCount(order)}` : ''}`
+                            : 'Non rangée'}
+                      </button>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right whitespace-nowrap">
                     <button
@@ -185,6 +286,16 @@ export const OrdersPage: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+          <TablePaginationFooter
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            rangeStart={rangeStart}
+            rangeEnd={rangeEnd}
+            total={filteredOrders.length}
+            label="commande(s)"
+            className="border-t border-zinc-200 dark:border-zinc-700"
+          />
           </FramePanel>
         </Frame>
       </div>

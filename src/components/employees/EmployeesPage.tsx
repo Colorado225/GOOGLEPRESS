@@ -3,7 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard } from '../common/ModuleCommon';
 import { Tabs } from '../common/Tabs';
-import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback } from '../common/DataTable';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, TablePaginationFooter } from '../common/DataTable';
+import { usePagination } from '../../lib/pagination';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeeDetailPanel } from './EmployeeDetailPanel';
 import { AttendanceSection } from './AttendanceSection';
@@ -94,6 +95,8 @@ export const EmployeesPage: React.FC = () => {
     }
     return list;
   }, [employees, searchTerm, statusFilter, positionFilter, presenceFilter, sortKey, attendanceRecords, today, activityByEmployee]);
+
+  const { page, pageCount, setPage, pageItems: pagedEmployees, rangeStart, rangeEnd } = usePagination(filteredEmployees, 10, [searchTerm, statusFilter, positionFilter, presenceFilter, sortKey]);
 
   const hasActiveFilters = searchTerm.trim() !== '' || statusFilter !== 'all' || positionFilter !== 'all' || presenceFilter !== 'all';
   const resetFilters = () => {
@@ -321,7 +324,7 @@ export const EmployeesPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEmployees.map((employee) => {
+                    {pagedEmployees.map((employee) => {
                       const presence = getAttendanceStatus(attendanceRecords, employee.id, today);
                       const activity = activityByEmployee.get(employee.id) ?? { assigned: 0, finished: 0 };
                       return (
@@ -355,12 +358,22 @@ export const EmployeesPage: React.FC = () => {
                     })}
                   </TableBody>
                 </Table>
+                <TablePaginationFooter
+                  page={page}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  rangeStart={rangeStart}
+                  rangeEnd={rangeEnd}
+                  total={filteredEmployees.length}
+                  label="employé(s)"
+                  className="border-t border-zinc-200 dark:border-zinc-700"
+                />
                 </FramePanel>
               </Frame>
 
               {/* Cartes (mobile) */}
               <div className="md:hidden grid grid-cols-1 gap-3 p-3">
-                {filteredEmployees.map((employee) => {
+                {pagedEmployees.map((employee) => {
                   const presence = getAttendanceStatus(attendanceRecords, employee.id, today);
                   const activity = activityByEmployee.get(employee.id) ?? { assigned: 0, finished: 0 };
                   return (
@@ -392,6 +405,16 @@ export const EmployeesPage: React.FC = () => {
                   );
                 })}
               </div>
+              <TablePaginationFooter
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                total={filteredEmployees.length}
+                label="employé(s)"
+                className="md:hidden border-t border-zinc-200 dark:border-zinc-700"
+              />
             </>
           )}
         </div>

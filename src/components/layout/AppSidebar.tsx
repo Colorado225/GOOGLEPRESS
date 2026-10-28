@@ -1,5 +1,7 @@
 import React from 'react';
-import { useApp, ScreenId } from '../../context/AppContext';
+import { useApp, ScreenId, WorkshopTab } from '../../context/AppContext';
+import { isLogisticsTaskActionable } from '../../lib/logistics';
+import { getOrdersOutForDeliveryIds, hasStructuredStorage } from '../../lib/storage';
 import {
   Crown,
   ChevronLeft,
@@ -11,6 +13,7 @@ import {
   LayoutDashboard,
   ShoppingBag,
   Cog,
+  Archive,
   Truck,
   Wallet,
   Users,
@@ -36,6 +39,9 @@ export const AppSidebar: React.FC = () => {
     setShortcutHelpOpen,
     nextTicketNumber,
     products,
+    shopSettings,
+    logisticsTasks,
+    requestWorkshopTab,
   } = useApp();
 
   // En tiroir mobile, la barre est toujours rendue déployée (le repli ne concerne que le bureau)
@@ -43,6 +49,14 @@ export const AppSidebar: React.FC = () => {
 
   const receivedCount = orders.filter((o) => o.status === 'received').length;
   const stockAlertCount = getAlertProducts(products).length;
+  const logisticsActionCount = logisticsTasks.filter(isLogisticsTaskActionable).length;
+  const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
+  const storageActionCount = orders.filter(
+    (order) =>
+      order.status === 'ready' &&
+      !outForDeliveryIds.has(order.id) &&
+      !hasStructuredStorage(order)
+  ).length;
 
   const navItems: {
     id: ScreenId;
@@ -51,6 +65,7 @@ export const AppSidebar: React.FC = () => {
     badge?: number;
     shortcut?: string;
     action?: () => void;
+    workshopTab?: WorkshopTab;
   }[] = [
     {
       id: 'dashboard',
@@ -70,11 +85,21 @@ export const AppSidebar: React.FC = () => {
       label: 'Production & Suivi',
       icon: <Cog className="w-[18px] h-[18px] shrink-0" />,
       shortcut: 'F3',
+      workshopTab: 'production',
+    },
+    {
+      id: 'workshop',
+      label: 'Rangement atelier',
+      icon: <Archive className="w-[18px] h-[18px] shrink-0" />,
+      badge: storageActionCount || undefined,
+      workshopTab: 'storage',
     },
     {
       id: 'workshop',
       label: 'Remises & Livraisons',
       icon: <Truck className="w-[18px] h-[18px] shrink-0" />,
+      badge: logisticsActionCount || undefined,
+      workshopTab: 'logistics',
     },
     {
       id: 'dashboard',
@@ -136,10 +161,12 @@ export const AppSidebar: React.FC = () => {
             P
           </div>
           <div className="overflow-hidden">
-            <p className="font-bold text-[15px] leading-tight text-white tracking-tight">
-              Pressing Pro CI
+            <p className="font-bold text-[15px] leading-tight text-white tracking-tight truncate">
+              {shopSettings.name}
             </p>
-            <p className="text-[11px] text-zinc-400 font-medium">Cocody, Abidjan</p>
+            <p className="text-[11px] text-zinc-400 font-medium truncate" title={shopSettings.address}>
+              {shopSettings.address}
+            </p>
           </div>
         </div>
 
@@ -167,15 +194,17 @@ export const AppSidebar: React.FC = () => {
           const isActive =
             item.action
               ? false
-              : idx === 3
-              ? false
-              : activeScreen === item.id;
+              : item.workshopTab && item.workshopTab !== 'production'
+                ? false
+                : activeScreen === item.id;
 
           return (
             <button
               key={`${item.id}-${idx}`}
               onClick={() => {
-                if (item.action) {
+                if (item.workshopTab) {
+                  requestWorkshopTab(item.workshopTab);
+                } else if (item.action) {
                   item.action();
                 } else {
                   setActiveScreen(item.id);

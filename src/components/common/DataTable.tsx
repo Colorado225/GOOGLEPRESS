@@ -247,3 +247,42 @@ export const TablePagination: React.FC<TablePaginationProps> = ({ page, pageCoun
     </nav>
   );
 };
+
+interface TablePaginationFooterProps {
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
+  /** Bornes 1-indexées des éléments affichés (rangeStart = 0 si vide). */
+  rangeStart: number;
+  rangeEnd: number;
+  total: number;
+  /** Libellé des éléments comptés, ex. « commande(s) ». */
+  label: string;
+  className?: string;
+}
+
+/**
+ * Pied de tableau paginé : compteur réel (« Affichage de X à Y sur Z … »,
+ * annoncé en aria-live) + navigation par pages. À placer sous le tableau
+ * dans le même panneau. Les totaux portent toujours sur la liste complète,
+ * seule la page courante est affichée (voir lib/pagination.ts).
+ */
+export const TablePaginationFooter: React.FC<TablePaginationFooterProps> = ({
+  page,
+  pageCount,
+  onPageChange,
+  rangeStart,
+  rangeEnd,
+  total,
+  label,
+  className,
+}) => (
+  <div className={cn('flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-4', className)}>
+    <p aria-live="polite" className="text-[12px] tabular-nums text-zinc-500 dark:text-zinc-400">
+      {total === 0
+        ? 'Aucun résultat'
+        : `Affichage de ${rangeStart} à ${rangeEnd} sur ${total} ${label} · Page ${page} sur ${pageCount}`}
+    </p>
+    <TablePagination page={page} pageCount={pageCount} onPageChange={onPageChange} />
+  </div>
+);

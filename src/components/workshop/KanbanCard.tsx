@@ -2,13 +2,21 @@ import React from 'react';
 import { LaundryOrder } from '../../types';
 import { formatFCFA } from '../../data/demoData';
 import { useApp } from '../../context/AppContext';
-import { ChevronRight, ChevronLeft, Clock, AlertTriangle, CheckCircle, Smartphone } from 'lucide-react';
+import { formatLogisticsSchedule, isHomeDeliveryOrder, isHomePickupOrder } from '../../lib/logistics';
+import {
+  formatPackageCount,
+  getOrderStorageCode,
+  hasLegacyStorage,
+  hasStructuredStorage,
+} from '../../lib/storage';
+import { ChevronRight, ChevronLeft, Clock, AlertTriangle, CheckCircle, Smartphone, Truck, PackageCheck, Archive, MapPin } from 'lucide-react';
 
 interface KanbanCardProps {
   order: LaundryOrder;
   onMoveForward?: () => void;
   onMoveBackward?: () => void;
   onSelectForHandover?: () => void;
+  onAssignStorage?: () => void;
 }
 
 export const KanbanCard: React.FC<KanbanCardProps> = ({
@@ -16,11 +24,22 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   onMoveForward,
   onMoveBackward,
   onSelectForHandover,
+  onAssignStorage,
 }) => {
-  const { setPreviewTicket, settleAndDeliverOrder } = useApp();
+  const { setPreviewTicket, settleAndDeliverOrder, focusLogisticsTask, logisticsTasks } = useApp();
 
   const isLate = order.isLate;
   const isReady = order.status === 'ready';
+  const isHomePickup = isHomePickupOrder(order);
+  const isHomeDelivery = isHomeDeliveryOrder(order);
+  const isOutForDelivery = logisticsTasks.some(
+    (task) => task.kind === 'delivery' && task.orderId === order.id && task.status === 'en_route'
+  );
+
+  const openDeliveryTask = () => {
+    if (order.deliveryTaskId) focusLogisticsTask(order.deliveryTaskId);
+    else setPreviewTicket(order);
+  };
 
   const summaryArticles = order.lines
     .map((l) => `${l.quantity > 1 ? `${l.quantity} ` : ''}${l.name.toLowerCase()}${l.color ? ` (${l.color.toLowerCase()})` : ''}`)
@@ -29,7 +48,9 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   return (
     <div
       onClick={() => {
-        if (isReady && onSelectForHandover) {
+        if (isReady && isHomeDelivery) {
+          openDeliveryTask();
+        } else if (isReady && onSelectForHandover) {
           onSelectForHandover();
         } else {
           setPreviewTicket(order);
@@ -77,6 +98,62 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
           </span>
         )}
       </p>
+
+      {(isHomePickup || isHomeDelivery) && (
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px] font-bold">
+          {isHomePickup && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <PackageCheck className="h-3 w-3" aria-hidden="true" /> Ramassage
+            </span>
+          )}
+          {isHomeDelivery && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              <Truck className="h-3 w-3" aria-hidden="true" />
+              Livraison{order.deliveryDate ? ` • ${formatLogisticsSchedule(order.deliveryDate, order.deliveryTimeSlot)}` : ''}
+            </span>
+          )}
+        </div>
+      )}
+
+      {isReady && (
+        <div
+          className="mt-2 flex items-center justify-between gap-2 text-[11px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {isOutForDelivery ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950 px-2 py-0.5 font-black text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              <Truck className="h-3 w-3" aria-hidden="true" />
+              En livraison • {formatPackageCount(order)}
+            </span>
+          ) : hasStructuredStorage(order) ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 font-black text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <MapPin className="h-3 w-3" aria-hidden="true" />
+              {getOrderStorageCode(order)} • {formatPackageCount(order)}
+            </span>
+          ) : hasLegacyStorage(order) ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 font-bold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+              <MapPin className="h-3 w-3" aria-hidden="true" />
+              {getOrderStorageCode(order)}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950 px-2 py-0.5 font-black text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+              Non rangée
+            </span>
+          )}
+
+          {onAssignStorage && !isOutForDelivery && (
+            <button
+              type="button"
+              onClick={onAssignStorage}
+              className="inline-flex items-center gap-1 font-bold text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-50 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 rounded px-1 py-0.5"
+            >
+              <Archive className="h-3 w-3" aria-hidden="true" />
+              {hasStructuredStorage(order) ? 'Déplacer' : 'Ranger'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Progress bar for washing machines */}
       {order.status === 'washing' && order.progressPercent && (
@@ -126,7 +203,16 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
       {/* Ready column action buttons */}
       {isReady && (
         <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-          {order.remainingBalance > 0 ? (
+          {isHomeDelivery ? (
+            <button
+              type="button"
+              onClick={openDeliveryTask}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold rounded-lg py-2 transition-all shadow-2xs flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <Truck className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>{order.remainingBalance > 0 ? 'Gérer la livraison & l’encaissement' : 'Gérer la livraison'}</span>
+            </button>
+          ) : order.remainingBalance > 0 ? (
             <button
               type="button"
               onClick={() => {

@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext';
+import React, { useEffect, useState } from 'react';
+import { useApp, type WorkshopTab } from '../../context/AppContext';
 import { KanbanColumn } from './KanbanColumn';
 import { Tabs } from '../common/Tabs';
 import { formatFCFA } from '../../data/demoData';
 import { HandoverSection } from './HandoverSection';
 import { DailyClosingCard } from './DailyClosingCard';
-import { OrderStatus } from '../../types';
-import { Search, Settings, Smartphone, ArrowLeft, WashingMachine, PackageCheck, Wallet } from 'lucide-react';
+import { LogisticsPanel } from '../logistics/LogisticsPanel';
+import { StoragePanel } from './StoragePanel';
+import { StorageAssignmentModal, type StorageAssignmentMode } from './StorageAssignmentModal';
+import type { LaundryOrder, OrderStatus } from '../../types';
+import { isHomeDeliveryOrder, isLogisticsTaskActionable } from '../../lib/logistics';
+import {
+  getOrderStorageCode,
+  getOrderStorageSearchText,
+  getOrdersOutForDeliveryIds,
+  hasStructuredStorage,
+} from '../../lib/storage';
+import { normalizeText } from '../../lib/utils';
+import { Search, Settings, Smartphone, ArrowLeft, WashingMachine, PackageCheck, Wallet, Truck, Archive } from 'lucide-react';
 
 export const WorkshopPage: React.FC = () => {
   const {
@@ -17,26 +28,83 @@ export const WorkshopPage: React.FC = () => {
     notifyAllSms,
     setActiveScreen,
     showToast,
+    logisticsTasks,
+    focusedLogisticsTaskId,
+    focusLogisticsTask,
+    focusedStorageOrderId,
+    workshopTabRequest,
+    clearWorkshopTabRequest,
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [machineStatusModal, setMachineStatusModal] = useState(false);
-  const [tab, setTab] = useState<'production' | 'handover' | 'cash'>('production');
+  const [tab, setTab] = useState<WorkshopTab>('production');
+  const [storageRequest, setStorageRequest] = useState<{
+    order: LaundryOrder;
+    mode: StorageAssignmentMode;
+  } | null>(null);
 
-  const filteredOrders = orders.filter(
-    (o) =>
-      o.ticketNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.lines.some((l) => l.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Une demande d’ouverture ciblée (carte Kanban « Prêts ») bascule l’atelier
+  // sur les Tournées ; le panneau se charge ensuite du défilement.
+  useEffect(() => {
+    if (focusedLogisticsTaskId) setTab('logistics');
+  }, [focusedLogisticsTaskId]);
+
+  useEffect(() => {
+    if (focusedStorageOrderId) setTab('storage');
+  }, [focusedStorageOrderId]);
+
+  useEffect(() => {
+    if (!workshopTabRequest) return;
+    setTab(workshopTabRequest);
+    clearWorkshopTabRequest();
+  }, [workshopTabRequest, clearWorkshopTabRequest]);
+
+  const needle = normalizeText(searchTerm);
+  const filteredOrders = orders.filter((o) => {
+    if (!needle) return true;
+    const haystack = normalizeText(
+      [
+        o.ticketNumber,
+        o.customerName,
+        o.customerPhone,
+        getOrderStorageSearchText(o),
+        ...o.lines.map((line) => `${line.name} ${line.color ?? ''}`),
+      ].join(' ')
+    );
+    return haystack.includes(needle);
+  });
 
   const receivedOrders = filteredOrders.filter((o) => o.status === 'received');
   const washingOrders = filteredOrders.filter((o) => o.status === 'washing');
   const ironingOrders = filteredOrders.filter((o) => o.status === 'ironing');
   const readyOrders = filteredOrders.filter((o) => o.status === 'ready');
+  const counterReadyOrders = readyOrders.filter((o) => !isHomeDeliveryOrder(o));
+  const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
+  const readyToStoreCount = orders.filter(
+    (o) =>
+      o.status === 'ready' &&
+      !outForDeliveryIds.has(o.id) &&
+      !hasStructuredStorage(o)
+  ).length;
+  const readyInShopCount = orders.filter(
+    (o) => o.status === 'ready' && !outForDeliveryIds.has(o.id)
+  ).length;
+  const actionableLogisticsCount = logisticsTasks.filter(isLogisticsTaskActionable).length;
 
   const handleMoveOrder = (orderId: string, targetStatus: OrderStatus) => {
+    if (targetStatus === 'ready') {
+      const order = orders.find((item) => item.id === orderId);
+      if (order) {
+        setStorageRequest({ order, mode: 'mark_ready' });
+        return;
+      }
+    }
     moveOrderStatus(orderId, targetStatus);
+  };
+
+  const handleAssignStorage = (order: LaundryOrder) => {
+    setStorageRequest({ order, mode: 'assign' });
   };
 
   return (
@@ -57,7 +125,7 @@ export const WorkshopPage: React.FC = () => {
             </h1>
           </div>
           <p className="text-[13px] text-zinc-500 dark:text-zinc-400 ml-7">
-            Suivi atelier en temps réel • glisser-déposer tactile • remise et encaissement au comptoir
+            Suivi atelier • rangement des commandes prêtes • tournées et remises au comptoir
           </p>
         </div>
 
@@ -68,7 +136,7 @@ export const WorkshopPage: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Ticket / client…"
+              placeholder="Ticket / client / casier…"
               className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100 shadow-2xs w-36 sm:w-44"
             />
           </div>
@@ -110,10 +178,22 @@ export const WorkshopPage: React.FC = () => {
             badge: receivedOrders.length + washingOrders.length + ironingOrders.length,
           },
           {
+            id: 'storage',
+            label: 'Rangement',
+            icon: <Archive className="w-4 h-4" aria-hidden="true" />,
+            badge: readyToStoreCount > 0 ? `${readyToStoreCount} à ranger` : readyInShopCount > 0 ? `${readyInShopCount} prête(s)` : undefined,
+          },
+          {
+            id: 'logistics',
+            label: 'Tournées',
+            icon: <Truck className="w-4 h-4" aria-hidden="true" />,
+            badge: actionableLogisticsCount > 0 ? actionableLogisticsCount : undefined,
+          },
+          {
             id: 'handover',
-            label: 'Remises',
+            label: 'Remises comptoir',
             icon: <PackageCheck className="w-4 h-4" aria-hidden="true" />,
-            badge: readyOrders.length > 0 ? `${readyOrders.length} prête(s)` : undefined,
+            badge: counterReadyOrders.length > 0 ? `${counterReadyOrders.length} prête(s)` : undefined,
           },
           {
             id: 'cash',
@@ -165,7 +245,7 @@ export const WorkshopPage: React.FC = () => {
 
         {/* Column 4 */}
         <KanbanColumn
-          title="④ Prêts à remettre"
+          title="④ Prêts"
           count={readyOrders.length}
           headerClass="bg-purple-600 text-white"
           badgeClass="bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-300"
@@ -173,32 +253,44 @@ export const WorkshopPage: React.FC = () => {
           status="ready"
           prevStatus="ironing"
           onMoveOrder={handleMoveOrder}
+          onAssignStorage={handleAssignStorage}
           onSelectForHandover={(order) => {
+            if (isHomeDeliveryOrder(order)) {
+              if (order.deliveryTaskId) focusLogisticsTask(order.deliveryTaskId);
+              else setTab('logistics');
+              showToast(`Commande ${order.ticketNumber} à livrer depuis l'onglet Tournées`);
+              return;
+            }
             setActiveHandoverOrder(order);
             setTab('handover');
-            showToast(`Commande ${order.ticketNumber} ouverte dans l'onglet Remises`);
+            showToast(`Commande ${order.ticketNumber} ouverte dans l'onglet Remises comptoir`);
           }}
         />
       </div>
 
       )}
 
+      {tab === 'storage' && <StoragePanel />}
+
+      {tab === 'logistics' && <LogisticsPanel />}
+
       {tab === 'handover' && (
         <div className="space-y-3">
           {/* Sélection rapide parmi les commandes prêtes */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3.5 shadow-2xs">
             <h2 className="font-bold text-[13.5px] text-zinc-900 dark:text-zinc-100">
-              Commandes prêtes à remettre
-              <span className="text-zinc-500 dark:text-zinc-400 font-semibold"> · {readyOrders.length} en attente de retrait</span>
+              Commandes prêtes à remettre au comptoir
+              <span className="text-zinc-500 dark:text-zinc-400 font-semibold"> · {counterReadyOrders.length} en attente de retrait</span>
             </h2>
-            {readyOrders.length === 0 ? (
+            {counterReadyOrders.length === 0 ? (
               <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 mt-1.5">
-                Aucune commande n'est prête pour le moment. Les commandes terminées apparaîtront ici
-                depuis l'onglet Production (colonne « Prêts à remettre »).
+                {readyOrders.length > 0
+                  ? 'Les commandes actuellement prêtes sont en livraison à domicile : gérez leur départ et leur encaissement depuis l’onglet Tournées.'
+                  : "Aucune commande n'est prête pour le moment. Les commandes terminées apparaîtront ici depuis l'onglet Production (colonne « Prêts »)."}
               </p>
             ) : (
               <div className="flex flex-wrap gap-2 mt-2.5">
-                {readyOrders.map((o) => (
+                {counterReadyOrders.map((o) => (
                   <button
                     key={o.id}
                     type="button"
@@ -213,6 +305,9 @@ export const WorkshopPage: React.FC = () => {
                     <span className="block font-bold text-[12.5px]">{o.ticketNumber} • {o.customerName}</span>
                     <span className={`block text-[11.5px] tabular-nums ${activeHandoverOrder?.id === o.id ? 'text-zinc-300' : 'text-zinc-500 dark:text-zinc-400'}`}>
                       {o.remainingBalance > 0 ? `Reste à payer : ${formatFCFA(o.remainingBalance)}` : 'Déjà soldée'}
+                    </span>
+                    <span className={`block text-[11px] font-bold ${activeHandoverOrder?.id === o.id ? 'text-teal-300' : getOrderStorageCode(o) ? 'text-teal-700 dark:text-teal-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                      {getOrderStorageCode(o) ? `Casier ${getOrderStorageCode(o)}` : 'Non rangée'}
                     </span>
                   </button>
                 ))}
@@ -230,8 +325,17 @@ export const WorkshopPage: React.FC = () => {
         </div>
       )}
 
+      {storageRequest && (
+        <StorageAssignmentModal
+          key={`${storageRequest.mode}-${storageRequest.order.id}`}
+          order={storageRequest.order}
+          mode={storageRequest.mode}
+          onClose={() => setStorageRequest(null)}
+        />
+      )}
+
       <p className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl mt-3 px-4 py-2 text-[11.5px] text-zinc-500 dark:text-zinc-400 shadow-2xs">
-        Maquette 3/3 • Kanban atelier + remise comptoir + caisse Mobile Money (Wave, MTN, Orange) • Données fictives • FCFA
+        Kanban atelier + rangement par casier + tournées domicile + remise comptoir + caisse Mobile Money (Wave, MTN, Orange) • Données locales • FCFA
       </p>
     </div>
   );

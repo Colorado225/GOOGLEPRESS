@@ -9,8 +9,17 @@ import {
   StockMovement,
   Expense,
   ExpenseCategory,
+  LogisticsTask,
+  StorageLocation,
 } from '../types';
-import { daysFromToday, formatDate, formatDateTime, formatPromised, isoDaysFromToday } from '../lib/dates';
+import {
+  daysFromToday,
+  formatDate,
+  formatDateTime,
+  formatPromised,
+  isoDaysFromToday,
+  nowISODateTime,
+} from '../lib/dates';
 import imgChemise from '../assets/images/articles/chemise.webp';
 import imgPantalon from '../assets/images/articles/pantalon.webp';
 import imgRobe from '../assets/images/articles/robe.webp';
@@ -38,6 +47,11 @@ import imgDoudoune from '../assets/images/articles/doudoune.webp';
 import imgBaskets from '../assets/images/articles/baskets.webp';
 import imgPyjama from '../assets/images/articles/pyjama.webp';
 import imgPeignoir from '../assets/images/articles/peignoir.webp';
+import imgBoubou from '../assets/images/articles/boubou.webp';
+import imgRetouche from '../assets/images/articles/retouche.webp';
+import imgLingeKilo from '../assets/images/articles/linge-kilo.webp';
+import imgCouette from '../assets/images/articles/couette.webp';
+import imgRideaux from '../assets/images/articles/rideaux.webp';
 
 export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   // --- PRESSING (Bleu) ---
@@ -45,12 +59,12 @@ export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   { id: 'c2', name: 'Pantalon', category: 'men', serviceCategory: 'pressing', unitPrice: 1500, pricingType: 'unit', unitLabel: 'pièce', emoji: '👖', image: imgPantalon, description: 'Pli marqué, costume, chino' },
   { id: 'c3', name: 'Robe', category: 'women', serviceCategory: 'pressing', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '👗', image: imgRobe, description: 'Soie, mousseline, soirée' },
   { id: 'c4', name: 'Costume', category: 'men', serviceCategory: 'pressing', unitPrice: 5000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🤵', image: imgCostume, description: '2 ou 3 pièces en laine' },
-  { id: 'c5', name: 'Boubou bazin', category: 'men', serviceCategory: 'pressing', unitPrice: 4500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🥻', description: 'Bazin riche, broderie or' },
+  { id: 'c5', name: 'Boubou bazin', category: 'men', serviceCategory: 'pressing', unitPrice: 4500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🥻', image: imgBoubou, description: 'Bazin riche, broderie or' },
   { id: 'c6', name: 'Veste & Manteau', category: 'men', serviceCategory: 'pressing', unitPrice: 4000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgManteau, description: 'Laine, velours, doublé' },
   { id: 'c7', name: 'Foulard & Soie', category: 'women', serviceCategory: 'pressing', unitPrice: 800, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧕', image: imgFoulard, description: 'Soie, mousseline, wax délicat' },
   { id: 'c8', name: 'Jupe', category: 'women', serviceCategory: 'pressing', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🩳', image: imgJupeLongue, description: 'Droite, plissée, tailleur' },
   { id: 'c9', name: 'Pull & Tricot', category: 'all', serviceCategory: 'pressing', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧶', image: imgPull, description: 'Cachemire, laine délicate' },
-  { id: 'c10', name: 'Retouche / Ourlet', category: 'all', serviceCategory: 'pressing', unitPrice: 1500, pricingType: 'unit', unitLabel: 'prestation', emoji: '🪡', description: 'Ourlet pantalon, reprise taille' },
+  { id: 'c10', name: 'Retouche / Ourlet', category: 'all', serviceCategory: 'pressing', unitPrice: 1500, pricingType: 'unit', unitLabel: 'prestation', emoji: '🪡', image: imgRetouche, description: 'Ourlet pantalon, reprise taille' },
   { id: 'c11', name: 'Gilet', category: 'men', serviceCategory: 'pressing', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgGilet, description: 'Gilet habillé, costume 3 pièces' },
   { id: 'c12', name: 'Tee-shirt & Polo', category: 'all', serviceCategory: 'pressing', unitPrice: 1000, pricingType: 'unit', unitLabel: 'pièce', emoji: '👕', image: imgTeeShirt, description: 'Coton, col rond ou polo' },
   { id: 'c13', name: 'Jean', category: 'all', serviceCategory: 'pressing', unitPrice: 1500, pricingType: 'unit', unitLabel: 'pièce', emoji: '👖', image: imgJean, description: 'Denim, pli léger' },
@@ -69,9 +83,9 @@ export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   { id: 'b3', name: 'Taies d’oreiller', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 800, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛌', image: imgTaieOreiller, description: 'Coton blanc, satin de coton' },
   { id: 'b4', name: 'Nappes & Serviettes table', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🍽️', image: imgNappe, description: 'Restauration, amidonnage' },
   { id: 'b5', name: 'Uniformes pro / Médical', category: 'pro', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🦺', image: imgBlouseUniforme, description: 'Blouse, tenue cuisine/sécurité' },
-  { id: 'b6', name: 'Linge au kilo (au poids)', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 1000, pricingType: 'kilo', unitLabel: 'kg', emoji: '⚖️', description: 'Pesée au comptoir • 1 000 FCFA/kg' },
-  { id: 'b7', name: 'Couette & Édredon', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 5000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛋️', description: 'Duvet plume ou synthétique' },
-  { id: 'b8', name: 'Rideaux & Voilages', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 3000, pricingType: 'unit', unitLabel: 'panneau', emoji: '🪟', description: 'Lavage & défroissage vapeur' },
+  { id: 'b6', name: 'Linge au kilo (au poids)', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 1000, pricingType: 'kilo', unitLabel: 'kg', emoji: '⚖️', image: imgLingeKilo, description: 'Pesée au comptoir • 1 000 FCFA/kg' },
+  { id: 'b7', name: 'Couette & Édredon', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 5000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛋️', image: imgCouette, description: 'Duvet plume ou synthétique' },
+  { id: 'b8', name: 'Rideaux & Voilages', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 3000, pricingType: 'unit', unitLabel: 'panneau', emoji: '🪟', image: imgRideaux, description: 'Lavage & défroissage vapeur' },
   { id: 'b9', name: 'Chaussettes & petit linge', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧦', image: imgChaussettesPhoto, description: 'Chaussettes, sous-vêtements, petit linge' },
   { id: 'b10', name: 'Pyjama (ensemble)', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'ensemble', emoji: '🌙', image: imgPyjama, description: 'Haut + bas assortis' },
   { id: 'b11', name: 'Peignoir & Robe de chambre', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '👘', image: imgPeignoir, description: 'Peignoir de bain, kimono, robe de chambre' },
@@ -174,6 +188,77 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
 ];
 
+/**
+ * Plan de rangement de départ proposé pour la zone des commandes terminées.
+ * Codes, libellés et capacités sont modifiables depuis Atelier → Rangement :
+ * ils doivent correspondre aux étiquettes réellement posées dans le local.
+ */
+export const INITIAL_STORAGE_LOCATIONS: StorageLocation[] = [
+  {
+    id: 'storage-A-01',
+    code: 'A-01',
+    label: 'Portant A — pressing sur cintres',
+    zone: 'hanging',
+    capacityPackages: 24,
+    description: 'Chemises, robes et pièces remises sur cintre ou sous housse.',
+    isActive: true,
+  },
+  {
+    id: 'storage-A-02',
+    code: 'A-02',
+    label: 'Portant A — costumes et pièces longues',
+    zone: 'hanging',
+    capacityPackages: 18,
+    description: 'Costumes, tailleurs, robes longues et manteaux.',
+    isActive: true,
+  },
+  {
+    id: 'storage-B-01',
+    code: 'B-01',
+    label: 'Étagère B — sacs retrait comptoir',
+    zone: 'folded',
+    capacityPackages: 30,
+    description: 'Commandes pliées et ensachées à retirer directement au pressing.',
+    isActive: true,
+  },
+  {
+    id: 'storage-B-02',
+    code: 'B-02',
+    label: 'Étagère B — linge maison plié',
+    zone: 'folded',
+    capacityPackages: 30,
+    description: 'Draps, serviettes, nappes et linge familial plié.',
+    isActive: true,
+  },
+  {
+    id: 'storage-C-01',
+    code: 'C-01',
+    label: 'Bac livraison C — départs planifiés',
+    zone: 'delivery',
+    capacityPackages: 20,
+    description: 'Paquets regroupés dans l’ordre des tournées, prêts à charger.',
+    isActive: true,
+  },
+  {
+    id: 'storage-D-01',
+    code: 'D-01',
+    label: 'Zone volumineux D — couettes et pro',
+    zone: 'bulky',
+    capacityPackages: 12,
+    description: 'Couettes, rideaux, gros volumes et lots professionnels.',
+    isActive: true,
+  },
+  {
+    id: 'storage-E-01',
+    code: 'E-01',
+    label: 'Attente E — contrôle ou rappel client',
+    zone: 'hold',
+    capacityPackages: 10,
+    description: 'Paquets à vérifier ou commandes en attente d’une décision client.',
+    isActive: true,
+  },
+];
+
 // Dates de démonstration RELATIVES au jour d'ouverture de l'application :
 // le tableau de bord reste cohérent quel que soit le jour de la démo
 // (commandes "du jour", une en retard depuis hier, retraits à venir…).
@@ -192,8 +277,8 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     subtotal: 6500,
     serviceFees: 0,
     discount: 0,
-    total: 6500,
-    depositPaid: 6500,
+    total: 7500,
+    depositPaid: 7500,
     remainingBalance: 0,
     paymentMethod: 'wave',
     status: 'washing',
@@ -203,6 +288,14 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     progressPercent: 65,
     notes: 'Lavage classique, amidonnage léger sur cols chemises',
     smsSent: true,
+    origin: 'home_pickup',
+    fulfillmentMethod: 'counter_pickup',
+    collectionTaskId: 'log-demo-pickup-converted',
+    collectionFee: 1000,
+    collectionAddress: 'Cocody, Angré 8e Tranche',
+    collectionAddressDetails: 'Démonstration — repère fictif',
+    collectionDate: isoDaysFromToday(0),
+    collectionTimeSlot: '08:00-10:00',
   },
   {
     id: 'ord-2853',
@@ -242,17 +335,31 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     subtotal: 9000,
     serviceFees: 0,
     discount: 0,
-    total: 9000,
+    total: 10000,
     depositPaid: 5000,
-    remainingBalance: 4000,
+    remainingBalance: 5000,
     paymentMethod: 'wave',
     status: 'ready',
     receivedAt: formatDateTime(daysFromToday(-1, 11, 0)),
     promisedAt: formatPromised(daysFromToday(1, 18)),
     readyAt: formatDateTime(daysFromToday(0, 8, 0)),
-    rackLocation: 'Étagère B-04',
+    rackLocation: 'C-01 · Bac livraison C — départs planifiés',
+    storageLocationId: 'storage-C-01',
+    storageLocationCode: 'C-01',
+    storageLocationLabel: 'Bac livraison C — départs planifiés',
+    storagePackageCount: 2,
+    storageNotes: 'Deux paquets housse, prêts pour la tournée.',
+    storedAt: formatDateTime(daysFromToday(0, 8, 0)),
     notes: 'Boubous wax très colorés, cintre + housse plastique',
     smsSent: true,
+    origin: 'counter',
+    fulfillmentMethod: 'home_delivery',
+    deliveryTaskId: 'log-demo-delivery-2852',
+    deliveryFee: 1000,
+    deliveryAddress: 'Yopougon, Maroc',
+    deliveryAddressDetails: 'Démonstration — repère fictif',
+    deliveryDate: isoDaysFromToday(0),
+    deliveryTimeSlot: '16:00-18:00',
   },
   {
     id: 'ord-2851',
@@ -350,7 +457,13 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     receivedAt: formatDateTime(daysFromToday(-2, 10, 0)),
     promisedAt: formatPromised(daysFromToday(0, 14)),
     readyAt: formatDateTime(daysFromToday(0, 9, 0)),
-    rackLocation: 'Étagère A-12',
+    rackLocation: 'A-02 · Portant A — costumes et pièces longues',
+    storageLocationId: 'storage-A-02',
+    storageLocationCode: 'A-02',
+    storageLocationLabel: 'Portant A — costumes et pièces longues',
+    storagePackageCount: 3,
+    storageNotes: 'Trois costumes sous housse.',
+    storedAt: formatDateTime(daysFromToday(0, 9, 0)),
     notes: 'Soldé par MTN MoMo',
     smsSent: true,
   },
@@ -445,6 +558,98 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     promisedAt: formatPromised(daysFromToday(0, 17)),
     notes: 'Jour J — commande volumineuse',
     smsSent: true,
+  },
+];
+
+/**
+ * Tournées fictives de démonstration : un ramassage à effectuer, un linge déjà
+ * collecté à convertir après comptage, un ramassage déjà converti et une
+ * livraison prête à partir. Les adresses et repères sont inventés.
+ */
+export const INITIAL_LOGISTICS_TASKS: LogisticsTask[] = [
+  {
+    id: 'log-demo-pickup-scheduled',
+    kind: 'pickup',
+    status: 'scheduled',
+    customerId: 'cust-10',
+    customerName: 'Aya Brou',
+    customerPhone: '07 12 99 88 77',
+    address: 'Riviera Palmeraie',
+    addressDetails: 'Repère de démonstration — portail bleu',
+    scheduledDate: isoDaysFromToday(0),
+    timeSlot: '10:00-12:00',
+    assignedEmployeeId: 'emp-6',
+    assignedEmployeeName: 'Ibrahim Sangaré',
+    fee: 1000,
+    estimatedBags: 2,
+    instructions: 'Appeler en arrivant (démonstration).',
+    createdAt: nowISODateTime(),
+    updatedAt: nowISODateTime(),
+  },
+  {
+    id: 'log-demo-pickup-collected',
+    kind: 'pickup',
+    status: 'completed',
+    customerId: 'cust-9',
+    customerName: 'Konan Ulrich',
+    customerPhone: '01 44 55 66 77',
+    address: 'Cocody, Danga',
+    addressDetails: 'Repère de démonstration — gardien prévenu',
+    scheduledDate: isoDaysFromToday(0),
+    timeSlot: '08:00-10:00',
+    assignedEmployeeId: 'emp-6',
+    assignedEmployeeName: 'Ibrahim Sangaré',
+    fee: 1000,
+    estimatedBags: 1,
+    collectedBags: 1,
+    instructions: 'Sac bleu — à compter à la boutique (démonstration).',
+    startedAt: `${isoDaysFromToday(0)}T08:05:00`,
+    completedAt: `${isoDaysFromToday(0)}T08:35:00`,
+    createdAt: `${isoDaysFromToday(0)}T07:45:00`,
+    updatedAt: `${isoDaysFromToday(0)}T08:35:00`,
+  },
+  {
+    id: 'log-demo-pickup-converted',
+    kind: 'pickup',
+    status: 'completed',
+    customerId: 'cust-4',
+    customerName: "N'Guessan Affoué",
+    customerPhone: '07 09 44 12 08',
+    address: 'Cocody, Angré 8e Tranche',
+    addressDetails: 'Démonstration — repère fictif',
+    scheduledDate: isoDaysFromToday(0),
+    timeSlot: '08:00-10:00',
+    assignedEmployeeId: 'emp-6',
+    assignedEmployeeName: 'Ibrahim Sangaré',
+    orderId: 'ord-2854',
+    orderTicketNumber: '#TK-2854',
+    fee: 1000,
+    estimatedBags: 1,
+    collectedBags: 1,
+    startedAt: `${isoDaysFromToday(0)}T08:00:00`,
+    completedAt: `${isoDaysFromToday(0)}T08:20:00`,
+    createdAt: `${isoDaysFromToday(0)}T07:30:00`,
+    updatedAt: `${isoDaysFromToday(0)}T08:30:00`,
+  },
+  {
+    id: 'log-demo-delivery-2852',
+    kind: 'delivery',
+    status: 'scheduled',
+    customerId: 'cust-3',
+    customerName: 'Fatou Diarra',
+    customerPhone: '07 47 88 03 55',
+    address: 'Yopougon, Maroc',
+    addressDetails: 'Démonstration — repère fictif',
+    scheduledDate: isoDaysFromToday(0),
+    timeSlot: '16:00-18:00',
+    assignedEmployeeId: 'emp-6',
+    assignedEmployeeName: 'Ibrahim Sangaré',
+    orderId: 'ord-2852',
+    orderTicketNumber: '#TK-2852',
+    fee: 1000,
+    instructions: 'Solde à encaisser à la livraison.',
+    createdAt: nowISODateTime(),
+    updatedAt: nowISODateTime(),
   },
 ];
 

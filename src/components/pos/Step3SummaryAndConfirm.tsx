@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { calculateOrderTotals } from '../../lib/pricing';
 import { formatLongDateTime, formatPromisedLong, getPickupLabel, getPromisedDate } from '../../lib/dates';
+import { formatLogisticsSchedule } from '../../lib/logistics';
 import { ConfettiButton } from '../../registry/magicui/confetti';
 import {
   ArrowLeft,
@@ -19,6 +20,8 @@ import {
   AlertTriangle,
   Loader2,
   Sparkles,
+  Truck,
+  MapPin,
 } from 'lucide-react';
 import {
   Badge,
@@ -47,6 +50,13 @@ export const Step3SummaryAndConfirm: React.FC = () => {
     submitNewOrder,
     resetNewOrderFlow,
     showToast,
+    pendingPickupTask,
+    shopSettings,
+    orderFulfillmentMethod,
+    deliveryAddress,
+    deliveryAddressDetails,
+    deliveryDateISO,
+    deliveryTimeSlot,
   } = useApp();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,13 +64,24 @@ export const Step3SummaryAndConfirm: React.FC = () => {
 
   const isPressing = selectedServiceCategory === 'pressing';
   const isBlanchisserie = selectedServiceCategory === 'blanchisserie';
+  const wantsHomeDelivery = orderFulfillmentMethod === 'home_delivery';
 
-  const { subtotal, expressFee, discountPercent, discountAmount, total: finalTotal, remaining } =
-    calculateOrderTotals(cartLines, {
-      pickupOption,
-      loyaltyDiscountPercent: selectedCustomer?.loyaltyDiscountPercent,
-      depositAmount,
-    });
+  const {
+    subtotal,
+    expressFee,
+    collectionFee,
+    deliveryFee,
+    discountPercent,
+    discountAmount,
+    total: finalTotal,
+    remaining,
+  } = calculateOrderTotals(cartLines, {
+    pickupOption,
+    loyaltyDiscountPercent: selectedCustomer?.loyaltyDiscountPercent,
+    depositAmount,
+    collectionFee: pendingPickupTask?.fee ?? 0,
+    deliveryFee: wantsHomeDelivery ? shopSettings.deliveryFee : 0,
+  });
 
   const promisedDateStr =
     pickupOption === 'express'
@@ -146,7 +167,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-2xl p-4 shadow-2xs space-y-2.5 text-[12.5px]">
             <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2">
               <span className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> Délais & Retrait
+                <Calendar className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> Délais & remise
               </span>
               <button
                 type="button"
@@ -157,10 +178,36 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               </button>
             </div>
             <div className="space-y-1">
-              <p className="text-zinc-500 dark:text-zinc-400 text-[11.5px]">Date de dépôt :</p>
+              <p className="text-zinc-500 dark:text-zinc-400 text-[11.5px]">
+                {pendingPickupTask ? 'Comptage à la boutique :' : 'Date de dépôt :'}
+              </p>
               <p className="font-bold text-zinc-800 dark:text-zinc-200">{depositDateStr}</p>
-              <p className="text-zinc-500 dark:text-zinc-400 text-[11.5px] pt-1">Retrait promis au client :</p>
+              <p className="text-zinc-500 dark:text-zinc-400 text-[11.5px] pt-1">Prêt promis au client :</p>
               <p className="font-extrabold text-zinc-950 dark:text-zinc-50 text-[13.5px]">{promisedDateStr}</p>
+            </div>
+
+            <div className="space-y-1.5 border-t border-zinc-100 dark:border-zinc-800 pt-2.5">
+              <p className="flex items-start gap-1.5 text-zinc-700 dark:text-zinc-300">
+                <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+                <span>
+                  Origine : <strong>{pendingPickupTask ? 'Ramassage à domicile' : 'Dépôt au comptoir'}</strong>
+                </span>
+              </p>
+              <p className="flex items-start gap-1.5 text-zinc-700 dark:text-zinc-300">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+                <span>
+                  Remise : <strong>{wantsHomeDelivery ? 'Livraison à domicile' : 'Retrait au comptoir'}</strong>
+                  {wantsHomeDelivery && (
+                    <>
+                      <br />
+                      {deliveryAddress || 'Adresse non renseignée'}
+                      {deliveryAddressDetails ? ` — ${deliveryAddressDetails}` : ''}
+                      <br />
+                      <span className="font-semibold">{formatLogisticsSchedule(deliveryDateISO, deliveryTimeSlot)}</span>
+                    </>
+                  )}
+                </span>
+              </p>
             </div>
             {orderNotes && (
               <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
@@ -240,6 +287,22 @@ export const Step3SummaryAndConfirm: React.FC = () => {
                   <span className="tabular-nums">+{formatFCFA(expressFee)}</span>
                 </div>
               )}
+              {pendingPickupTask && (
+                <div className="flex justify-between text-emerald-700 dark:text-emerald-300 font-medium">
+                  <span>Ramassage à domicile</span>
+                  <span className="tabular-nums">
+                    {collectionFee > 0 ? `+${formatFCFA(collectionFee)}` : 'Offert'}
+                  </span>
+                </div>
+              )}
+              {wantsHomeDelivery && (
+                <div className="flex justify-between text-blue-700 dark:text-blue-300 font-medium">
+                  <span>Livraison à domicile</span>
+                  <span className="tabular-nums">
+                    {deliveryFee > 0 ? `+${formatFCFA(deliveryFee)}` : 'Offerte'}
+                  </span>
+                </div>
+              )}
               {discountAmount > 0 && (
                 <div className="flex justify-between text-blue-700 dark:text-blue-300 font-medium">
                   <span>Remise fidélité (−{discountPercent}%)</span>
@@ -263,6 +326,34 @@ export const Step3SummaryAndConfirm: React.FC = () => {
                 Poste de caisse comptoir
               </span>
             </div>
+
+            {wantsHomeDelivery && (
+              <div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950 p-3">
+                <p className="text-[12px] font-bold text-purple-900 dark:text-purple-100">
+                  Règlement de cette livraison
+                </p>
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-purple-700 dark:text-purple-300">
+                  Le client peut tout payer maintenant, verser un acompte, ou régler le solde au
+                  coursier lors de la remise.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDepositAmount(finalTotal)}
+                    className="rounded-lg bg-purple-700 px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    Tout payer maintenant ({formatFCFA(finalTotal)})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDepositAmount(0)}
+                    className="rounded-lg border border-purple-300 dark:border-purple-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-[11.5px] font-bold text-purple-800 dark:text-purple-200 transition-colors hover:bg-purple-100 dark:hover:bg-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    Tout régler à la livraison
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Mode selection buttons */}
             <div className="grid grid-cols-4 gap-2 text-[12px] font-bold">
@@ -332,7 +423,9 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               </div>
 
               <div className="flex-1 text-right bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Reste à payer au retrait :</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">
+                  {wantsHomeDelivery ? 'Reste à payer à la livraison :' : 'Reste à payer au retrait :'}
+                </span>
                 <span
                   className={`text-[16px] font-black tabular-nums ${
                     remaining === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-purple-700 dark:text-purple-300'
@@ -341,7 +434,11 @@ export const Step3SummaryAndConfirm: React.FC = () => {
                   {formatFCFA(remaining)}
                 </span>
                 <span className="text-[10px] text-zinc-400 dark:text-zinc-500 block">
-                  {remaining === 0 ? '✓ Soldé au dépôt' : 'À encaisser au comptoir'}
+                  {remaining === 0
+                    ? '✓ Soldé avant la remise'
+                    : wantsHomeDelivery
+                      ? 'À encaisser par le coursier'
+                      : 'À encaisser au comptoir'}
                 </span>
               </div>
             </div>

@@ -2,20 +2,26 @@ import React from 'react';
 import { Customer, LaundryOrder } from '../../types';
 import { formatFCFA } from '../../data/demoData';
 import { encodeCode39 } from '../../lib/barcode';
+import { useApp } from '../../context/AppContext';
+import {
+  formatLogisticsSchedule,
+  getLogisticsTimeSlotLabel,
+  isHomeDeliveryOrder,
+  isHomePickupOrder,
+} from '../../lib/logistics';
+import {
+  formatPackageCount,
+  getOrderStorageLabel,
+  hasStructuredStorage,
+} from '../../lib/storage';
 
 export type ReceiptVariant = 'client' | 'atelier';
 
 /**
- * Coordonnées de la boutique imprimées sur le reçu.
- * (Valeurs alignées sur l'écran Paramètres ; elles y deviendront éditables
- * lorsque les paramètres seront persistés.)
+ * L'identité de la boutique imprimée ci-dessous provient des paramètres
+ * persistés (contexte : shopSettings, écran Paramètres → Établissement) ;
+ * les valeurs par défaut sont dans lib/shopSettings.ts.
  */
-export const SHOP_INFO = {
-  name: 'PRESSING PRO CI',
-  tagline: 'Pressing & Blanchisserie — Haute qualité',
-  address: 'Rue des Jardins, Cocody • Abidjan',
-  phone: '+225 07 08 09 10 11',
-} as const;
 
 const PAYMENT_LABELS: Record<LaundryOrder['paymentMethod'], string> = {
   especes: 'Espèces',
@@ -106,6 +112,7 @@ interface ReceiptTicketProps {
  * les informations absentes sont simplement omises (ou « Non renseigné »).
  */
 export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, customer }) => {
+  const { shopSettings } = useApp();
   const isClient = variant === 'client';
   const isSettled = order.remainingBalance <= 0;
 
@@ -123,6 +130,24 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
   const loyaltyPercent =
     customer && customer.loyaltyDiscountPercent > 0 ? customer.loyaltyDiscountPercent : null;
 
+  const isHomePickup = isHomePickupOrder(order);
+  const isHomeDelivery = isHomeDeliveryOrder(order);
+  const statusLabel =
+    order.status === 'delivered'
+      ? isHomeDelivery
+        ? 'Livré à domicile'
+        : 'Remis au comptoir'
+      : order.status === 'ready'
+        ? isHomeDelivery
+          ? 'Prêt à livrer'
+          : 'Prêt au retrait'
+        : order.status === 'received' && isHomePickup
+          ? 'Collecté à domicile'
+          : STATUS_LABELS[order.status];
+  const fulfillmentHeadline = isHomeDelivery && order.deliveryDate
+    ? formatLogisticsSchedule(order.deliveryDate, order.deliveryTimeSlot)
+    : order.promisedAt;
+
   return (
     <div className="w-[340px] max-w-full mx-auto">
       <ZigzagEdge flip />
@@ -132,10 +157,10 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <div className="w-9 h-9 bg-zinc-950 text-white flex items-center justify-center font-sans font-black text-[17px] rounded-md mx-auto">
             P
           </div>
-          <h2 className="font-sans font-black text-[18px] tracking-tight mt-1.5">{SHOP_INFO.name}</h2>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">{SHOP_INFO.tagline}</p>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 mt-1">{SHOP_INFO.address}</p>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">Tél : {SHOP_INFO.phone}</p>
+          <h2 className="font-sans font-black text-[18px] tracking-tight mt-1.5">{shopSettings.name.toUpperCase()}</h2>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">{shopSettings.tagline}</p>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 mt-1">{shopSettings.address}</p>
+          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">Tél : {shopSettings.phone}</p>
         </div>
 
         <div className="mt-3">
@@ -150,6 +175,7 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <span className="text-[10px] font-bold border border-zinc-900 px-1.5 py-0.5 rounded-sm">
             {order.serviceCategory === 'blanchisserie' ? 'BLANCHISSERIE' : 'PRESSING'}
             {order.serviceFees > 0 ? ' • EXPRESS' : ''}
+            {isHomePickup || isHomeDelivery ? ' • DOMICILE' : ''}
             {order.isUrgent ? ' • URGENT' : ''}
           </span>
         </div>
@@ -162,16 +188,25 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
 
         {/* ─── Dates & statut ─── */}
         <div className="space-y-1 mt-2.5 text-[11.5px]">
-          <MetaRow label="Déposé le" value={order.receivedAt} />
-          <MetaRow label="Statut" value={STATUS_LABELS[order.status]} bold />
+          <MetaRow label={isHomePickup ? 'Compté le' : 'Déposé le'} value={order.receivedAt} />
+          <MetaRow label="Statut" value={statusLabel} bold />
           {order.readyAt && <MetaRow label="Prêt le" value={order.readyAt} />}
-          {order.deliveredAt && <MetaRow label="Livré le" value={order.deliveredAt} />}
-          {order.rackLocation && <MetaRow label="Casier" value={order.rackLocation} />}
+          {order.deliveredAt && (
+            <MetaRow label={isHomeDelivery ? 'Livré le' : 'Remis le'} value={order.deliveredAt} />
+          )}
+          {getOrderStorageLabel(order) && (
+            <MetaRow label="Emplacement" value={getOrderStorageLabel(order) as string} />
+          )}
         </div>
 
         <div className="border-2 border-zinc-950 rounded-sm text-center px-3 py-2 mt-3">
-          <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">RETRAIT PRÉVU</p>
-          <p className="font-sans font-black text-[16px] leading-tight mt-0.5">{order.promisedAt}</p>
+          <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">
+            {isHomeDelivery ? 'LIVRAISON PRÉVUE' : 'RETRAIT PRÉVU'}
+          </p>
+          <p className="font-sans font-black text-[16px] leading-tight mt-0.5">{fulfillmentHeadline}</p>
+          {isHomeDelivery && (
+            <p className="text-[10px] text-zinc-600 dark:text-zinc-400 mt-0.5">Prêt promis : {order.promisedAt}</p>
+          )}
         </div>
 
         {/* ─── Client ─── */}
@@ -186,6 +221,43 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           </p>
           <p className="text-zinc-700 dark:text-zinc-300">{order.customerPhone}</p>
           {order.customerAddress && <p className="text-zinc-600 dark:text-zinc-400 text-[11px]">{order.customerAddress}</p>}
+        </div>
+
+        {/* ─── Logistique ─── */}
+        <div className="mt-3">
+          <SepDashed />
+        </div>
+        <div className="mt-2.5 text-[11.5px] space-y-1">
+          <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">LOGISTIQUE</p>
+          <MetaRow
+            label="Origine"
+            value={isHomePickup ? 'Ramassage à domicile' : 'Dépôt au comptoir'}
+          />
+          <MetaRow
+            label="Remise"
+            value={isHomeDelivery ? 'Livraison à domicile' : 'Retrait au comptoir'}
+          />
+          {isHomePickup && order.collectionDate && (
+            <MetaRow
+              label="Collecte"
+              value={formatLogisticsSchedule(order.collectionDate, order.collectionTimeSlot)}
+            />
+          )}
+          {isHomePickup && order.collectionAddress && (
+            <p className="text-zinc-600 dark:text-zinc-400 text-[11px]">
+              Adresse de collecte : {order.collectionAddress}
+              {order.collectionAddressDetails ? ` — ${order.collectionAddressDetails}` : ''}
+            </p>
+          )}
+          {isHomeDelivery && order.deliveryAddress && (
+            <p className="text-zinc-600 dark:text-zinc-400 text-[11px]">
+              Adresse de livraison : {order.deliveryAddress}
+              {order.deliveryAddressDetails ? ` — ${order.deliveryAddressDetails}` : ''}
+            </p>
+          )}
+          {isHomeDelivery && order.deliveryTimeSlot && (
+            <MetaRow label="Créneau" value={getLogisticsTimeSlotLabel(order.deliveryTimeSlot)} />
+          )}
         </div>
 
         {/* ─── Articles ─── */}
@@ -247,6 +319,30 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
                   value={<span className="tabular-nums">+{formatFCFA(order.serviceFees)}</span>}
                 />
               )}
+              {isHomePickup && (
+                <MetaRow
+                  label="Ramassage à domicile"
+                  value={
+                    <span className="tabular-nums">
+                      {(order.collectionFee ?? 0) > 0
+                        ? `+${formatFCFA(order.collectionFee ?? 0)}`
+                        : 'Offert'}
+                    </span>
+                  }
+                />
+              )}
+              {isHomeDelivery && (
+                <MetaRow
+                  label="Livraison à domicile"
+                  value={
+                    <span className="tabular-nums">
+                      {(order.deliveryFee ?? 0) > 0
+                        ? `+${formatFCFA(order.deliveryFee ?? 0)}`
+                        : 'Offerte'}
+                    </span>
+                  }
+                />
+              )}
               {order.discount > 0 && (
                 <MetaRow
                   label={loyaltyPercent ? `Remise fidélité (−${loyaltyPercent} %)` : 'Remise fidélité'}
@@ -281,7 +377,9 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
                     {formatFCFA(order.remainingBalance)}
                   </span>
                 </div>
-                <p className="text-[10px] text-zinc-600 dark:text-zinc-400 text-center mt-1">à régler au retrait du linge</p>
+                <p className="text-[10px] text-zinc-600 dark:text-zinc-400 text-center mt-1">
+                  {isHomeDelivery ? 'à régler au coursier lors de la livraison' : 'à régler au retrait du linge'}
+                </p>
               </>
             )}
           </>
@@ -297,7 +395,12 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
               <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">PRODUCTION</p>
               <MetaRow label="Machine" value={order.machineAssigned ?? 'Non renseignée'} />
               <MetaRow label="Responsable" value={order.assignee ?? 'Non assigné'} />
-              <MetaRow label="Casier" value={order.rackLocation ?? 'Non renseigné'} />
+              <MetaRow label="Emplacement" value={getOrderStorageLabel(order) ?? 'Non renseigné'} />
+              {hasStructuredStorage(order) && (
+                <MetaRow label="Paquets" value={formatPackageCount(order)} />
+              )}
+              {order.storedAt && <MetaRow label="Rangée le" value={order.storedAt} />}
+              {order.storageNotes && <MetaRow label="Repère" value={order.storageNotes} />}
               {typeof order.progressPercent === 'number' && (
                 <div className="pt-1">
                   <div className="flex justify-between">
@@ -332,10 +435,16 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
         </div>
         {isClient ? (
           <div className="text-[9.5px] leading-[1.45] text-zinc-700 dark:text-zinc-300 mt-2.5 space-y-1">
-            <p>• Retrait uniquement contre présentation de ce reçu ou du SMS de confirmation.</p>
-            <p>• Merci de vérifier vos articles au comptoir lors du retrait.</p>
             <p>
-              • Articles non réclamés 30 jours après la date de retrait prévue : l'établissement ne
+              • {isHomeDelivery
+                ? 'Présentez ce reçu ou le SMS de confirmation au coursier lors de la livraison.'
+                : 'Retrait uniquement contre présentation de ce reçu ou du SMS de confirmation.'}
+            </p>
+            <p>
+              • Merci de vérifier vos articles {isHomeDelivery ? 'avec le coursier lors de la remise' : 'au comptoir lors du retrait'}.
+            </p>
+            <p>
+              • Articles non réclamés 30 jours après la date de {isHomeDelivery ? 'livraison' : 'retrait'} prévue : l'établissement ne
               pourra être tenu responsable de leur conservation.
             </p>
           </div>
@@ -354,7 +463,9 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <p className="text-[10px] tracking-[0.3em] mt-1">{order.ticketNumber.replace('#', '')}</p>
           <p className="text-[9px] text-zinc-500 dark:text-zinc-400 mt-1.5">
             {isClient
-              ? 'Exemplaire client — à conserver pour le retrait'
+              ? isHomeDelivery
+                ? 'Exemplaire client — à conserver pour la livraison'
+                : 'Exemplaire client — à conserver pour le retrait'
               : 'Exemplaire atelier — usage interne'}
           </p>
         </div>

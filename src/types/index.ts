@@ -9,6 +9,162 @@ export type PricingType = 'unit' | 'kilo';
 /** Délai de retrait choisi au comptoir (règles dans src/lib/dates.ts). */
 export type PickupOption = 'standard' | 'express' | 'delayed';
 
+/** Moyens d'encaissement acceptés au comptoir et lors d'une livraison. */
+export type PaymentMethod = 'especes' | 'wave' | 'momo' | 'om';
+
+/* -------------------------------------------------------------------------- */
+/* Ramassage & livraison à domicile                                           */
+/* -------------------------------------------------------------------------- */
+
+/** Provenance physique du linge : déposé au comptoir ou collecté chez le client. */
+export type OrderOrigin = 'counter' | 'home_pickup';
+
+/** Mode de restitution choisi pour la commande. */
+export type FulfillmentMethod = 'counter_pickup' | 'home_delivery';
+
+export type LogisticsTaskKind = 'pickup' | 'delivery';
+
+export type LogisticsTaskStatus = 'scheduled' | 'en_route' | 'completed' | 'failed' | 'cancelled';
+
+/** Créneaux de tournée de deux heures (libellés dans src/lib/logistics.ts). */
+export type LogisticsTimeSlot =
+  | '08:00-10:00'
+  | '10:00-12:00'
+  | '14:00-16:00'
+  | '16:00-18:00'
+  | '18:00-20:00';
+
+export type LogisticsIssueReason =
+  | 'customer_absent'
+  | 'customer_unreachable'
+  | 'address_issue'
+  | 'payment_unavailable'
+  | 'customer_request'
+  | 'other';
+
+/**
+ * Une course de ramassage ou de livraison. Les coordonnées client, l'adresse
+ * et le frais sont des instantanés pris à la réservation : modifier ensuite
+ * la fiche client ou les paramètres tarifaires ne réécrit pas une tournée
+ * déjà promise. Une livraison est toujours rattachée à une commande ; un
+ * ramassage ne l'est qu'après comptage et conversion au POS.
+ */
+export interface LogisticsTask {
+  id: string;
+  kind: LogisticsTaskKind;
+  status: LogisticsTaskStatus;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  addressDetails?: string;
+  scheduledDate: string; // ISO YYYY-MM-DD
+  timeSlot: LogisticsTimeSlot;
+  assignedEmployeeId?: string;
+  assignedEmployeeName?: string;
+  orderId?: string;
+  orderTicketNumber?: string;
+  /** Frais de ramassage ou de livraison annoncé au client (FCFA). */
+  fee: number;
+  estimatedBags?: number;
+  collectedBags?: number;
+  instructions?: string;
+  issueReason?: LogisticsIssueReason;
+  issueNotes?: string;
+  startedAt?: string; // ISO datetime
+  completedAt?: string; // ISO datetime
+  /** Solde réellement encaissé par le coursier lors d'une livraison. */
+  collectedAmount?: number;
+  collectedPaymentMethod?: PaymentMethod;
+  createdAt: string; // ISO datetime
+  updatedAt: string; // ISO datetime
+}
+
+/** Saisie du formulaire de réservation d'un ramassage (client existant ou nouveau). */
+export interface PickupTaskFormData {
+  customerMode: 'existing' | 'new';
+  customerId?: string;
+  newCustomerName?: string;
+  newCustomerPhone?: string;
+  address: string;
+  addressDetails?: string;
+  scheduledDate: string; // ISO YYYY-MM-DD
+  timeSlot: LogisticsTimeSlot;
+  assignedEmployeeId?: string;
+  estimatedBags?: number;
+  instructions?: string;
+}
+
+/** Champs modifiables d'une tournée non terminée (édition / reprogrammation). */
+export interface LogisticsTaskScheduleFormData {
+  address: string;
+  addressDetails?: string;
+  scheduledDate: string; // ISO YYYY-MM-DD
+  timeSlot: LogisticsTimeSlot;
+  assignedEmployeeId?: string;
+  estimatedBags?: number;
+  instructions?: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Rangement atelier des commandes terminées                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Familles d'emplacements proposées pour organiser physiquement les articles
+ * terminés avant leur remise. Elles décrivent le mode de rangement, sans
+ * empêcher le personnel de placer exceptionnellement une commande ailleurs.
+ */
+export type StorageZone = 'hanging' | 'folded' | 'delivery' | 'bulky' | 'hold' | 'other';
+
+/**
+ * Un emplacement physique de l'atelier (portant, étagère, bac…). La capacité
+ * est indicative et exprimée en paquets/sacs afin de signaler la saturation.
+ */
+export interface StorageLocation {
+  id: string;
+  /** Code court à reporter sur l'étiquette physique, ex. « A-01 ». */
+  code: string;
+  label: string;
+  zone: StorageZone;
+  capacityPackages: number;
+  description?: string;
+  isActive: boolean;
+  createdAt?: string; // ISO datetime
+  updatedAt?: string; // ISO datetime
+}
+
+export interface StorageLocationFormData {
+  code: string;
+  label: string;
+  zone: StorageZone;
+  capacityPackages: number;
+  description?: string;
+  isActive: boolean;
+}
+
+/**
+ * Création en série d'emplacements numérotés (ex. B-01 → B-12). Le modèle
+ * de libellé accepte {code}, {nn} (01, 02…) et {n} (1, 2…).
+ */
+export interface StorageLocationSeriesInput {
+  codePrefix: string;
+  startNumber: number;
+  count: number;
+  labelTemplate: string;
+  zone: StorageZone;
+  capacityPackages: number;
+  description?: string;
+  isActive: boolean;
+}
+
+/** Affectation physique d'une commande prête à un emplacement. */
+export interface StorageAssignmentInput {
+  locationId?: string;
+  packageCount: number;
+  notes?: string;
+}
+
 export interface ClothingItem {
   id: string;
   name: string;
@@ -104,7 +260,7 @@ export interface LaundryOrder {
   total: number;
   depositPaid: number;
   remainingBalance: number;
-  paymentMethod: 'especes' | 'wave' | 'momo' | 'om';
+  paymentMethod: PaymentMethod;
   status: OrderStatus;
   receivedAt: string;
   promisedAt: string;
@@ -113,11 +269,65 @@ export interface LaundryOrder {
   notes?: string;
   isLate?: boolean;
   isUrgent?: boolean;
-  rackLocation?: string; // e.g., "Étagère B-04"
+  /**
+   * Libellé d'affichage de l'emplacement, conservé pour les anciens tickets
+   * et comme instantané lisible (ex. « A-02 · Portant costumes »).
+   */
+  rackLocation?: string;
+  /** Emplacement structuré courant, pour recherche et taux d'occupation. */
+  storageLocationId?: string;
+  storageLocationCode?: string;
+  storageLocationLabel?: string;
+  /** Nombre de paquets/sacs physiquement présents à cet emplacement. */
+  storagePackageCount?: number;
+  storageNotes?: string;
+  storedAt?: string; // "JJ/MM/AAAA HH:mm"
   machineAssigned?: string; // e.g. "L1 • 40 min"
   assignee?: string; // e.g. "Grâce"
   progressPercent?: number; // for washing machines, e.g. 65%
   smsSent?: boolean;
+  /**
+   * Logistique (champs optionnels : les anciennes commandes sans ces champs
+   * valent automatiquement dépôt + retrait au comptoir).
+   * Les frais et adresses sont figés à la création de la commande.
+   */
+  origin?: OrderOrigin;
+  fulfillmentMethod?: FulfillmentMethod;
+  collectionTaskId?: string;
+  collectionFee?: number;
+  collectionAddress?: string;
+  collectionAddressDetails?: string;
+  collectionDate?: string; // ISO YYYY-MM-DD
+  collectionTimeSlot?: LogisticsTimeSlot;
+  deliveryTaskId?: string;
+  deliveryFee?: number;
+  deliveryAddress?: string;
+  deliveryAddressDetails?: string;
+  deliveryDate?: string; // ISO YYYY-MM-DD
+  deliveryTimeSlot?: LogisticsTimeSlot;
+}
+
+/**
+ * Paramètres de la boutique (écran Paramètres), persistés dans le navigateur
+ * (clé pressingpro_shop_settings). L'identité alimente le ticket thermique,
+ * la barre latérale et l'en-tête imprimé des rapports.
+ */
+export interface ShopSettings {
+  name: string;
+  tagline: string;
+  address: string;
+  phone: string;
+  currency: string;
+  enableSms: boolean;
+  enableThermalPrinter: boolean;
+  /** Forfaits appliqués aux NOUVEAUX ramassages / livraisons (0 = offert). */
+  pickupFee: number;
+  deliveryFee: number;
+  /** Règles du propriétaire pour le rangement des commandes terminées. */
+  storageAssignmentRequired: boolean;
+  storageAllowCapacityOverflow: boolean;
+  storageSuggestionsEnabled: boolean;
+  storageDefaultCapacityPackages: number;
 }
 
 export interface CashRegisterData {

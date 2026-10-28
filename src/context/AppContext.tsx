@@ -4,20 +4,40 @@ import {
   Employee, EmployeeStatus, EmployeeFormData, AttendanceRecord,
   InventoryProduct, ProductFormData, StockMovement, StockMovementInput,
   Expense, ExpenseFormData, ExpenseCategory, ActionResult,
+  FulfillmentMethod, LogisticsIssueReason, LogisticsTask, LogisticsTaskScheduleFormData,
+  LogisticsTimeSlot, PaymentMethod, PickupTaskFormData,
+  StorageAssignmentInput, StorageLocation, StorageLocationFormData,
+  StorageLocationSeriesInput,
 } from '../types';
 import {
-  INITIAL_CUSTOMERS, INITIAL_ORDERS, INITIAL_CASH_REGISTER,
+  INITIAL_CUSTOMERS, INITIAL_ORDERS, INITIAL_CASH_REGISTER, INITIAL_LOGISTICS_TASKS,
+  INITIAL_STORAGE_LOCATIONS,
   INITIAL_EMPLOYEES, INITIAL_ATTENDANCE, INITIAL_PRODUCTS, INITIAL_STOCK_MOVEMENTS,
   INITIAL_EXPENSES, INITIAL_EXPENSE_CATEGORIES,
 } from '../data/demoData';
 import { fireOrderCelebration } from '../registry/magicui/confetti';
 import { calculateOrderTotals, calculateLineSubtotal } from '../lib/pricing';
-import { formatPromised, getPromisedDate, nowDateTime, nowISODateTime } from '../lib/dates';
+import {
+  formatPromised, getPromisedDate, isValidISODate, nowDateTime, nowISODateTime, toISODate, todayISO,
+} from '../lib/dates';
 import { computeMovement } from '../lib/inventory';
 import { normalizeText } from '../lib/utils';
+import {
+  LOGISTICS_TASKS_STORAGE_KEY, PAYMENT_METHOD_LABELS, getDefaultDeliveryTimeSlot,
+  isHomeDeliveryOrder, normalizeLogisticsFee,
+} from '../lib/logistics';
+import {
+  STORAGE_LOCATIONS_STORAGE_KEY, buildStorageLocationSeries,
+  calculateStorageOccupancy, formatStorageLocation, getOrderPackageCount,
+  getOrderStorageCode, hasStorageLocation, isValidStorageCode, normalizeStorageCode,
+  normalizeStorageLocations, sanitizePackageCount,
+  wouldExceedKnownStorageCapacity,
+} from '../lib/storage';
 
 /** Clé localStorage du compteur séquentiel de tickets (voir plus bas). */
 import { AppTheme, applyTheme, getInitialTheme, persistTheme } from '../lib/theme';
+import { DEFAULT_SHOP_SETTINGS, SHOP_SETTINGS_STORAGE_KEY } from '../lib/shopSettings';
+import { ShopSettings } from '../types';
 
 const TICKET_COUNTER_KEY = 'pressingpro_next_ticket_number';
 
@@ -38,6 +58,15 @@ export type ScreenId =
   | 'expenses'
   | 'reports'
   | 'settings';
+
+/** Onglets de l’écran Production & remises. */
+export type WorkshopTab = 'production' | 'storage' | 'logistics' | 'handover' | 'cash';
+
+/** Sous-vues du panneau Rangement (commandes prêtes ou plan des emplacements). */
+export type StoragePanelView = 'orders' | 'locations';
+
+/** Onglets de l’écran Paramètres. */
+export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices' | 'backend';
 
 /** Chargement localStorage avec repli sur les données initiales (même convention que commandes/clients/caisse). */
 function loadPersistedState<T>(key: string, fallback: T): T {
@@ -82,6 +111,20 @@ interface AppContextType {
   clearCart: () => void;
   pickupOption: PickupOption;
   setPickupOption: (opt: PickupOption) => void;
+  /** Brouillon logistique de la commande en cours de saisie au POS. */
+  orderFulfillmentMethod: FulfillmentMethod;
+  setOrderFulfillmentMethod: (method: FulfillmentMethod) => void;
+  deliveryAddress: string;
+  setDeliveryAddress: (address: string) => void;
+  deliveryAddressDetails: string;
+  setDeliveryAddressDetails: (details: string) => void;
+  deliveryDateISO: string;
+  setDeliveryDateISO: (date: string) => void;
+  deliveryTimeSlot: LogisticsTimeSlot;
+  setDeliveryTimeSlot: (slot: LogisticsTimeSlot) => void;
+  /** Ramassage collecté en attente de comptage/conversion dans le POS. */
+  pendingPickupTask: LogisticsTask | null;
+  pendingPickupTaskId: string | null;
   /** Prochain numéro de ticket qui sera attribué (compteur séquentiel persisté). */
   nextTicketNumber: number;
   orderNotes: string;
@@ -103,6 +146,49 @@ interface AppContextType {
   submitNewOrder: () => LaundryOrder | null;
   moveOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   settleAndDeliverOrder: (orderId: string, method: 'especes' | 'wave' | 'momo' | 'om') => void;
+  // --- Rangement atelier des commandes terminées ---
+  storageLocations: StorageLocation[];
+  createStorageLocation: (
+    data: StorageLocationFormData
+  ) => ActionResult & { location?: StorageLocation };
+  createStorageLocationSeries: (
+    input: StorageLocationSeriesInput
+  ) => ActionResult & { locations?: StorageLocation[] };
+  updateStorageLocation: (id: string, data: StorageLocationFormData) => ActionResult;
+  deleteStorageLocation: (id: string) => ActionResult;
+  setStorageLocationActive: (id: string, isActive: boolean) => void;
+  markOrderReadyAndStore: (orderId: string, input: StorageAssignmentInput) => ActionResult;
+  assignOrderStorage: (orderId: string, input: StorageAssignmentInput) => ActionResult;
+  clearOrderStorage: (orderId: string) => ActionResult;
+  focusedStorageOrderId: string | null;
+  setFocusedStorageOrderId: (orderId: string | null) => void;
+  focusStorageOrder: (orderId: string) => void;
+  storagePanelViewRequest: StoragePanelView | null;
+  clearStoragePanelViewRequest: () => void;
+  openStorageLocationsConfig: () => void;
+  // --- Ramassage & livraison ---
+  logisticsTasks: LogisticsTask[];
+  createPickupTask: (data: PickupTaskFormData) => ActionResult & { task?: LogisticsTask };
+  updateLogisticsTask: (taskId: string, data: LogisticsTaskScheduleFormData) => ActionResult;
+  assignLogisticsTask: (taskId: string, employeeId: string) => ActionResult;
+  startLogisticsTask: (taskId: string) => ActionResult;
+  completePickupTask: (taskId: string, collectedBags?: number) => ActionResult;
+  completeDeliveryTask: (taskId: string, paymentMethod: PaymentMethod) => ActionResult;
+  failLogisticsTask: (taskId: string, reason: LogisticsIssueReason, notes?: string) => ActionResult;
+  cancelLogisticsTask: (taskId: string, reason: LogisticsIssueReason, notes?: string) => ActionResult;
+  startOrderFromPickupTask: (taskId: string) => boolean;
+  cancelPendingPickupConversion: () => void;
+  focusedLogisticsTaskId: string | null;
+  setFocusedLogisticsTaskId: (taskId: string | null) => void;
+  focusLogisticsTask: (taskId: string) => void;
+  /** Demande ponctuelle d’ouverture d’un onglet précis de l’atelier. */
+  workshopTabRequest: WorkshopTab | null;
+  requestWorkshopTab: (tab: WorkshopTab) => void;
+  clearWorkshopTabRequest: () => void;
+  /** Demande ponctuelle d’ouverture d’un onglet précis des Paramètres. */
+  settingsTabRequest: SettingsTab | null;
+  requestSettingsTab: (tab: SettingsTab) => void;
+  clearSettingsTabRequest: () => void;
   addNewCustomer: (cust: Omit<Customer, 'id' | 'depositsCount' | 'balance'>) => Customer;
   notifyAllSms: () => void;
   selectedServiceCategory: ServiceCategory | null;
@@ -118,6 +204,8 @@ interface AppContextType {
   theme: AppTheme;
   setTheme: (theme: AppTheme) => void;
   toggleTheme: () => void;
+  shopSettings: ShopSettings;
+  updateShopSettings: (settings: ShopSettings) => void;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -285,15 +373,160 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadPersistedState('pressingpro_expense_categories', INITIAL_EXPENSE_CATEGORIES)
   );
 
+  // Tournées ramassage/livraison. Une première installation reçoit tous les
+  // exemples fictifs. Sur un jeu de données antérieur à cette fonctionnalité,
+  // on ne charge que les deux ramassages non convertis : ils ne dépendent
+  // d'aucun total de commande déjà enregistré, contrairement aux exemples
+  // liés à un ticket de démonstration.
+  const [logisticsTasks, setLogisticsTasks] = useState<LogisticsTask[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOGISTICS_TASKS_STORAGE_KEY);
+      if (saved) return JSON.parse(saved) as LogisticsTask[];
+      if (localStorage.getItem('pressingpro_orders')) {
+        return INITIAL_LOGISTICS_TASKS.filter((task) => task.kind === 'pickup' && !task.orderId);
+      }
+    } catch (e) {
+      console.warn('LocalStorage load error', e);
+    }
+    return INITIAL_LOGISTICS_TASKS;
+  });
+
+  // Emplacements physiques des commandes terminées. Le plan proposé par
+  // défaut est éditable pour correspondre au local réel ; persistance locale.
+  const [storageLocations, setStorageLocations] = useState<StorageLocation[]>(() =>
+    normalizeStorageLocations(
+      loadPersistedState<unknown>(STORAGE_LOCATIONS_STORAGE_KEY, INITIAL_STORAGE_LOCATIONS),
+      INITIAL_STORAGE_LOCATIONS
+    )
+  );
+  const [focusedStorageOrderId, setFocusedStorageOrderId] = useState<string | null>(null);
+  const [storagePanelViewRequest, setStoragePanelViewRequest] =
+    useState<StoragePanelView | null>(null);
+
+  // Paramètres de la boutique (écran Paramètres) : fusionnés aux valeurs par
+  // défaut pour rester complets même si une ancienne version est en mémoire.
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => {
+    const merged = {
+      ...DEFAULT_SHOP_SETTINGS,
+      ...loadPersistedState<Partial<ShopSettings>>(SHOP_SETTINGS_STORAGE_KEY, {}),
+    };
+    return {
+      ...merged,
+      storageAssignmentRequired: merged.storageAssignmentRequired === true,
+      storageAllowCapacityOverflow: merged.storageAllowCapacityOverflow !== false,
+      storageSuggestionsEnabled: merged.storageSuggestionsEnabled !== false,
+      storageDefaultCapacityPackages:
+        sanitizePackageCount(merged.storageDefaultCapacityPackages) ??
+        DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
+    };
+  });
+  const updateShopSettings = (next: ShopSettings) =>
+    setShopSettings({
+      ...next,
+      pickupFee: normalizeLogisticsFee(next.pickupFee),
+      deliveryFee: normalizeLogisticsFee(next.deliveryFee),
+      storageAssignmentRequired: next.storageAssignmentRequired === true,
+      storageAllowCapacityOverflow: next.storageAllowCapacityOverflow === true,
+      storageSuggestionsEnabled: next.storageSuggestionsEnabled === true,
+      storageDefaultCapacityPackages:
+        sanitizePackageCount(next.storageDefaultCapacityPackages) ??
+        DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
+    });
+
+  useEffect(() => persistState(LOGISTICS_TASKS_STORAGE_KEY, logisticsTasks), [logisticsTasks]);
+  useEffect(
+    () => persistState(STORAGE_LOCATIONS_STORAGE_KEY, storageLocations),
+    [storageLocations]
+  );
   useEffect(() => persistState('pressingpro_employees', employees), [employees]);
   useEffect(() => persistState('pressingpro_attendance', attendanceRecords), [attendanceRecords]);
   useEffect(() => persistState('pressingpro_inventory_products', products), [products]);
   useEffect(() => persistState('pressingpro_stock_movements', stockMovements), [stockMovements]);
   useEffect(() => persistState('pressingpro_expenses', expenses), [expenses]);
   useEffect(() => persistState('pressingpro_expense_categories', expenseCategories), [expenseCategories]);
+  useEffect(() => persistState(SHOP_SETTINGS_STORAGE_KEY, shopSettings), [shopSettings]);
 
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(customers[0] || INITIAL_CUSTOMERS[0]);
   const [pickupOption, setPickupOption] = useState<PickupOption>('standard');
+
+  // Brouillon logistique du POS : mode de restitution et, si livraison,
+  // adresse/créneau saisis avant l'enregistrement de la commande.
+  const [orderFulfillmentMethod, setOrderFulfillmentMethod] =
+    useState<FulfillmentMethod>('counter_pickup');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>(
+    (customers[0] || INITIAL_CUSTOMERS[0]).address || ''
+  );
+  const [deliveryAddressDetails, setDeliveryAddressDetails] = useState<string>('');
+  const [deliveryDateISO, setDeliveryDateISOState] = useState<string>(() =>
+    toISODate(getPromisedDate('standard'))
+  );
+  const [deliveryTimeSlot, setDeliveryTimeSlotState] =
+    useState<LogisticsTimeSlot>('16:00-18:00');
+  const [deliveryScheduleManual, setDeliveryScheduleManual] = useState(false);
+  const [pendingPickupTaskId, setPendingPickupTaskId] = useState<string | null>(null);
+  const [focusedLogisticsTaskId, setFocusedLogisticsTaskId] = useState<string | null>(null);
+  const [workshopTabRequest, setWorkshopTabRequest] = useState<WorkshopTab | null>(null);
+  const [settingsTabRequest, setSettingsTabRequest] = useState<SettingsTab | null>(null);
+
+  const pendingPickupTask = pendingPickupTaskId
+    ? logisticsTasks.find((task) => task.id === pendingPickupTaskId) ?? null
+    : null;
+
+  const requestWorkshopTab = (tab: WorkshopTab) => {
+    setWorkshopTabRequest(tab);
+    setActiveScreen('workshop');
+  };
+  const clearWorkshopTabRequest = () => setWorkshopTabRequest(null);
+  const requestSettingsTab = (tab: SettingsTab) => {
+    setSettingsTabRequest(tab);
+    setActiveScreen('settings');
+  };
+  const clearSettingsTabRequest = () => setSettingsTabRequest(null);
+
+  const focusStorageOrder = (orderId: string) => {
+    setFocusedStorageOrderId(orderId);
+    requestWorkshopTab('storage');
+  };
+
+  const clearStoragePanelViewRequest = () => setStoragePanelViewRequest(null);
+  const openStorageLocationsConfig = () => {
+    setStoragePanelViewRequest('locations');
+    requestWorkshopTab('storage');
+  };
+
+  const setDeliveryDateISO = (date: string) => {
+    setDeliveryScheduleManual(true);
+    setDeliveryDateISOState(date);
+  };
+  const setDeliveryTimeSlot = (slot: LogisticsTimeSlot) => {
+    setDeliveryScheduleManual(true);
+    setDeliveryTimeSlotState(slot);
+  };
+
+  const resetLogisticsDraft = (option: PickupOption = pickupOption) => {
+    setOrderFulfillmentMethod('counter_pickup');
+    setDeliveryAddress(selectedCustomer.address || '');
+    setDeliveryAddressDetails('');
+    setDeliveryScheduleManual(false);
+    setDeliveryDateISOState(toISODate(getPromisedDate(option)));
+    setDeliveryTimeSlotState(getDefaultDeliveryTimeSlot(option));
+    setPendingPickupTaskId(null);
+  };
+
+  // L'adresse proposée suit le client sélectionné, sauf pendant la conversion
+  // d'un ramassage où l'adresse de collecte fait foi par défaut.
+  useEffect(() => {
+    if (!pendingPickupTaskId) setDeliveryAddress(selectedCustomer.address || '');
+  }, [selectedCustomer.id, pendingPickupTaskId]);
+
+  // Tant que le créneau n'a pas été choisi manuellement, la livraison suit la
+  // date promise par l'option standard/express/différé.
+  useEffect(() => {
+    if (deliveryScheduleManual) return;
+    setDeliveryDateISOState(toISODate(getPromisedDate(pickupOption)));
+    setDeliveryTimeSlotState(getDefaultDeliveryTimeSlot(pickupOption));
+  }, [pickupOption, deliveryScheduleManual]);
+
   const [orderNotes, setOrderNotes] = useState<string>(
     'Consigne : tache de sauce graine sur boubou — détachage doux. Cliente prévient sur WhatsApp.'
   );
@@ -308,9 +541,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [newCustomerModalOpen, setNewCustomerModalOpen] = useState(false);
   const [smsModalData, setSmsModalData] = useState<{ isOpen: boolean; order?: LaundryOrder; text?: string } | null>(null);
 
-  // Active handover in workshop
+  // Active handover in workshop : uniquement une commande prête en retrait
+  // comptoir (les livraisons à domicile passent par l'onglet Tournées).
   const [activeHandoverOrder, setActiveHandoverOrder] = useState<LaundryOrder | null>(() => {
-    return INITIAL_ORDERS.find((o) => o.id === 'ord-2852') || null;
+    return orders.find((o) => o.status === 'ready' && !isHomeDeliveryOrder(o)) || null;
   });
 
   // Default pre-populated cart to replicate Mockup 2:
@@ -357,6 +591,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSelectedServiceCategory(null);
       setOrderStep(1);
     }
+    resetLogisticsDraft();
     clearCart();
   };
 
@@ -480,18 +715,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     }
 
+    // Conversion d'un ramassage : la course doit être collectée, non encore
+    // convertie, et appartenir au client actuellement sélectionné.
+    const sourcePickupTask = pendingPickupTask;
+    if (pendingPickupTaskId) {
+      if (
+        !sourcePickupTask ||
+        sourcePickupTask.kind !== 'pickup' ||
+        sourcePickupTask.status !== 'completed' ||
+        sourcePickupTask.orderId ||
+        sourcePickupTask.customerId !== selectedCustomer.id
+      ) {
+        showToast('Ce ramassage ne peut pas être converti pour le client sélectionné.');
+        return null;
+      }
+    }
+
+    const wantsHomeDelivery = orderFulfillmentMethod === 'home_delivery';
+    const cleanDeliveryAddress = deliveryAddress.trim();
+    const cleanDeliveryDetails = deliveryAddressDetails.trim();
+    if (wantsHomeDelivery) {
+      if (!cleanDeliveryAddress) {
+        showToast('Renseignez l’adresse de livraison avant d’enregistrer la commande.');
+        return null;
+      }
+      if (!isValidISODate(deliveryDateISO) || deliveryDateISO < todayISO()) {
+        showToast('Choisissez une date de livraison valide, aujourd’hui ou plus tard.');
+        return null;
+      }
+    }
+
+    const collectionFee = sourcePickupTask ? normalizeLogisticsFee(sourcePickupTask.fee) : 0;
+    const deliveryFee = wantsHomeDelivery
+      ? normalizeLogisticsFee(shopSettings.deliveryFee)
+      : 0;
+
     const { subtotal, expressFee, discountAmount: discount, total, deposit, remaining } =
       calculateOrderTotals(cartLines, {
         pickupOption,
         loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
         depositAmount,
+        collectionFee,
+        deliveryFee,
       });
 
     const nextTicketNum = `#TK-${nextTicketNumber}`;
     const promised = formatPromised(getPromisedDate(pickupOption));
+    const orderId = genId('ord');
+    const nowIso = nowISODateTime();
+
+    const deliveryTask: LogisticsTask | null = wantsHomeDelivery
+      ? {
+          id: genId('log'),
+          kind: 'delivery',
+          status: 'scheduled',
+          customerId: selectedCustomer.id,
+          customerName: selectedCustomer.name,
+          customerPhone: selectedCustomer.phone,
+          address: cleanDeliveryAddress,
+          addressDetails: cleanDeliveryDetails || undefined,
+          scheduledDate: deliveryDateISO,
+          timeSlot: deliveryTimeSlot,
+          orderId,
+          orderTicketNumber: nextTicketNum,
+          fee: deliveryFee,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        }
+      : null;
 
     const newOrder: LaundryOrder = {
-      id: `ord-${Date.now()}`,
+      id: orderId,
       ticketNumber: nextTicketNum,
       serviceCategory: selectedServiceCategory || 'pressing',
       customerId: selectedCustomer.id,
@@ -511,9 +805,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       promisedAt: promised,
       notes: orderNotes,
       smsSent: true,
+      origin: sourcePickupTask ? 'home_pickup' : 'counter',
+      fulfillmentMethod: orderFulfillmentMethod,
+      collectionTaskId: sourcePickupTask?.id,
+      collectionFee,
+      collectionAddress: sourcePickupTask?.address,
+      collectionAddressDetails: sourcePickupTask?.addressDetails,
+      collectionDate: sourcePickupTask?.scheduledDate,
+      collectionTimeSlot: sourcePickupTask?.timeSlot,
+      deliveryTaskId: deliveryTask?.id,
+      deliveryFee,
+      deliveryAddress: wantsHomeDelivery ? cleanDeliveryAddress : undefined,
+      deliveryAddressDetails: wantsHomeDelivery
+        ? cleanDeliveryDetails || undefined
+        : undefined,
+      deliveryDate: wantsHomeDelivery ? deliveryDateISO : undefined,
+      deliveryTimeSlot: wantsHomeDelivery ? deliveryTimeSlot : undefined,
     };
 
     setOrders((prev) => [newOrder, ...prev]);
+    setLogisticsTasks((prev) => {
+      const linked = sourcePickupTask
+        ? prev.map((task) =>
+            task.id === sourcePickupTask.id
+              ? {
+                  ...task,
+                  orderId,
+                  orderTicketNumber: nextTicketNum,
+                  updatedAt: nowISODateTime(),
+                }
+              : task
+          )
+        : prev;
+      return deliveryTask ? [deliveryTask, ...linked] : linked;
+    });
     setNextTicketNumber((n) => n + 1);
 
     // Update cash register if deposit received
@@ -551,26 +876,435 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Open ticket preview
     setPreviewTicket(newOrder);
     clearCart();
-    showToast(`✓ Commande ${newOrder.ticketNumber} enregistrée avec succès! 🎉`);
+    resetLogisticsDraft();
+    showToast(
+      wantsHomeDelivery
+        ? `✓ Commande ${newOrder.ticketNumber} enregistrée — livraison à programmer dans Tournées.`
+        : `✓ Commande ${newOrder.ticketNumber} enregistrée avec succès! 🎉`
+    );
     return newOrder;
   };
 
   const moveOrderStatus = (orderId: string, newStatus: OrderStatus) => {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    // La remise finale passe toujours par un encaissement contrôlé : comptoir
+    // pour un retrait, confirmation de tournée pour une livraison à domicile.
+    if (newStatus === 'delivered') {
+      showToast(
+        isHomeDeliveryOrder(order)
+          ? 'Confirmez la livraison depuis l’onglet Tournées pour encaisser le solde une seule fois.'
+          : 'Utilisez l’onglet Remises pour encaisser puis remettre la commande au comptoir.'
+      );
+      return;
+    }
+    if (order.status === 'delivered') {
+      showToast('Cette commande est déjà remise : son statut de production ne peut plus changer.');
+      return;
+    }
+    const activeDelivery = logisticsTasks.find(
+      (task) => task.kind === 'delivery' && task.orderId === order.id && task.status === 'en_route'
+    );
+    if (activeDelivery) {
+      showToast('Cette commande est déjà en route : terminez ou signalez la livraison dans Tournées avant tout retour en production.');
+      return;
+    }
+    if (
+      newStatus === 'ready' &&
+      order.status !== 'ready' &&
+      shopSettings.storageAssignmentRequired
+    ) {
+      showToast('Règle du propriétaire : choisissez un casier pour marquer cette commande prête.');
+      return;
+    }
+
     const now = nowDateTime();
+    const leavingReady = order.status === 'ready' && newStatus !== 'ready';
+    const clearedStorageFields = {
+      rackLocation: undefined,
+      storageLocationId: undefined,
+      storageLocationCode: undefined,
+      storageLocationLabel: undefined,
+      storagePackageCount: undefined,
+      storageNotes: undefined,
+      storedAt: undefined,
+    };
     setOrders((prev) =>
       prev.map((ord) => {
         if (ord.id === orderId) {
           return {
             ...ord,
             status: newStatus,
-            readyAt: newStatus === 'ready' ? now : ord.readyAt,
-            deliveredAt: newStatus === 'delivered' ? now : ord.deliveredAt,
+            readyAt: newStatus === 'ready' ? now : leavingReady ? undefined : ord.readyAt,
+            deliveredAt: ord.deliveredAt,
+            // Une commande qui repart en production n'occupe plus le rayon des
+            // prêts ; une nouvelle arrivée en « Prêt » repart non rangée.
+            ...(leavingReady || (newStatus === 'ready' && ord.status !== 'ready')
+              ? clearedStorageFields
+              : {}),
           };
         }
         return ord;
       })
     );
-    showToast(`Statut mis à jour`);
+    showToast(
+      leavingReady
+        ? `${order.ticketNumber} retourne en production — son emplacement est libéré.`
+        : newStatus === 'ready'
+          ? `✓ ${order.ticketNumber} est prête — pensez à la ranger dans l’onglet Rangement.`
+          : 'Statut mis à jour'
+    );
+  };
+
+  /* ================= Rangement atelier ================= */
+
+  const validateStorageLocationData = (
+    data: StorageLocationFormData,
+    excludeId?: string
+  ): { normalized?: StorageLocationFormData; error?: string } => {
+    const code = normalizeStorageCode(data.code);
+    const label = data.label.trim();
+    const capacityPackages = Number(data.capacityPackages);
+    if (!isValidStorageCode(code)) {
+      return {
+        error: 'Le code doit contenir 2 à 16 lettres/chiffres, séparés si besoin par des tirets (ex. A-01).',
+      };
+    }
+    if (!label) return { error: 'Le libellé de l’emplacement est obligatoire.' };
+    if (!Number.isInteger(capacityPackages) || capacityPackages < 1 || capacityPackages > 999) {
+      return { error: 'La capacité doit être comprise entre 1 et 999 paquets.' };
+    }
+    if (
+      storageLocations.some(
+        (location) =>
+          location.id !== excludeId && normalizeStorageCode(location.code) === code
+      )
+    ) {
+      return { error: `Un emplacement portant déjà le code ${code} existe.` };
+    }
+    return {
+      normalized: {
+        code,
+        label,
+        zone: data.zone,
+        capacityPackages,
+        description: data.description?.trim() || undefined,
+        isActive: data.isActive,
+      },
+    };
+  };
+
+  const createStorageLocation = (
+    data: StorageLocationFormData
+  ): ActionResult & { location?: StorageLocation } => {
+    const { normalized, error } = validateStorageLocationData(data);
+    if (!normalized || error) return { ok: false, error: error ?? 'Emplacement invalide.' };
+    const now = nowISODateTime();
+    const location: StorageLocation = {
+      ...normalized,
+      id: genId('storage'),
+      createdAt: now,
+      updatedAt: now,
+    };
+    setStorageLocations((prev) => [...prev, location]);
+    showToast(`✓ Emplacement ajouté : ${formatStorageLocation(location)}`);
+    return { ok: true, location };
+  };
+
+  const createStorageLocationSeries = (
+    input: StorageLocationSeriesInput
+  ): ActionResult & { locations?: StorageLocation[] } => {
+    const { locations: drafts, error } = buildStorageLocationSeries(input, storageLocations);
+    if (error || drafts.length === 0) {
+      return { ok: false, error: error ?? 'Aucun emplacement à créer.' };
+    }
+
+    const now = nowISODateTime();
+    const locations: StorageLocation[] = drafts.map((draft, index) => ({
+      ...draft,
+      id: `${genId('storage')}-${index}`,
+      createdAt: now,
+      updatedAt: now,
+    }));
+    setStorageLocations((prev) => [...prev, ...locations]);
+    showToast(
+      `✓ Série créée : ${locations.length} emplacement(s), de ${locations[0].code} à ${locations[locations.length - 1].code}.`
+    );
+    return { ok: true, locations };
+  };
+
+  const updateStorageLocation = (id: string, data: StorageLocationFormData): ActionResult => {
+    const current = storageLocations.find((location) => location.id === id);
+    if (!current) return { ok: false, error: 'Emplacement introuvable.' };
+    const { normalized, error } = validateStorageLocationData(data, id);
+    if (!normalized || error) return { ok: false, error: error ?? 'Emplacement invalide.' };
+
+    const updated: StorageLocation = {
+      ...current,
+      ...normalized,
+      updatedAt: nowISODateTime(),
+    };
+    setStorageLocations((prev) => prev.map((location) => (location.id === id ? updated : location)));
+    // Les écrans de remise lisent un instantané code/libellé : il est
+    // resynchronisé pour les commandes encore physiquement rangées. Les
+    // commandes déjà remises conservent leur historique tel qu'imprimé.
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.storageLocationId === id && order.status === 'ready'
+          ? {
+              ...order,
+              storageLocationCode: updated.code,
+              storageLocationLabel: updated.label,
+              rackLocation: formatStorageLocation(updated),
+            }
+          : order
+      )
+    );
+    showToast(`✓ Emplacement mis à jour : ${formatStorageLocation(updated)}`);
+    return { ok: true };
+  };
+
+  const deleteStorageLocation = (id: string): ActionResult => {
+    const location = storageLocations.find((item) => item.id === id);
+    if (!location) return { ok: false, error: 'Emplacement introuvable.' };
+    const isReferenced = orders.some((order) => {
+      if (order.storageLocationId === id) return true;
+      const referencedCode = normalizeStorageCode(getOrderStorageCode(order) ?? '');
+      return referencedCode !== '' && referencedCode === location.code;
+    });
+    if (isReferenced) {
+      return {
+        ok: false,
+        error:
+          'Cet emplacement est déjà cité par au moins une commande : désactivez-le pour conserver l’historique.',
+      };
+    }
+    setStorageLocations((prev) => prev.filter((item) => item.id !== id));
+    showToast(`✓ Emplacement supprimé : ${formatStorageLocation(location)}`);
+    return { ok: true };
+  };
+
+  const setStorageLocationActive = (id: string, isActive: boolean) => {
+    const location = storageLocations.find((item) => item.id === id);
+    if (!location) return;
+    setStorageLocations((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, isActive, updatedAt: nowISODateTime() } : item
+      )
+    );
+    const currentOrders = orders.filter(
+      (order) => order.storageLocationId === id && order.status === 'ready'
+    ).length;
+    showToast(
+      isActive
+        ? `✓ Emplacement réactivé : ${formatStorageLocation(location)}`
+        : `Emplacement désactivé pour les nouveaux rangements${currentOrders ? ` — ${currentOrders} commande(s) déjà placée(s) restent visibles.` : '.'}`
+    );
+  };
+
+  const isOrderOutForDelivery = (orderId: string): boolean =>
+    logisticsTasks.some(
+      (task) => task.kind === 'delivery' && task.orderId === orderId && task.status === 'en_route'
+    );
+
+  const resolveStorageAssignment = (
+    input: StorageAssignmentInput,
+    required: boolean,
+    existingLocationId?: string,
+    orderId?: string
+  ): {
+    location?: StorageLocation;
+    packageCount?: number;
+    notes?: string;
+    error?: string;
+  } => {
+    if (!input.locationId) {
+      return required ? { error: 'Choisissez l’emplacement où les paquets sont rangés.' } : {};
+    }
+    const location = storageLocations.find((item) => item.id === input.locationId);
+    if (!location) return { error: 'L’emplacement sélectionné est introuvable.' };
+    // Un emplacement désactivé reste modifiable pour une commande qui s'y
+    // trouve déjà (correction du nombre de paquets), mais ne reçoit plus de
+    // nouvelle commande.
+    if (!location.isActive && location.id !== existingLocationId) {
+      return { error: 'Cet emplacement est désactivé : choisissez-en un autre.' };
+    }
+    const packageCount = sanitizePackageCount(input.packageCount);
+    if (!packageCount) {
+      return { error: 'Indiquez un nombre de paquets entier compris entre 1 et 999.' };
+    }
+
+    if (!shopSettings.storageAllowCapacityOverflow) {
+      const occupancy = calculateStorageOccupancy(orders, logisticsTasks).get(location.id) ?? {
+        orderCount: 0,
+        packageCount: 0,
+        unknownPackageOrders: 0,
+      };
+      const adjustedOccupancy = { ...occupancy };
+      const currentOrder = orderId ? orders.find((item) => item.id === orderId) : undefined;
+      if (
+        currentOrder &&
+        currentOrder.storageLocationId === location.id &&
+        currentOrder.status === 'ready' &&
+        !isOrderOutForDelivery(currentOrder.id)
+      ) {
+        const currentPackages = getOrderPackageCount(currentOrder);
+        if (currentPackages) {
+          adjustedOccupancy.packageCount = Math.max(
+            0,
+            adjustedOccupancy.packageCount - currentPackages
+          );
+        } else {
+          adjustedOccupancy.unknownPackageOrders = Math.max(
+            0,
+            adjustedOccupancy.unknownPackageOrders - 1
+          );
+        }
+      }
+      if (wouldExceedKnownStorageCapacity(location, adjustedOccupancy, packageCount)) {
+        return {
+          error: `${location.code} est plein (${adjustedOccupancy.packageCount}/${location.capacityPackages} paquets connus) : choisissez un autre emplacement ou augmentez sa capacité.`,
+        };
+      }
+    }
+
+    return {
+      location,
+      packageCount,
+      notes: input.notes?.trim() || undefined,
+    };
+  };
+
+  const clearStorageFields = () => ({
+    rackLocation: undefined,
+    storageLocationId: undefined,
+    storageLocationCode: undefined,
+    storageLocationLabel: undefined,
+    storagePackageCount: undefined,
+    storageNotes: undefined,
+    storedAt: undefined,
+  });
+
+  const markOrderReadyAndStore = (
+    orderId: string,
+    input: StorageAssignmentInput
+  ): ActionResult => {
+    const order = orders.find((item) => item.id === orderId);
+    if (!order) return { ok: false, error: 'Commande introuvable.' };
+    if (order.status === 'delivered') {
+      return { ok: false, error: 'Cette commande est déjà remise.' };
+    }
+    if (order.status === 'ready') {
+      return {
+        ok: false,
+        error: 'Cette commande est déjà prête : utilisez Ranger/Déplacer pour changer son emplacement.',
+      };
+    }
+    if (isOrderOutForDelivery(orderId)) {
+      return { ok: false, error: 'Cette commande est déjà en cours de livraison.' };
+    }
+    const { location, packageCount, notes, error } = resolveStorageAssignment(
+      input,
+      shopSettings.storageAssignmentRequired,
+      undefined,
+      orderId
+    );
+    if (error) return { ok: false, error };
+
+    const now = nowDateTime();
+    setOrders((prev) =>
+      prev.map((item) =>
+        item.id === orderId
+          ? {
+              ...item,
+              status: 'ready',
+              readyAt: now,
+              ...(location
+                ? {
+                    rackLocation: formatStorageLocation(location),
+                    storageLocationId: location.id,
+                    storageLocationCode: location.code,
+                    storageLocationLabel: location.label,
+                    storagePackageCount: packageCount,
+                    storageNotes: notes,
+                    storedAt: now,
+                  }
+                : clearStorageFields()),
+            }
+          : item
+      )
+    );
+    showToast(
+      location
+        ? `✓ ${order.ticketNumber} prête et rangée en ${location.code}.`
+        : `✓ ${order.ticketNumber} prête — à ranger depuis l’onglet Rangement.`
+    );
+    return { ok: true };
+  };
+
+  const assignOrderStorage = (orderId: string, input: StorageAssignmentInput): ActionResult => {
+    const order = orders.find((item) => item.id === orderId);
+    if (!order) return { ok: false, error: 'Commande introuvable.' };
+    if (order.status !== 'ready') {
+      return { ok: false, error: 'Seules les commandes prêtes se rangent dans la zone d’attente des retraits.' };
+    }
+    if (isOrderOutForDelivery(orderId)) {
+      return { ok: false, error: 'Cette commande est avec le livreur : elle ne peut pas être rangée en atelier.' };
+    }
+    const { location, packageCount, notes, error } = resolveStorageAssignment(
+      input,
+      true,
+      order.storageLocationId,
+      orderId
+    );
+    if (error || !location) return { ok: false, error: error ?? 'Emplacement invalide.' };
+
+    const now = nowDateTime();
+    const isSameLocation = order.storageLocationId === location.id;
+    setOrders((prev) =>
+      prev.map((item) =>
+        item.id === orderId
+          ? {
+              ...item,
+              rackLocation: formatStorageLocation(location),
+              storageLocationId: location.id,
+              storageLocationCode: location.code,
+              storageLocationLabel: location.label,
+              storagePackageCount: packageCount,
+              storageNotes: notes,
+              // Une correction sur place (paquets/repère) ne doit pas faire
+              // repartir à zéro l'ancienneté du rangement.
+              storedAt: isSameLocation ? item.storedAt ?? now : now,
+            }
+          : item
+      )
+    );
+    showToast(
+      isSameLocation
+        ? `✓ Rangement de ${order.ticketNumber} mis à jour en ${location.code}.`
+        : `✓ ${order.ticketNumber} rangée en ${location.code}.`
+    );
+    return { ok: true };
+  };
+
+  const clearOrderStorage = (orderId: string): ActionResult => {
+    const order = orders.find((item) => item.id === orderId);
+    if (!order) return { ok: false, error: 'Commande introuvable.' };
+    if (order.status !== 'ready') {
+      return { ok: false, error: 'Cette commande n’est pas dans la zone des commandes prêtes.' };
+    }
+    if (isOrderOutForDelivery(orderId)) {
+      return { ok: false, error: 'Cette commande est déjà en cours de livraison.' };
+    }
+    if (!hasStorageLocation(order)) {
+      return { ok: false, error: 'Cette commande n’a déjà aucun emplacement renseigné.' };
+    }
+    setOrders((prev) =>
+      prev.map((item) => (item.id === orderId ? { ...item, ...clearStorageFields() } : item))
+    );
+    showToast(`${order.ticketNumber} marquée non rangée — choisissez son nouvel emplacement.`);
+    return { ok: true };
   };
 
   const settleAndDeliverOrder = (orderId: string, method: 'especes' | 'wave' | 'momo' | 'om') => {
@@ -580,6 +1314,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // créditer la caisse deux fois (ex. double invocation en mode Strict).
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
+    if (isHomeDeliveryOrder(order)) {
+      showToast('Cette commande est en livraison à domicile : terminez-la depuis l’onglet Tournées.');
+      return;
+    }
+    if (order.status !== 'ready') {
+      showToast('Seule une commande prête peut être remise au comptoir.');
+      return;
+    }
     const balance = order.remainingBalance;
     const deliveredAt = nowDateTime();
 
@@ -608,7 +1350,388 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
     }
 
-    showToast(`✓ Commande remise au client et solde encaissé via ${method.toUpperCase()}!`);
+    if (activeHandoverOrder?.id === orderId) setActiveHandoverOrder(null);
+    showToast(`✓ Commande remise au client et solde encaissé via ${PAYMENT_METHOD_LABELS[method]}!`);
+  };
+
+  /* ================= Ramassage & livraison ================= */
+
+  const sanitizeBags = (value?: number): number | undefined => {
+    if (value === undefined || !Number.isFinite(value)) return undefined;
+    return Math.min(99, Math.max(1, Math.round(value)));
+  };
+
+  const resolveLogisticsEmployee = (
+    employeeId?: string
+  ): { employee?: Employee; error?: string } => {
+    if (!employeeId) return {};
+    const employee = employees.find((e) => e.id === employeeId);
+    if (!employee) return { error: 'Le coursier sélectionné est introuvable.' };
+    if (employee.status !== 'active') {
+      return { error: `${employee.fullName} n’est pas actif et ne peut pas recevoir cette tournée.` };
+    }
+    return { employee };
+  };
+
+  const patchLogisticsTask = (taskId: string, patch: Partial<LogisticsTask>) => {
+    setLogisticsTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId ? { ...task, ...patch, updatedAt: nowISODateTime() } : task
+      )
+    );
+  };
+
+  const createPickupTask = (
+    data: PickupTaskFormData
+  ): ActionResult & { task?: LogisticsTask } => {
+    const address = data.address.trim();
+    if (!address) return { ok: false, error: 'L’adresse de ramassage est obligatoire.' };
+    if (!isValidISODate(data.scheduledDate) || data.scheduledDate < todayISO()) {
+      return { ok: false, error: 'Choisissez une date de ramassage valide, aujourd’hui ou plus tard.' };
+    }
+
+    const { employee, error: employeeError } = resolveLogisticsEmployee(data.assignedEmployeeId);
+    if (employeeError) return { ok: false, error: employeeError };
+
+    let customer: Customer | undefined;
+    if (data.customerMode === 'existing') {
+      customer = customers.find((c) => c.id === data.customerId);
+      if (!customer) return { ok: false, error: 'Sélectionnez un client existant.' };
+    } else {
+      const name = (data.newCustomerName ?? '').trim();
+      const phone = (data.newCustomerPhone ?? '').trim();
+      if (!name) return { ok: false, error: 'Le nom du nouveau client est obligatoire.' };
+      if (!phone) return { ok: false, error: 'Le téléphone du nouveau client est obligatoire.' };
+      const phoneDigits = phone.replace(/\D/g, '');
+      const duplicate = customers.find((c) => c.phone.replace(/\D/g, '') === phoneDigits);
+      if (duplicate) {
+        return {
+          ok: false,
+          error: `Ce numéro appartient déjà à ${duplicate.name}. Sélectionnez ce client existant.`,
+        };
+      }
+      customer = {
+        id: genId('cust'),
+        name,
+        phone,
+        address,
+        depositsCount: 0,
+        balance: 0,
+        loyaltyDiscountPercent: 0,
+      };
+      setCustomers((prev) => [customer as Customer, ...prev]);
+    }
+
+    const now = nowISODateTime();
+    const task: LogisticsTask = {
+      id: genId('log'),
+      kind: 'pickup',
+      status: 'scheduled',
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      address,
+      addressDetails: data.addressDetails?.trim() || undefined,
+      scheduledDate: data.scheduledDate,
+      timeSlot: data.timeSlot,
+      assignedEmployeeId: employee?.id,
+      assignedEmployeeName: employee?.fullName,
+      fee: normalizeLogisticsFee(shopSettings.pickupFee),
+      estimatedBags: sanitizeBags(data.estimatedBags),
+      instructions: data.instructions?.trim() || undefined,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setLogisticsTasks((prev) => [task, ...prev]);
+    showToast(`✓ Ramassage programmé pour ${customer.name}.`);
+    return { ok: true, task };
+  };
+
+  const updateLogisticsTask = (
+    taskId: string,
+    data: LogisticsTaskScheduleFormData
+  ): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status === 'completed' || task.status === 'en_route') {
+      return { ok: false, error: 'Une tournée en route ou terminée ne peut plus être modifiée.' };
+    }
+
+    const address = data.address.trim();
+    if (!address) return { ok: false, error: 'L’adresse est obligatoire.' };
+    if (!isValidISODate(data.scheduledDate) || data.scheduledDate < todayISO()) {
+      return { ok: false, error: 'Choisissez une date valide, aujourd’hui ou plus tard.' };
+    }
+
+    const { employee, error: employeeError } = resolveLogisticsEmployee(data.assignedEmployeeId);
+    if (employeeError) return { ok: false, error: employeeError };
+
+    const linkedOrder = task.orderId ? orders.find((o) => o.id === task.orderId) : undefined;
+    if (task.kind === 'delivery' && linkedOrder?.status === 'delivered') {
+      return { ok: false, error: 'Cette commande est déjà livrée.' };
+    }
+
+    patchLogisticsTask(taskId, {
+      address,
+      addressDetails: data.addressDetails?.trim() || undefined,
+      scheduledDate: data.scheduledDate,
+      timeSlot: data.timeSlot,
+      assignedEmployeeId: employee?.id,
+      assignedEmployeeName: employee?.fullName,
+      estimatedBags: task.kind === 'pickup' ? sanitizeBags(data.estimatedBags) : task.estimatedBags,
+      instructions: data.instructions?.trim() || undefined,
+      status: 'scheduled',
+      issueReason: undefined,
+      issueNotes: undefined,
+      startedAt: undefined,
+      completedAt: undefined,
+    });
+
+    // Le ticket doit refléter la dernière adresse/créneau promis au client.
+    if (task.kind === 'delivery' && task.orderId) {
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === task.orderId
+            ? {
+                ...order,
+                deliveryAddress: address,
+                deliveryAddressDetails: data.addressDetails?.trim() || undefined,
+                deliveryDate: data.scheduledDate,
+                deliveryTimeSlot: data.timeSlot,
+              }
+            : order
+        )
+      );
+    }
+
+    showToast(task.status === 'scheduled' ? '✓ Tournée mise à jour.' : '✓ Tournée reprogrammée.');
+    return { ok: true };
+  };
+
+  const assignLogisticsTask = (taskId: string, employeeId: string): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status === 'completed' || task.status === 'cancelled') {
+      return { ok: false, error: 'Cette tournée ne peut plus être assignée.' };
+    }
+    const { employee, error } = resolveLogisticsEmployee(employeeId || undefined);
+    if (error) return { ok: false, error };
+    patchLogisticsTask(taskId, {
+      assignedEmployeeId: employee?.id,
+      assignedEmployeeName: employee?.fullName,
+    });
+    showToast(employee ? `✓ Tournée assignée à ${employee.fullName}.` : 'Coursier retiré de la tournée.');
+    return { ok: true };
+  };
+
+  const startLogisticsTask = (taskId: string): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status !== 'scheduled') {
+      return { ok: false, error: 'Seule une tournée programmée peut démarrer.' };
+    }
+    if (!task.assignedEmployeeId) {
+      return { ok: false, error: 'Assignez un coursier avant le départ.' };
+    }
+    const employee = employees.find((e) => e.id === task.assignedEmployeeId);
+    if (!employee || employee.status !== 'active') {
+      return { ok: false, error: 'Le coursier assigné n’est plus actif. Choisissez-en un autre.' };
+    }
+    if (task.kind === 'delivery') {
+      const order = orders.find((o) => o.id === task.orderId);
+      if (!order) return { ok: false, error: 'La commande liée à cette livraison est introuvable.' };
+      if (order.status !== 'ready') {
+        return { ok: false, error: 'Cette livraison ne peut partir que lorsque la commande est prête.' };
+      }
+    }
+
+    patchLogisticsTask(taskId, {
+      status: 'en_route',
+      assignedEmployeeName: employee.fullName,
+      startedAt: nowISODateTime(),
+      issueReason: undefined,
+      issueNotes: undefined,
+    });
+    showToast(`🚚 ${employee.fullName} est en route pour ${task.customerName}.`);
+    return { ok: true };
+  };
+
+  const completePickupTask = (taskId: string, collectedBags?: number): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task || task.kind !== 'pickup') return { ok: false, error: 'Ce ramassage est introuvable.' };
+    if (task.status !== 'en_route') {
+      return { ok: false, error: 'Démarrez d’abord la tournée avant de confirmer la collecte.' };
+    }
+    patchLogisticsTask(taskId, {
+      status: 'completed',
+      collectedBags: sanitizeBags(collectedBags),
+      completedAt: nowISODateTime(),
+    });
+    showToast('✓ Linge collecté. Créez la commande après le comptage à la boutique.');
+    return { ok: true };
+  };
+
+  const completeDeliveryTask = (
+    taskId: string,
+    paymentMethodForBalance: PaymentMethod
+  ): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task || task.kind !== 'delivery') return { ok: false, error: 'Cette livraison est introuvable.' };
+    if (task.status !== 'en_route') {
+      return { ok: false, error: 'Démarrez d’abord la tournée avant de confirmer la livraison.' };
+    }
+    const order = orders.find((o) => o.id === task.orderId);
+    if (!order) return { ok: false, error: 'La commande liée à cette livraison est introuvable.' };
+    if (order.status !== 'ready') {
+      return { ok: false, error: 'La commande doit être prête et non encore remise pour être livrée.' };
+    }
+
+    const balance = Math.max(0, order.remainingBalance);
+    const deliveredAt = nowDateTime();
+
+    setOrders((prev) =>
+      prev.map((ord) =>
+        ord.id === order.id
+          ? {
+              ...ord,
+              depositPaid: ord.total,
+              remainingBalance: 0,
+              status: 'delivered',
+              deliveredAt,
+              paymentMethod:
+                balance > 0 && ord.depositPaid === 0 ? paymentMethodForBalance : ord.paymentMethod,
+            }
+          : ord
+      )
+    );
+
+    patchLogisticsTask(taskId, {
+      status: 'completed',
+      completedAt: nowISODateTime(),
+      collectedAmount: balance,
+      collectedPaymentMethod: balance > 0 ? paymentMethodForBalance : undefined,
+    });
+
+    if (balance > 0) {
+      setCashRegister((reg) => ({
+        ...reg,
+        cashAmount: reg.cashAmount + (paymentMethodForBalance === 'especes' ? balance : 0),
+        waveAmount: reg.waveAmount + (paymentMethodForBalance === 'wave' ? balance : 0),
+        momoAmount:
+          reg.momoAmount + (paymentMethodForBalance === 'momo' || paymentMethodForBalance === 'om' ? balance : 0),
+        totalAmount: reg.totalAmount + balance,
+      }));
+      setCustomers((prev) =>
+        prev.map((customer) =>
+          customer.id === order.customerId
+            ? { ...customer, balance: Math.max(0, customer.balance - balance) }
+            : customer
+        )
+      );
+    }
+
+    if (activeHandoverOrder?.id === order.id) setActiveHandoverOrder(null);
+    showToast(
+      balance > 0
+        ? `✓ ${order.ticketNumber} livrée — ${balance.toLocaleString('fr-FR')} FCFA encaissés via ${PAYMENT_METHOD_LABELS[paymentMethodForBalance]}.`
+        : `✓ ${order.ticketNumber} livrée — commande déjà soldée.`
+    );
+    return { ok: true };
+  };
+
+  const failLogisticsTask = (
+    taskId: string,
+    reason: LogisticsIssueReason,
+    notes?: string
+  ): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status !== 'en_route') {
+      return { ok: false, error: 'Seule une tournée en route peut être marquée en échec.' };
+    }
+    patchLogisticsTask(taskId, {
+      status: 'failed',
+      issueReason: reason,
+      issueNotes: notes?.trim() || undefined,
+      completedAt: undefined,
+    });
+    showToast('Tournée en échec : elle reste visible dans « À traiter » pour reprogrammation.');
+    return { ok: true };
+  };
+
+  const cancelLogisticsTask = (
+    taskId: string,
+    reason: LogisticsIssueReason,
+    notes?: string
+  ): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status !== 'scheduled' && task.status !== 'failed') {
+      return { ok: false, error: 'Seule une tournée programmée ou en échec peut être annulée.' };
+    }
+    patchLogisticsTask(taskId, {
+      status: 'cancelled',
+      issueReason: reason,
+      issueNotes: notes?.trim() || undefined,
+      completedAt: undefined,
+    });
+    showToast('Tournée annulée. Elle pourra être reprogrammée depuis l’historique si besoin.');
+    return { ok: true };
+  };
+
+  const startOrderFromPickupTask = (taskId: string): boolean => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task || task.kind !== 'pickup') {
+      showToast('Ce ramassage est introuvable.');
+      return false;
+    }
+    if (task.status !== 'completed') {
+      showToast('Confirmez d’abord la collecte avant de compter et créer la commande.');
+      return false;
+    }
+    if (task.orderId) {
+      showToast(`Ce ramassage est déjà converti en commande ${task.orderTicketNumber ?? ''}.`);
+      return false;
+    }
+    const customer = customers.find((c) => c.id === task.customerId);
+    if (!customer) {
+      showToast('La fiche client de ce ramassage est introuvable.');
+      return false;
+    }
+
+    setCartLines([]);
+    setDepositAmount(0);
+    setSelectedCustomer(customer);
+    // Les instructions de tournée restent sur la course ; les consignes
+    // atelier sont saisies séparément après inspection des pièces.
+    setOrderNotes('');
+    setOrderFulfillmentMethod('counter_pickup');
+    setDeliveryAddress(task.address);
+    setDeliveryAddressDetails(task.addressDetails ?? '');
+    setDeliveryScheduleManual(false);
+    setDeliveryDateISOState(toISODate(getPromisedDate(pickupOption)));
+    setDeliveryTimeSlotState(getDefaultDeliveryTimeSlot(pickupOption));
+    setPendingPickupTaskId(task.id);
+    setSelectedServiceCategory(null);
+    setOrderStep(1);
+    setActiveScreen('pos');
+    showToast('Ramassage chargé : comptez les pièces puis enregistrez la commande.');
+    return true;
+  };
+
+  const cancelPendingPickupConversion = () => {
+    if (!pendingPickupTaskId) return;
+    setPendingPickupTaskId(null);
+    setOrderFulfillmentMethod('counter_pickup');
+    setDeliveryAddress(selectedCustomer.address || '');
+    setDeliveryAddressDetails('');
+    showToast('Ramassage détaché : la saisie redevient une commande comptoir.');
+  };
+
+  const focusLogisticsTask = (taskId: string) => {
+    setFocusedLogisticsTaskId(taskId);
+    setActiveScreen('workshop');
   };
 
   const addNewCustomer = (custData: Omit<Customer, 'id' | 'depositsCount' | 'balance'>): Customer => {
@@ -1039,6 +2162,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearCart,
         pickupOption,
         setPickupOption,
+        orderFulfillmentMethod,
+        setOrderFulfillmentMethod,
+        deliveryAddress,
+        setDeliveryAddress,
+        deliveryAddressDetails,
+        setDeliveryAddressDetails,
+        deliveryDateISO,
+        setDeliveryDateISO,
+        deliveryTimeSlot,
+        setDeliveryTimeSlot,
+        pendingPickupTask,
+        pendingPickupTaskId,
         nextTicketNumber,
         orderNotes,
         setOrderNotes,
@@ -1059,6 +2194,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         submitNewOrder,
         moveOrderStatus,
         settleAndDeliverOrder,
+        storageLocations,
+        createStorageLocation,
+        createStorageLocationSeries,
+        updateStorageLocation,
+        deleteStorageLocation,
+        setStorageLocationActive,
+        markOrderReadyAndStore,
+        assignOrderStorage,
+        clearOrderStorage,
+        focusedStorageOrderId,
+        setFocusedStorageOrderId,
+        focusStorageOrder,
+        storagePanelViewRequest,
+        clearStoragePanelViewRequest,
+        openStorageLocationsConfig,
+        logisticsTasks,
+        createPickupTask,
+        updateLogisticsTask,
+        assignLogisticsTask,
+        startLogisticsTask,
+        completePickupTask,
+        completeDeliveryTask,
+        failLogisticsTask,
+        cancelLogisticsTask,
+        startOrderFromPickupTask,
+        cancelPendingPickupConversion,
+        focusedLogisticsTaskId,
+        setFocusedLogisticsTaskId,
+        focusLogisticsTask,
+        workshopTabRequest,
+        requestWorkshopTab,
+        clearWorkshopTabRequest,
+        settingsTabRequest,
+        requestSettingsTab,
+        clearSettingsTabRequest,
         addNewCustomer,
         notifyAllSms,
         selectedServiceCategory,
@@ -1074,6 +2244,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         theme,
         setTheme,
         toggleTheme,
+        shopSettings,
+        updateShopSettings,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,

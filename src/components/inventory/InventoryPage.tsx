@@ -3,7 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { ConfirmModal } from '../common/ModalShell';
 import { PageHeader, LocalDataNotice, EmptyState, ResetFiltersButton, KpiCard } from '../common/ModuleCommon';
 import { Tabs } from '../common/Tabs';
-import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '../common/DataTable';
+import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, TablePaginationFooter } from '../common/DataTable';
+import { usePagination } from '../../lib/pagination';
 import { ProductFormModal } from './ProductFormModal';
 import { StockMovementModal } from './StockMovementModal';
 import { StockMovementHistory } from './StockMovementHistory';
@@ -75,6 +76,8 @@ export const InventoryPage: React.FC = () => {
     }
     return list;
   }, [products, searchTerm, categoryFilter, statusFilter, activeFilter, sortKey]);
+
+  const { page, pageCount, setPage, pageItems: pagedProducts, rangeStart, rangeEnd } = usePagination(filteredProducts, 10, [searchTerm, categoryFilter, statusFilter, activeFilter, sortKey]);
 
   // Produits les plus sortis sur 30 jours (quantités par produit, unités non mélangées)
   const topOutputs = useMemo(() => {
@@ -366,7 +369,7 @@ export const InventoryPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProducts.map((product) => {
+                    {pagedProducts.map((product) => {
                       const status = getStockStatus(product.currentQuantity, product.alertThreshold);
                       return (
                         <TableRow
@@ -398,11 +401,21 @@ export const InventoryPage: React.FC = () => {
                     })}
                   </TableBody>
                 </Table>
+                <TablePaginationFooter
+                  page={page}
+                  pageCount={pageCount}
+                  onPageChange={setPage}
+                  rangeStart={rangeStart}
+                  rangeEnd={rangeEnd}
+                  total={filteredProducts.length}
+                  label="produit(s)"
+                  className="border-t border-zinc-200 dark:border-zinc-700"
+                />
                 </FramePanel>
               </Frame>
 
               <div className="md:hidden grid grid-cols-1 gap-3 p-3">
-                {filteredProducts.map((product) => {
+                {pagedProducts.map((product) => {
                   const status = getStockStatus(product.currentQuantity, product.alertThreshold);
                   return (
                     <div
@@ -430,6 +443,16 @@ export const InventoryPage: React.FC = () => {
                   );
                 })}
               </div>
+              <TablePaginationFooter
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                total={filteredProducts.length}
+                label="produit(s)"
+                className="md:hidden border-t border-zinc-200 dark:border-zinc-700"
+              />
             </>
           )}
         </div>

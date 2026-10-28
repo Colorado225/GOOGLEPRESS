@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CustomerSection } from './CustomerSection';
 import { PickupOptionsSection } from './PickupOptionsSection';
+import { LogisticsOptionsSection } from './LogisticsOptionsSection';
 import { ArrowRight, UserCheck, Calendar, Clock, AlertCircle } from 'lucide-react';
+import { isValidISODate, todayISO } from '../../lib/dates';
 import { formatFCFA } from '../../data/demoData';
 import { Badge } from '../common/DataTable';
 
@@ -12,6 +14,9 @@ export const Step1ClientAndDates: React.FC = () => {
     setOrderStep,
     selectedServiceCategory,
     showToast,
+    orderFulfillmentMethod,
+    deliveryAddress,
+    deliveryDateISO,
   } = useApp();
 
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -21,9 +26,19 @@ export const Step1ClientAndDates: React.FC = () => {
       setValidationError('Veuillez sélectionner un client pour continuer.');
       return;
     }
+    if (orderFulfillmentMethod === 'home_delivery') {
+      if (!deliveryAddress.trim()) {
+        setValidationError('Renseignez l’adresse de livraison pour continuer.');
+        return;
+      }
+      if (!isValidISODate(deliveryDateISO) || deliveryDateISO < todayISO()) {
+        setValidationError('Choisissez une date de livraison valide, aujourd’hui ou plus tard.');
+        return;
+      }
+    }
     setValidationError(null);
     setOrderStep(2);
-    showToast('Client et dates validés. Sélectionnez les articles.');
+    showToast('Client, délais et mode de remise validés. Sélectionnez les articles.');
   };
 
   const isPressing = selectedServiceCategory === 'pressing';
@@ -53,6 +68,9 @@ export const Step1ClientAndDates: React.FC = () => {
 
       {/* Dates, Pickup Options & Notes Card */}
       <PickupOptionsSection />
+
+      {/* Origine éventuelle (ramassage) et mode de restitution */}
+      <LogisticsOptionsSection />
 
       {/* Validation Error Message if any */}
       {validationError && (

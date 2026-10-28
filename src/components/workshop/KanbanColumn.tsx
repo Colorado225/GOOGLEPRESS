@@ -13,6 +13,7 @@ interface KanbanColumnProps {
   nextStatus?: OrderStatus;
   onMoveOrder: (orderId: string, targetStatus: OrderStatus) => void;
   onSelectForHandover?: (order: LaundryOrder) => void;
+  onAssignStorage?: (order: LaundryOrder) => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -26,6 +27,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   nextStatus,
   onMoveOrder,
   onSelectForHandover,
+  onAssignStorage,
 }) => {
   return (
     <div className="flex flex-col min-w-[240px]">
@@ -51,6 +53,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               onMoveBackward={prevStatus ? () => onMoveOrder(order.id, prevStatus) : undefined}
               onMoveForward={nextStatus ? () => onMoveOrder(order.id, nextStatus) : undefined}
               onSelectForHandover={onSelectForHandover ? () => onSelectForHandover(order) : undefined}
+              onAssignStorage={onAssignStorage ? () => onAssignStorage(order) : undefined}
             />
           ))
         )}

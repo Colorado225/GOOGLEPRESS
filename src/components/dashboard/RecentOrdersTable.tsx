@@ -5,6 +5,7 @@ import { LaundryOrder } from '../../types';
 import { Search, Eye, Filter } from 'lucide-react';
 import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, TablePagination } from '../common/DataTable';
 import { getInitials } from '../../lib/utils';
+import { isHomeDeliveryOrder } from '../../lib/logistics';
 
 const PAGE_SIZE = 5;
 
@@ -52,7 +53,7 @@ export const RecentOrdersTable: React.FC = () => {
       case 'ready':
         return <Badge variant="purple">Prêt ✓</Badge>;
       case 'delivered':
-        return <Badge variant="success">Remis ✓</Badge>;
+        return <Badge variant="success">{isHomeDeliveryOrder(order) ? 'Livré ✓' : 'Remis ✓'}</Badge>;
       default:
         return <Badge variant="outline">{order.status}</Badge>;
     }
