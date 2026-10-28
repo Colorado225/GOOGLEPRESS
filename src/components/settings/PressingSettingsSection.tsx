@@ -1,14 +1,27 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ImagePlus, Info, Plus, Save, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  ImagePlus,
+  Info,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { formatFCFA } from '../../data/demoData';
+import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
 import { fileToGarmentImageDataUrl } from '../../lib/imageDownscale';
 import {
   GARMENT_CATEGORIES,
   MAX_GARMENT_NAME_LENGTH,
   MAX_GARMENT_PRICE_XOF,
+  applyGarmentOverride,
   buildGarmentId,
-  getGarmentCatalog,
+  getBaseGarment,
+  isBaseGarmentId,
   validateCustomGarment,
 } from '../../lib/garmentCatalog';
 import { MAX_LOGO_FILE_BYTES } from '../../lib/shopIdentity';
@@ -19,7 +32,7 @@ import {
   pressingPriceKey,
   validatePressingSettings,
 } from '../../lib/pressing';
-import type { CustomGarment, PressingSettings } from '../../types';
+import type { CustomGarment, GarmentOverride, PressingSettings } from '../../types';
 
 /**
  * Réglage des prestations du pressing.
@@ -39,14 +52,39 @@ export const PressingSettingsSection: React.FC = () => {
   const [draft, setDraft] = useState<PressingSettings>(shopSettings.pressing);
   const [error, setError] = useState<string | null>(null);
 
-  // Catalogue réel : vêtements créés ici + catalogue fourni.
-  const items = useMemo(
-    () =>
-      getGarmentCatalog(shopSettings).filter(
-        (item) => item.serviceCategory === 'pressing' || item.serviceCategory === 'both'
-      ),
-    [shopSettings]
-  );
+  /**
+   * Toutes les entrées du catalogue, masquées comprises : c'est ici qu'on les
+   * rétablit. Les vêtements créés passent devant les vêtements fournis.
+   */
+  const catalogEntries = useMemo(() => {
+    const overrides = shopSettings.catalogOverrides;
+    const customs = shopSettings.customGarments.map((garment) => ({
+      ...garment,
+      hidden: false,
+      custom: true as const,
+      basePrice: garment.unitPrice,
+    }));
+    const supplied = INITIAL_CLOTHING_ITEMS.map((item) => {
+      const override = overrides[item.id];
+      const merged = applyGarmentOverride(item, override);
+      return {
+        id: merged.id,
+        name: merged.name,
+        category: merged.category,
+        unitPrice: merged.unitPrice,
+        unitLabel: merged.unitLabel || 'pièce',
+        emoji: merged.emoji,
+        imageDataUrl: merged.image ?? null,
+        hidden: override?.hidden === true,
+        custom: false as const,
+        basePrice: item.unitPrice,
+      };
+    });
+    return [...customs, ...supplied];
+  }, [shopSettings]);
+
+  // Seuls les vêtements affichés au comptoir se tarifent.
+  const items = catalogEntries.filter((entry) => !entry.hidden);
 
   // --- Création d'un vêtement (nom, catégorie, prix de base, photo) ---
   const [garmentName, setGarmentName] = useState('');
@@ -57,6 +95,8 @@ export const PressingSettingsSection: React.FC = () => {
   const [garmentImageBusy, setGarmentImageBusy] = useState(false);
   const [garmentError, setGarmentError] = useState<string | null>(null);
   const garmentImageRef = useRef<HTMLInputElement>(null);
+  /** Vêtement en cours de modification (`null` = création). */
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const patch = (updater: (current: PressingSettings) => PressingSettings) => {
     setError(null);
@@ -112,7 +152,34 @@ export const PressingSettingsSection: React.FC = () => {
     }
   };
 
-  const addGarment = () => {
+  const resetGarmentForm = () => {
+    setEditingId(null);
+    setGarmentName('');
+    setGarmentPrice('');
+    setGarmentImage(null);
+    setGarmentCategory('all');
+    setGarmentError(null);
+    setGarmentImageError(null);
+  };
+
+  const startEdit = (entry: (typeof catalogEntries)[number]) => {
+    setEditingId(entry.id);
+    setGarmentName(entry.name);
+    setGarmentCategory(entry.category);
+    setGarmentPrice(String(entry.unitPrice));
+    setGarmentImage(entry.imageDataUrl);
+    setGarmentError(null);
+    setGarmentImageError(null);
+  };
+
+  /**
+   * Enregistre la création ou la modification d'un vêtement.
+   *
+   * Un vêtement **fourni** n'est jamais réécrit : seules ses différences sont
+   * stockées (`catalogOverrides`), ce qui permet de revenir à l'original et de
+   * garder les commandes déjà enregistrées intactes.
+   */
+  const saveGarment = () => {
     if (!garmentPrice.trim()) {
       setGarmentError('Indiquez le prix de base du vêtement.');
       return;
@@ -127,10 +194,51 @@ export const PressingSettingsSection: React.FC = () => {
       setGarmentError(validationError);
       return;
     }
+    const cleanName = garmentName.trim().replace(/\s+/g, ' ');
+
+    if (editingId && isBaseGarmentId(editingId)) {
+      const base = getBaseGarment(editingId)!;
+      const current = shopSettings.catalogOverrides[editingId] ?? {};
+      const nextOverride: GarmentOverride = {};
+      if (cleanName !== base.name) nextOverride.name = cleanName;
+      if (garmentCategory !== base.category) nextOverride.category = garmentCategory;
+      if (price !== base.unitPrice) nextOverride.unitPrice = price;
+      const baseImage = base.image ?? null;
+      if (garmentImage !== baseImage) nextOverride.imageDataUrl = garmentImage;
+      if (current.hidden === true) nextOverride.hidden = true;
+
+      const overrides = { ...shopSettings.catalogOverrides };
+      if (Object.keys(nextOverride).length === 0) delete overrides[editingId];
+      else overrides[editingId] = nextOverride;
+      updateShopSettings({ ...shopSettings, catalogOverrides: overrides });
+      showToast(`✓ ${cleanName} mis à jour`);
+      resetGarmentForm();
+      return;
+    }
+
+    if (editingId) {
+      updateShopSettings({
+        ...shopSettings,
+        customGarments: shopSettings.customGarments.map((garment) =>
+          garment.id === editingId
+            ? {
+                ...garment,
+                name: cleanName,
+                category: garmentCategory,
+                unitPrice: price,
+                imageDataUrl: garmentImage,
+              }
+            : garment
+        ),
+      });
+      showToast(`✓ ${cleanName} mis à jour`);
+      resetGarmentForm();
+      return;
+    }
 
     const garment: CustomGarment = {
-      id: buildGarmentId(garmentName, shopSettings.customGarments),
-      name: garmentName.trim().replace(/\s+/g, ' '),
+      id: buildGarmentId(cleanName, shopSettings.customGarments),
+      name: cleanName,
       category: garmentCategory,
       unitPrice: price,
       unitLabel: 'pièce',
@@ -142,13 +250,26 @@ export const PressingSettingsSection: React.FC = () => {
       ...shopSettings,
       customGarments: [garment, ...shopSettings.customGarments],
     });
-    setGarmentName('');
-    setGarmentPrice('');
-    setGarmentImage(null);
-    setGarmentCategory('all');
-    setGarmentError(null);
-    setGarmentImageError(null);
     showToast(`✓ ${garment.name} ajouté au catalogue`);
+    resetGarmentForm();
+  };
+
+  /** Masque ou rétablit un vêtement fourni au comptoir. */
+  const toggleHidden = (entry: (typeof catalogEntries)[number]) => {
+    if (entry.custom) return;
+    const overrides = { ...shopSettings.catalogOverrides };
+    const current = { ...(overrides[entry.id] ?? {}) };
+    if (entry.hidden) {
+      delete current.hidden;
+      if (Object.keys(current).length === 0) delete overrides[entry.id];
+      else overrides[entry.id] = current;
+      showToast(`✓ ${entry.name} rétabli au catalogue`);
+    } else {
+      overrides[entry.id] = { ...current, hidden: true };
+      showToast(`${entry.name} masqué au comptoir`);
+    }
+    if (editingId === entry.id) resetGarmentForm();
+    updateShopSettings({ ...shopSettings, catalogOverrides: overrides });
   };
 
   const removeGarment = (garment: CustomGarment) => {
@@ -164,6 +285,7 @@ export const PressingSettingsSection: React.FC = () => {
       customGarments: shopSettings.customGarments.filter((item) => item.id !== garment.id),
       pressing: nextDraft,
     });
+    if (editingId === garment.id) resetGarmentForm();
     showToast(`${garment.name} retiré du catalogue`);
   };
 
@@ -270,12 +392,12 @@ export const PressingSettingsSection: React.FC = () => {
       {/* Création d'un vêtement */}
       <section className="space-y-2">
         <h3 className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
-          Ajouter un vêtement au catalogue
+          {editingId ? 'Modifier le vêtement' : 'Ajouter un vêtement au catalogue'}
         </h3>
         <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
           Nom, catégorie, prix de base et photo : le vêtement apparaît aussitôt au comptoir,
           avec sa vignette, et son prix peut être affiné par prestation dans le tableau
-          ci-dessous.
+          ci-dessous. Les vêtements fournis peuvent aussi être modifiés ou masqués.
         </p>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -404,53 +526,110 @@ export const PressingSettingsSection: React.FC = () => {
           </p>
         )}
 
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {editingId && (
+            <button
+              type="button"
+              onClick={resetGarmentForm}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-[12px] font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+              Annuler
+            </button>
+          )}
           <button
             type="button"
-            onClick={addGarment}
+            onClick={saveGarment}
             className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-950"
           >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            Ajouter au catalogue
+            {editingId ? (
+              <Save className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {editingId ? 'Enregistrer les modifications' : 'Ajouter au catalogue'}
           </button>
         </div>
 
-        {shopSettings.customGarments.length > 0 && (
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {shopSettings.customGarments.map((garment) => (
-              <li
-                key={garment.id}
-                className="flex items-center gap-2 rounded-lg border border-zinc-200 p-2 dark:border-zinc-700"
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Catalogue : {catalogEntries.length - catalogEntries.filter((entry) => entry.hidden).length}{' '}
+            affiché(s)
+            {catalogEntries.some((entry) => entry.hidden) &&
+              ` · ${catalogEntries.filter((entry) => entry.hidden).length} masqué(s)`}
+          </h4>
+        </div>
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {catalogEntries.map((entry) => (
+            <li
+              key={entry.id}
+              className={`flex items-center gap-2 rounded-lg border p-2 ${
+                entry.hidden
+                  ? 'border-dashed border-zinc-300 opacity-60 dark:border-zinc-600'
+                  : 'border-zinc-200 dark:border-zinc-700'
+              }`}
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
+                {entry.imageDataUrl ? (
+                  <img src={entry.imageDataUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span aria-hidden="true">{entry.emoji}</span>
+                )}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12.5px] font-semibold text-zinc-900 dark:text-zinc-100">
+                  {entry.name}
+                </span>
+                <span className="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                  {formatFCFA(entry.unitPrice)} •{' '}
+                  {GARMENT_CATEGORIES.find((category) => category.id === entry.category)?.label}
+                  {entry.custom ? ' • Personnalisé' : ' • Fourni'}
+                  {entry.hidden ? ' • Masqué' : ''}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => startEdit(entry)}
+                aria-label={`Modifier ${entry.name}`}
+                title="Modifier (nom, catégorie, prix, photo)"
+                className="shrink-0 rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800">
-                  {garment.imageDataUrl ? (
-                    <img src={garment.imageDataUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span aria-hidden="true">{garment.emoji}</span>
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12.5px] font-semibold text-zinc-900 dark:text-zinc-100">
-                    {garment.name}
-                  </span>
-                  <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">
-                    {formatFCFA(garment.unitPrice)} •{' '}
-                    {GARMENT_CATEGORIES.find((category) => category.id === garment.category)?.label}
-                  </span>
-                </span>
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+              </button>
+              {entry.custom ? (
                 <button
                   type="button"
-                  onClick={() => removeGarment(garment)}
-                  aria-label={`Retirer ${garment.name} du catalogue`}
+                  onClick={() => removeGarment(entry)}
+                  aria-label={`Retirer ${entry.name} du catalogue`}
                   title="Retirer du catalogue"
                   className="shrink-0 rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
-              </li>
-            ))}
-          </ul>
-        )}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleHidden(entry)}
+                  aria-label={
+                    entry.hidden ? `Rétablir ${entry.name} au catalogue` : `Masquer ${entry.name}`
+                  }
+                  title={entry.hidden ? 'Rétablir au catalogue' : 'Masquer au comptoir'}
+                  className={`shrink-0 rounded-lg p-1.5 transition-colors ${
+                    entry.hidden
+                      ? 'text-teal-600 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-950/40'
+                      : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  {entry.hidden ? (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Prix par vêtement */}

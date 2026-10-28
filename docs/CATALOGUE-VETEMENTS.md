@@ -20,6 +20,24 @@ des vêtements créés (vignette, nom, prix, catégorie, bouton de retrait) **et
 la grille « Prix par vêtement », où chaque prestation peut recevoir son propre
 tarif.
 
+## Modifier ou masquer un vêtement fourni
+
+Le catalogue affiché dans les Paramètres contient **tous** les vêtements —
+les vôtres et les 21 fournis — avec, pour chacun, deux actions :
+
+| Action | Effet |
+| --- | --- |
+| ✏️ **Modifier** | Le formulaire se remplit avec le vêtement ; on change le nom, la catégorie, le prix de base ou la photo, puis « Enregistrer les modifications ». |
+| 👁 **Masquer** (fournis) | Le vêtement disparaît du comptoir, sans être supprimé. Le bouton devient 👁 « Rétablir ». |
+| 🗑 **Retirer** (les vôtres) | Supprime le vêtement et ses prix par prestation. |
+
+Un vêtement fourni n'est **jamais réécrit** : seules ses différences sont
+enregistrées (`shopSettings.catalogOverrides`). On peut donc revenir à
+l'original, et les commandes déjà enregistrées gardent leur libellé et leur
+prix d'origine. Le compteur « Catalogue : N affiché(s) · M masqué(s) » rappelle
+l'état. Un vêtement masqué n'apparaît plus dans la grille de prix ; ses tarifs
+sont conservés s'il est rétabli.
+
 ## Ce que cela change au comptoir
 
 - le vêtement apparaît **en tête** du catalogue de vêtements (les ajouts
@@ -52,7 +70,8 @@ s'ajoutent devant eux.
 ## Fichiers
 
 - `src/lib/garmentCatalog.ts` — normalisation, identifiants, validation,
-  conversion en ligne de catalogue (`getGarmentCatalog`).
+  retouches (`normalizeCatalogOverrides`, `applyGarmentOverride`) et conversion
+  en ligne de catalogue (`getGarmentCatalog`).
 - `src/lib/imageDownscale.ts` — `fileToGarmentImageDataUrl` (recadrage « cover »).
 - `src/components/settings/PressingSettingsSection.tsx` — formulaire de
   création et liste des vêtements créés.
@@ -73,7 +92,12 @@ Rendus serveur (harnais Vite SSR) :
   catégories proposées, aucune liste affichée ;
 - avec un vêtement créé (« Chemise en lin », 2 500 FCFA, photo) : vignette et
   prix dans la liste, ligne `cg:chemise-en-lin` dans la grille de prix,
-  vêtement visible au comptoir avec sa photo et son prix.
+  vêtement visible au comptoir avec sa photo et son prix ;
+- avec des retouches (Chemise masquée, Pantalon renommé « Pantalon de costume »
+  à 2 200 FCFA avec nouvelle photo) : la chemise disparaît du comptoir, le
+  pantalon y apparaît sous son nouveau nom et son nouveau prix, la liste des
+  Paramètres signale « Masqué » et propose « Rétablir Chemise au catalogue »,
+  le compteur affiche « 21 affiché(s) · 1 masqué(s) ».
 
 Non vérifié ici : la sélection réelle d'un fichier dans un navigateur (pas de
 Chromium dans l'environnement de travail) ; la chaîne FileReader + canvas est

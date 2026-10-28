@@ -1,5 +1,10 @@
 import { INITIAL_CLOTHING_ITEMS } from '../data/demoData';
-import type { ClothingItem, CustomGarment, ShopSettings } from '../types';
+import type {
+  ClothingItem,
+  CustomGarment,
+  GarmentOverride,
+  ShopSettings,
+} from '../types';
 import { isValidImageDataUrl } from './shopIdentity';
 
 /**
@@ -13,7 +18,10 @@ import { isValidImageDataUrl } from './shopIdentity';
  *    n'ajoute rien.
  *
  * Un vêtement créé apparaît immédiatement au comptoir, avec sa vignette, et
- * ses prix par prestation se règlent dans la grille habituelle.
+ * ses prix par prestation se règlent dans la grille habituelle. Les vêtements
+ * fournis peuvent être **renommés, retarifés, rephotographiés ou masqués**
+ * sans être supprimés : leurs retouches sont conservées à part, ce qui permet
+ * de tout rétablir et de ne jamais casser une commande déjà enregistrée.
  */
 
 export const MAX_CUSTOM_GARMENTS = 60;
@@ -160,13 +168,92 @@ export const customGarmentToClothingItem = (garment: CustomGarment): ClothingIte
   description: garment.description,
 });
 
+/** Identifiants des vêtements fournis (`c1`…), jamais masquables par erreur. */
+export const BASE_GARMENT_IDS: readonly string[] = INITIAL_CLOTHING_ITEMS.map((item) => item.id);
+
+export const isBaseGarmentId = (id: string): boolean => BASE_GARMENT_IDS.includes(id);
+
+/** Vêtement fourni, avant application d'une éventuelle retouche. */
+export const getBaseGarment = (id: string): ClothingItem | undefined =>
+  INITIAL_CLOTHING_ITEMS.find((item) => item.id === id);
+
+/**
+ * Nettoie les retouches enregistrées : seules les valeurs exploitables sont
+ * conservées. Une retouche devenue vide est simplement oubliée, ce qui remet
+ * le vêtement fourni dans son état d'origine.
+ */
+export const normalizeCatalogOverrides = (
+  value: unknown
+): Record<string, GarmentOverride> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const overrides: Record<string, GarmentOverride> = {};
+
+  for (const [rawId, rawOverride] of Object.entries(value as Record<string, unknown>)) {
+    const id = rawId.trim();
+    if (!id || !rawOverride || typeof rawOverride !== 'object') continue;
+    const candidate = rawOverride as GarmentOverride;
+    const override: GarmentOverride = {};
+
+    const name = toText(candidate.name).slice(0, MAX_GARMENT_NAME_LENGTH);
+    if (name) override.name = name;
+
+    if (isCategory(candidate.category)) override.category = candidate.category;
+
+    const price = toPrice(candidate.unitPrice);
+    if (price !== null) override.unitPrice = price;
+
+    const unitLabel = toText(candidate.unitLabel);
+    if (unitLabel) override.unitLabel = unitLabel;
+
+    const description = toText(candidate.description);
+    if (description) override.description = description;
+
+    // `null` = photo retirée ; une data URL valide = photo remplacée.
+    if (candidate.imageDataUrl === null) override.imageDataUrl = null;
+    else if (isValidImageDataUrl(candidate.imageDataUrl)) {
+      override.imageDataUrl = candidate.imageDataUrl;
+    }
+
+    if (candidate.hidden === true) override.hidden = true;
+
+    if (Object.keys(override).length > 0) overrides[id] = override;
+  }
+
+  return overrides;
+};
+
+/** Applique une retouche à un vêtement fourni. */
+export const applyGarmentOverride = (
+  item: ClothingItem,
+  override?: GarmentOverride
+): ClothingItem => {
+  if (!override) return item;
+  const merged: ClothingItem = {
+    ...item,
+    name: override.name ?? item.name,
+    category: override.category ?? item.category,
+    unitPrice: override.unitPrice ?? item.unitPrice,
+    unitLabel: override.unitLabel ?? item.unitLabel,
+    description: override.description ?? item.description,
+  };
+  if (override.imageDataUrl === null) merged.image = undefined;
+  else if (typeof override.imageDataUrl === 'string') merged.image = override.imageDataUrl;
+  return merged;
+};
+
 /**
  * Catalogue affiché au comptoir : vêtements créés d'abord (les plus récents
- * additions visibles sans défiler), puis le catalogue de départ.
+ * ajouts visibles sans défiler), puis le catalogue fourni retouché, sans les
+ * vêtements masqués.
  */
 export const getGarmentCatalog = (
-  shopSettings: Pick<ShopSettings, 'customGarments'>
-): ClothingItem[] => [
-  ...shopSettings.customGarments.map(customGarmentToClothingItem),
-  ...INITIAL_CLOTHING_ITEMS,
-];
+  shopSettings: Pick<ShopSettings, 'customGarments' | 'catalogOverrides'>
+): ClothingItem[] => {
+  const overrides = shopSettings.catalogOverrides ?? {};
+  return [
+    ...shopSettings.customGarments.map(customGarmentToClothingItem),
+    ...INITIAL_CLOTHING_ITEMS.filter((item) => overrides[item.id]?.hidden !== true).map(
+      (item) => applyGarmentOverride(item, overrides[item.id])
+    ),
+  ];
+};

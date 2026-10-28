@@ -285,7 +285,7 @@ blanchisserie au forfait par nombre de vêtements dans
 [`docs/BLANCHISSERIE-FORFAITS.md`](docs/BLANCHISSERIE-FORFAITS.md), les
 prestations du pressing et le type de service express dans
 [`docs/PRESTATIONS-PRESSING.md`](docs/PRESTATIONS-PRESSING.md), le catalogue de
-vêtements créé depuis les Paramètres dans
+vêtements créé, modifié ou masqué depuis les Paramètres dans
 [`docs/CATALOGUE-VETEMENTS.md`](docs/CATALOGUE-VETEMENTS.md) et la carte des
 routes par contexte (client, personnel, ERP) dans
 [`docs/ROUTES.md`](docs/ROUTES.md).

@@ -3,9 +3,13 @@ import { INITIAL_CLOTHING_ITEMS } from '../../src/data/demoData';
 import {
   MAX_CUSTOM_GARMENTS,
   MAX_GARMENT_NAME_LENGTH,
+  applyGarmentOverride,
   buildGarmentId,
   customGarmentToClothingItem,
+  getBaseGarment,
   getGarmentCatalog,
+  isBaseGarmentId,
+  normalizeCatalogOverrides,
   normalizeCustomGarments,
   slugifyGarmentName,
   validateCustomGarment,
@@ -143,13 +147,83 @@ describe('catalogue', () => {
   });
 
   it('place les vêtements créés devant le catalogue fourni', () => {
-    const catalog = getGarmentCatalog({ customGarments: [garment()] });
+    const catalog = getGarmentCatalog({ customGarments: [garment()], catalogOverrides: {} });
     expect(catalog).toHaveLength(INITIAL_CLOTHING_ITEMS.length + 1);
     expect(catalog[0].id).toBe('cg:chemise-lin');
     expect(catalog[0].image).toBe(IMAGE);
   });
 
   it('sans vêtement créé, le catalogue fourni reste intact', () => {
-    expect(getGarmentCatalog({ customGarments: [] })).toHaveLength(INITIAL_CLOTHING_ITEMS.length);
+    expect(
+      getGarmentCatalog({ customGarments: [], catalogOverrides: {} })
+    ).toHaveLength(INITIAL_CLOTHING_ITEMS.length);
+  });
+});
+
+describe('vêtements fournis masqués ou retouchés', () => {
+  it('reconnaît les identifiants fournis', () => {
+    expect(isBaseGarmentId('c1')).toBe(true);
+    expect(isBaseGarmentId('cg:chemise-en-lin')).toBe(false);
+    expect(getBaseGarment('c1')?.name).toBe('Chemise');
+    expect(getBaseGarment('inconnu')).toBeUndefined();
+  });
+
+  it('masque un vêtement fourni sans le supprimer', () => {
+    const catalog = getGarmentCatalog({
+      customGarments: [],
+      catalogOverrides: { c1: { hidden: true } },
+    });
+    expect(catalog.some((item) => item.id === 'c1')).toBe(false);
+    expect(catalog).toHaveLength(INITIAL_CLOTHING_ITEMS.length - 1);
+    // Le vêtement reste dans le catalogue d'origine, prêt à être rétabli.
+    expect(getBaseGarment('c1')).toBeDefined();
+  });
+
+  it('applique nom, catégorie, prix, libellé et photo', () => {
+    const overridden = applyGarmentOverride(getBaseGarment('c1')!, {
+      name: 'Chemise forte',
+      category: 'women',
+      unitPrice: 3200,
+      unitLabel: 'ensemble',
+      imageDataUrl: IMAGE,
+      description: 'Lin épais',
+    });
+    expect(overridden).toMatchObject({
+      id: 'c1',
+      name: 'Chemise forte',
+      category: 'women',
+      unitPrice: 3200,
+      unitLabel: 'ensemble',
+      image: IMAGE,
+      description: 'Lin épais',
+    });
+  });
+
+  it('retire la photo fournie quand la retouche vaut null', () => {
+    const overridden = applyGarmentOverride(getBaseGarment('c1')!, { imageDataUrl: null });
+    expect(overridden.image).toBeUndefined();
+  });
+
+  it('sans retouche, le vêtement fourni est rendu tel quel', () => {
+    expect(applyGarmentOverride(getBaseGarment('c1')!)).toEqual(getBaseGarment('c1'));
+  });
+
+  it('nettoie les retouches enregistrées', () => {
+    const overrides = normalizeCatalogOverrides({
+      c1: { name: '  Chemise premium ', unitPrice: -5, imageDataUrl: 'https://exemple.test/x.jpg' },
+      c2: { hidden: true, category: 'inconnue' },
+      c3: {},
+      '  ': { hidden: true },
+    });
+    expect(overrides).toEqual({
+      c1: { name: 'Chemise premium' },
+      c2: { hidden: true },
+    });
+  });
+
+  it('ne casse pas sur une sauvegarde corrompue', () => {
+    expect(normalizeCatalogOverrides(null)).toEqual({});
+    expect(normalizeCatalogOverrides('texte')).toEqual({});
+    expect(normalizeCatalogOverrides([1, 2])).toEqual({});
   });
 });

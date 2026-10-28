@@ -49,7 +49,10 @@ import {
 import { isValidLogoDataUrl } from '../lib/shopIdentity';
 import { normalizeBlanchisserieSettings } from '../lib/blanchisserie';
 import { normalizePressingSettings } from '../lib/pressing';
-import { normalizeCustomGarments } from '../lib/garmentCatalog';
+import {
+  normalizeCatalogOverrides,
+  normalizeCustomGarments,
+} from '../lib/garmentCatalog';
 import { ShopSettings } from '../types';
 import {
   TICKET_COUNTER_STORAGE_KEY as TICKET_COUNTER_KEY,
@@ -453,6 +456,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         persisted.customGarments === undefined
           ? base.customGarments
           : normalizeCustomGarments(persisted.customGarments),
+      catalogOverrides:
+        persisted.catalogOverrides === undefined
+          ? base.catalogOverrides
+          : normalizeCatalogOverrides(persisted.catalogOverrides),
     };
     return {
       ...merged,
@@ -471,6 +478,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       blanchisserie: normalizeBlanchisserieSettings(next.blanchisserie),
       pressing: normalizePressingSettings(next.pressing),
       customGarments: normalizeCustomGarments(next.customGarments),
+      catalogOverrides: normalizeCatalogOverrides(next.catalogOverrides),
       pickupFee: normalizeLogisticsFee(next.pickupFee),
       deliveryFee: normalizeLogisticsFee(next.deliveryFee),
       storageAssignmentRequired: next.storageAssignmentRequired === true,

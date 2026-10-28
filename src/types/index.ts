@@ -398,6 +398,23 @@ export interface CustomGarment {
   description?: string;
 }
 
+/**
+ * Retouche d'un vêtement du catalogue fourni.
+ *
+ * Chaque champ absent laisse la valeur d'origine ; `imageDataUrl: null`
+ * retire la photo fournie. `hidden: true` masque le vêtement au comptoir sans
+ * le supprimer (les commandes déjà enregistrées gardent leur libellé).
+ */
+export interface GarmentOverride {
+  name?: string;
+  category?: CustomGarment['category'];
+  unitPrice?: number;
+  unitLabel?: string;
+  description?: string;
+  imageDataUrl?: string | null;
+  hidden?: boolean;
+}
+
 export interface ShopSettings {
   name: string;
   /** Logo de l'établissement en data URL (PNG/WebP 256 px), `null` = aucun. */
@@ -422,6 +439,8 @@ export interface ShopSettings {
   pressing: PressingSettings;
   /** Vêtements créés par le pressing, affichés dans le catalogue. */
   customGarments: CustomGarment[];
+  /** Modifications et masquages des vêtements fournis (`c1`…), par identifiant. */
+  catalogOverrides: Record<string, GarmentOverride>;
 }
 
 export interface CashRegisterData {

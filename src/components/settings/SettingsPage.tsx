@@ -295,6 +295,7 @@ export const SettingsPage: React.FC = () => {
       blanchisserie: shopSettings.blanchisserie,
       pressing: shopSettings.pressing,
       customGarments: shopSettings.customGarments,
+      catalogOverrides: shopSettings.catalogOverrides,
     });
     setPickupFeeInput(String(Math.round(pickupFee)));
     setDeliveryFeeInput(String(Math.round(deliveryFee)));
