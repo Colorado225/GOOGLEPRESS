@@ -290,7 +290,8 @@ vêtements créé, modifié ou masqué depuis les Paramètres dans
 routes par contexte (client, personnel, ERP) dans
 [`docs/ROUTES.md`](docs/ROUTES.md), et la note de conception du suivi GPS des
 tournées et de la preuve de remise dans
-[`docs/SUIVI-GPS-LIVRAISON.md`](docs/SUIVI-GPS-LIVRAISON.md) (proposition,
-aucun code écrit).
+[`docs/SUIVI-GPS-LIVRAISON.md`](docs/SUIVI-GPS-LIVRAISON.md), dont la phase 0
+(preuve de remise, jalons, itinéraire) est documentée dans
+[`docs/PREUVE-DE-REMISE.md`](docs/PREUVE-DE-REMISE.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.

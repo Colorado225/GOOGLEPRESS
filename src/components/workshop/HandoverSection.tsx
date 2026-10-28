@@ -9,6 +9,7 @@ import {
   hasLegacyStorage,
   hasStructuredStorage,
 } from '../../lib/storage';
+import { DeliveryProofPanel } from '../logistics/DeliveryProofPanel';
 import { StorageAssignmentModal } from './StorageAssignmentModal';
 import { Check, Camera, CheckCircle2, ShieldCheck, Truck, Eye, Archive, AlertTriangle, MapPin } from 'lucide-react';
 
@@ -16,6 +17,7 @@ export const HandoverSection: React.FC = () => {
   const {
     activeHandoverOrder,
     orders,
+    logisticsTasks,
     settleAndDeliverOrder,
     showToast,
     focusLogisticsTask,
@@ -54,6 +56,11 @@ export const HandoverSection: React.FC = () => {
   }
 
   if (isHomeDeliveryOrder(order)) {
+    // La preuve vit sur la tournée, pas sur la commande : on la relit ici pour
+    // que le comptoir puisse la montrer au client sans changer d'écran.
+    const deliveryTask = order.deliveryTaskId
+      ? logisticsTasks.find((task) => task.id === order.deliveryTaskId)
+      : undefined;
     return (
       <div className="bg-white dark:bg-zinc-900 border border-blue-200 dark:border-blue-800 rounded-xl p-5 shadow-2xs">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -92,6 +99,17 @@ export const HandoverSection: React.FC = () => {
               <Eye className="h-4 w-4" aria-hidden="true" /> Voir le ticket
             </button>
           </div>
+        </div>
+
+        <div className="mt-3">
+          {deliveryTask ? (
+            <DeliveryProofPanel task={deliveryTask} />
+          ) : (
+            <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-[12.5px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              Aucune tournée n’est rattachée à cette commande : la preuve de remise sera
+              enregistrée depuis la tournée de livraison.
+            </p>
+          )}
         </div>
       </div>
     );

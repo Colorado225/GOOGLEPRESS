@@ -5,6 +5,7 @@ import {
   EMPTY_BLANCHISSERIE_SETTINGS,
 } from './blanchisserie';
 import { EMPTY_PRESSING_SETTINGS } from './pressing';
+import { DEFAULT_DELIVERY_PROOF_SETTINGS } from './deliveryProof';
 
 /** Clé localStorage des paramètres de la boutique (écran Paramètres). */
 export const SHOP_SETTINGS_STORAGE_KEY = 'pressingpro_shop_settings';
@@ -26,6 +27,8 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   // Proposition commerciale de démarrage, modifiable dans Paramètres.
   pickupFee: 1000,
   deliveryFee: 1000,
+  // Aucune preuve exigée au départ : le pressing l'active dans Paramètres.
+  deliveryProof: DEFAULT_DELIVERY_PROOF_SETTINGS,
   // Rangement : souple au démarrage (file « À ranger » et dépassement
   // signalé mais autorisé), durcissable par le propriétaire.
   storageAssignmentRequired: false,

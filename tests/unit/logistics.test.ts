@@ -9,6 +9,7 @@ import {
   getPhoneHref,
   isLogisticsTaskActionable,
   normalizeLogisticsFee,
+  normalizeStoredLogisticsTask,
   sortCourierCandidates,
 } from '../../src/lib/logistics';
 import type { Employee, LogisticsTask } from '../../src/types';
@@ -86,6 +87,41 @@ describe('logistics', () => {
     expect(getDefaultDeliveryTimeSlot('delayed')).toBe('10:00-12:00');
     expect(getPhoneHref('+225 07-08 09')).toBe('tel:+225070809');
     expect(formatLogisticsDateTime('invalide')).toBe('Non renseigné');
+  });
+
+  it('relit une tournée stockée sans conserver de preuve inexploitable', () => {
+    const photo = 'data:image/png;base64,iVBORw0KGgo=';
+
+    const withProof = normalizeStoredLogisticsTask(
+      makeTask({
+        deliveryCode: '0042',
+        proof: {
+          photoDataUrl: photo,
+          receiverName: 'Awa',
+          capturedAt: '2026-10-28T10:00:00.000Z',
+        },
+      })
+    );
+    expect(withProof.deliveryCode).toBe('0042');
+    expect(withProof.proof?.photoDataUrl).toBe(photo);
+    expect(withProof.proof?.receiverName).toBe('Awa');
+
+    const broken = normalizeStoredLogisticsTask(
+      makeTask({
+        deliveryCode: '12',
+        proof: {
+          photoDataUrl: 'https://exemple.ci/photo.jpg',
+          receiverName: 'Awa',
+          capturedAt: '2026-10-28T10:00:00.000Z',
+        },
+      })
+    );
+    expect(broken.deliveryCode).toBeUndefined();
+    expect(broken.proof?.photoDataUrl).toBeUndefined();
+    expect(broken.proof?.receiverName).toBe('Awa');
+
+    const empty = normalizeStoredLogisticsTask(makeTask({ proof: undefined }));
+    expect(empty.proof).toBeUndefined();
   });
 
   it('place les livreurs actifs avant les autres employés actifs', () => {

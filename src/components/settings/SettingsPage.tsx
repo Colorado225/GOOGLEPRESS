@@ -161,7 +161,12 @@ const PwaInstallCard: React.FC = () => {
   );
 };
 
-export const SettingsPage: React.FC = () => {
+/**
+ * `initialTab` permet d'ouvrir directement un onglet (utile aux vérifications
+ * automatisées et, plus tard, à un lien profond « Paramètres → Livraison »).
+ * Par défaut, l'écran s'ouvre sur l'établissement, comme avant.
+ */
+export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTab = 'shop' }) => {
   const {
     setActiveScreen,
     showToast,
@@ -190,6 +195,15 @@ export const SettingsPage: React.FC = () => {
   const [enableThermalPrinter, setEnableThermalPrinter] = useState(shopSettings.enableThermalPrinter);
   const [pickupFeeInput, setPickupFeeInput] = useState(String(shopSettings.pickupFee));
   const [deliveryFeeInput, setDeliveryFeeInput] = useState(String(shopSettings.deliveryFee));
+  // Preuve de remise : ce que le coursier doit fournir avant de valider une
+  // livraison. Aucune obligation par défaut.
+  const [requireProofPhoto, setRequireProofPhoto] = useState(
+    shopSettings.deliveryProof.requirePhoto
+  );
+  const [requireProofSignature, setRequireProofSignature] = useState(
+    shopSettings.deliveryProof.requireSignature
+  );
+  const [requireProofCode, setRequireProofCode] = useState(shopSettings.deliveryProof.requireCode);
   const [storageAssignmentRequired, setStorageAssignmentRequired] = useState(
     shopSettings.storageAssignmentRequired
   );
@@ -202,7 +216,7 @@ export const SettingsPage: React.FC = () => {
   const [storageDefaultCapacityInput, setStorageDefaultCapacityInput] = useState(
     String(shopSettings.storageDefaultCapacityPackages)
   );
-  const [tab, setTab] = useState<SettingsTab>('shop');
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
 
   useEffect(() => {
     if (!settingsTabRequest) return;
@@ -288,6 +302,11 @@ export const SettingsPage: React.FC = () => {
       enableThermalPrinter,
       pickupFee,
       deliveryFee,
+      deliveryProof: {
+        requirePhoto: requireProofPhoto,
+        requireSignature: requireProofSignature,
+        requireCode: requireProofCode,
+      },
       storageAssignmentRequired,
       storageAllowCapacityOverflow: storageCapacityMode === 'flexible',
       storageSuggestionsEnabled,
@@ -601,6 +620,89 @@ export const SettingsPage: React.FC = () => {
           <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2.5 text-[12px] leading-relaxed text-blue-900 dark:text-blue-100">
             Proposition de démarrage : 1 000 FCFA par course dans la zone habituelle. Ajustez ces
             montants selon vos coûts réels de carburant et vos quartiers desservis.
+          </div>
+
+          {/* Preuve de remise */}
+          <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
+            <h3 className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">
+              Preuve de remise des livraisons
+            </h3>
+            <p className="text-[12px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+              À la confirmation d’une livraison, le coursier peut joindre une photo du linge, une
+              signature et le code à 4 chiffres communiqué au client. Cochez ce qui doit être
+              <strong className="text-zinc-900 dark:text-zinc-100"> obligatoire</strong> ; une preuve
+              manquante bloque alors la confirmation.
+            </p>
+
+            <label
+              htmlFor="settings-proof-photo"
+              className="flex items-start gap-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+            >
+              <input
+                id="settings-proof-photo"
+                type="checkbox"
+                checked={requireProofPhoto}
+                onChange={(e) => setRequireProofPhoto(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-black rounded cursor-pointer"
+              />
+              <span>
+                <span className="block text-[12.5px] font-bold text-zinc-900 dark:text-zinc-100">
+                  Photo du linge remis
+                </span>
+                <span className="block text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                  Compressée à 320 px, conservée avec la tournée.
+                </span>
+              </span>
+            </label>
+
+            <label
+              htmlFor="settings-proof-signature"
+              className="flex items-start gap-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+            >
+              <input
+                id="settings-proof-signature"
+                type="checkbox"
+                checked={requireProofSignature}
+                onChange={(e) => setRequireProofSignature(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-black rounded cursor-pointer"
+              />
+              <span>
+                <span className="block text-[12.5px] font-bold text-zinc-900 dark:text-zinc-100">
+                  Signature du réceptionnaire
+                </span>
+                <span className="block text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                  Tracée au doigt sur le téléphone du coursier.
+                </span>
+              </span>
+            </label>
+
+            <label
+              htmlFor="settings-proof-code"
+              className="flex items-start gap-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+            >
+              <input
+                id="settings-proof-code"
+                type="checkbox"
+                checked={requireProofCode}
+                onChange={(e) => setRequireProofCode(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-black rounded cursor-pointer"
+              />
+              <span>
+                <span className="block text-[12.5px] font-bold text-zinc-900 dark:text-zinc-100">
+                  Code de remise à 4 chiffres
+                </span>
+                <span className="block text-[11.5px] text-zinc-500 dark:text-zinc-400">
+                  Généré pour chaque nouvelle livraison, affiché sur la tournée pour être
+                  communiqué au client. Les livraisons créées avant cette option n’ont pas de code.
+                </span>
+              </span>
+            </label>
+
+            <p className="text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              Sans case cochée, la preuve reste facultative : le coursier peut confirmer une
+              livraison sans photo. La fiche de remise indique alors clairement qu’aucune preuve
+              n’a été enregistrée.
+            </p>
           </div>
         </div>
         )}

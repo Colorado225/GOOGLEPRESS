@@ -1,7 +1,9 @@
 # Suivi GPS des tournées et preuve de remise — note de conception
 
 **Date :** 28 octobre 2026 · **Branche :** `arena/7aed267c-googlepress`
-**Statut :** proposition à valider — **aucun code écrit**. Ce document décrit
+**Statut :** **phase 0 livrée** le 28 octobre 2026 — voir
+[`docs/PREUVE-DE-REMISE.md`](PREUVE-DE-REMISE.md). Les phases 1 à 3 restent des
+propositions à valider. Ce document décrit
 ce qui existe déjà, ce que « GPS » peut raisonnablement vouloir dire dans une
 application web, le modèle de données proposé, les écrans, les cas limites et
 un découpage en phases. Il se valide ou se corrige avant la première ligne de
@@ -312,16 +314,15 @@ sur téléphone réel.
 
 | Phase | Contenu | Dépendance externe | Estimation |
 | --- | --- | --- | --- |
-| **0 — Preuve + jalons** | preuve photo/signature/code, nom du réceptionnaire, jalons *parti / arrivé / livré*, bloc preuve dans Remises comptoir, bouton *Itinéraire* (lien profond Maps/Waze) | aucune | 1 à 2 jours |
+| **0 — Preuve + jalons** ✅ **livrée** | preuve photo/signature/code, nom du réceptionnaire, jalons *parti / arrivé / livré*, bloc preuve dans Remises comptoir, bouton *Itinéraire* (lien profond Maps/Waze) — [`docs/PREUVE-DE-REMISE.md`](PREUVE-DE-REMISE.md) | aucune | livrée |
 | **1 — Positions + carte + ETA** | point de destination, page *Ma tournée*, envoi de positions, carte Leaflet, fraîcheur, fourchette d'arrivée, réglages GPS | tuiles OSM (gratuit) | 2 à 3 jours |
 | **2 — Client + zones** | lien de suivi à jeton, position arrondie, frais par quartier, `district` client | optionnelle | 2 jours |
 | **3 — Backend** | tables Supabase, RLS, temps réel multi-appareils, PWA hors-ligne complète, optimisation de tournée | Supabase | à planifier séparément |
 
-**Recommandation : commencer par la phase 0.** Elle apporte l'essentiel de la
-valeur juridique et opérationnelle (prouver la remise, guider le coursier)
-sans carte, sans clé, sans dépendance réseau. La phase 1 ajoute le confort du
-suivi ; elle n'est utile que si les téléphones des coursiers tiennent
-effectivement la position.
+La **phase 0 est livrée** : elle apporte la valeur juridique et opérationnelle
+(prouver la remise, guider le coursier) sans carte, sans clé, sans dépendance
+réseau. **Prochaine étape : la phase 1**, utile seulement si les téléphones des
+coursiers tiennent effectivement la position.
 
 ## 10. Stratégie de test
 
@@ -375,8 +376,7 @@ vous**, et je le dirai tel quel.
 
 ## 13. Prochaine étape proposée
 
-Valider ce document, puis livrer la **phase 0** : preuve de remise complète,
-jalons horodatés, bouton *Itinéraire*, affichage dans Remises comptoir, tests
-unitaires et SSR, documentation, CI verte. La carte et les positions
-viendront ensuite, une fois les téléphones et le fournisseur de cartes
-tranchés.
+La phase 0 est livrée. Reste à trancher les décisions ci-dessus (carte,
+téléphones, lien client) avant la **phase 1** : positions du coursier, carte
+Leaflet/OSM, heure d'arrivée en fourchette, et espace coursier restreint — ce
+dernier point rendra aussi le code de remise réellement confidentiel.

@@ -1,20 +1,25 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CalendarClock,
   Eye,
   Hourglass,
+  KeyRound,
   MapPin,
+  Navigation,
   PackageCheck,
   Pencil,
   Phone,
   Play,
   RotateCcw,
+  ShieldCheck,
   ShoppingBag,
   Truck,
   XCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { ModalShell } from '../common/ModalShell';
+import { DeliveryProofPanel } from './DeliveryProofPanel';
 import { formatFCFA } from '../../data/demoData';
 import {
   LOGISTICS_ISSUE_REASON_LABELS,
@@ -30,6 +35,8 @@ import {
   getOrderStorageLabel,
   hasStructuredStorage,
 } from '../../lib/storage';
+import { buildDeliveryItinerary } from '../../lib/deliveryRoute';
+import { describeDeliveryProof, hasDeliveryProof } from '../../lib/deliveryProof';
 import type { LogisticsTask, OrderStatus } from '../../types';
 import type { LogisticsActionRequest } from './LogisticsActionModal';
 
@@ -69,12 +76,14 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
     employees,
     assignLogisticsTask,
     startLogisticsTask,
+    markLogisticsTaskArrived,
     startOrderFromPickupTask,
     setPreviewTicket,
     focusedLogisticsTaskId,
     showToast,
   } = useApp();
 
+  const [proofOpen, setProofOpen] = useState(false);
   const order = useMemo(
     () => (task.orderId ? orders.find((o) => o.id === task.orderId) : undefined),
     [orders, task.orderId]
@@ -99,6 +108,18 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
     const result = startLogisticsTask(task.id);
     if (!result.ok) showToast(result.error);
   };
+
+  const handleArrived = () => {
+    const result = markLogisticsTaskArrived(task.id);
+    if (!result.ok) showToast(result.error);
+  };
+
+  const itinerary = buildDeliveryItinerary(task);
+  // Liens utiles tant que la tournée est ouverte ; le code disparaît une fois
+  // la livraison confirmée (il ne sert qu'avant la remise).
+  const showItineraryLinks =
+    Boolean(itinerary) && task.status !== 'completed' && task.status !== 'cancelled';
+  const showDeliveryCode = !isPickup && Boolean(task.deliveryCode) && task.status !== 'completed';
 
   const feeLabel = task.fee > 0 ? formatFCFA(task.fee) : 'Offerte';
 
@@ -227,6 +248,47 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
         </p>
       )}
 
+      {(showItineraryLinks || showDeliveryCode) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {showItineraryLinks && itinerary && (
+            <>
+              <a
+                href={itinerary.googleMaps}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-lg border border-blue-300 bg-blue-50 px-2.5 py-1.5 text-[12px] font-bold text-blue-800 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <Navigation className="h-3.5 w-3.5" aria-hidden="true" />
+                Itinéraire
+              </a>
+              <a
+                href={itinerary.waze}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[12px] font-bold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              >
+                Waze
+              </a>
+            </>
+          )}
+          {showDeliveryCode && task.deliveryCode && (
+            <span className="ml-auto inline-flex flex-wrap items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[12px] font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+              <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
+              Code de remise
+              <strong className="tabular-nums tracking-[0.3em]">{task.deliveryCode}</strong>
+              <span className="font-normal opacity-80">à communiquer au client</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {task.arrivedAt && (
+        <p className="mt-2 text-[12px] text-zinc-600 dark:text-zinc-400">
+          Arrivé sur place le{' '}
+          <strong className="text-zinc-900 dark:text-zinc-100">{formatLogisticsDateTime(task.arrivedAt)}</strong>
+        </p>
+      )}
+
       {pickupAwaitingConversion && (
         <p className="mt-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-2 text-[12px] font-medium text-emerald-800 dark:text-emerald-200">
           Linge arrivé à la boutique : comptez les pièces dans le POS pour créer le ticket et appliquer le frais de ramassage.
@@ -253,6 +315,24 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
         <p className="mt-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 px-2.5 py-2 text-[12px] text-red-700 dark:text-red-300">
           <strong>{LOGISTICS_ISSUE_REASON_LABELS[task.issueReason]}</strong>
           {task.issueNotes ? ` — ${task.issueNotes}` : ''}
+        </p>
+      )}
+
+      {!isPickup && task.status === 'completed' && (
+        <p
+          className={`mt-2 rounded-lg border px-2.5 py-2 text-[12px] ${
+            hasDeliveryProof(task.proof)
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100'
+              : 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+          }`}
+        >
+          {hasDeliveryProof(task.proof) ? (
+            <>
+              <strong>Preuve de remise :</strong> {describeDeliveryProof(task.proof).join(' • ')}
+            </>
+          ) : (
+            'Remise confirmée par le coursier, sans preuve enregistrée.'
+          )}
         </p>
       )}
 
@@ -338,6 +418,13 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
             </button>
           )}
 
+          {task.status === 'en_route' && !task.arrivedAt && (
+            <button type="button" onClick={handleArrived} className={secondaryButton}>
+              <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+              Arrivé sur place
+            </button>
+          )}
+
           {task.status === 'en_route' && (
             <button type="button" onClick={() => onAction({ type: 'fail', task })} className={warningButton}>
               <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
@@ -359,6 +446,13 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
             </button>
           )}
 
+          {!isPickup && task.status === 'completed' && (
+            <button type="button" onClick={() => setProofOpen(true)} className={secondaryButton}>
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              Preuve de remise
+            </button>
+          )}
+
           {task.status === 'completed' && order && (
             <button type="button" onClick={() => setPreviewTicket(order)} className={secondaryButton}>
               <Eye className="h-3.5 w-3.5" aria-hidden="true" />
@@ -374,6 +468,25 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
           )}
         </div>
       </div>
+
+      {proofOpen && (
+        <ModalShell
+          title="Preuve de remise"
+          subtitle={`${task.orderTicketNumber ?? 'Livraison'} • ${task.customerName}`}
+          icon={<ShieldCheck className="h-5 w-5 text-emerald-400" aria-hidden="true" />}
+          onClose={() => setProofOpen(false)}
+          maxWidthClass="max-w-lg"
+        >
+          <div className="space-y-3 p-5 text-[13px]">
+            <DeliveryProofPanel task={task} />
+            <p className="text-[11.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+              Cette fiche est en lecture seule : elle reflète ce qui a été enregistré au moment de
+              la livraison. Adresse : {task.address}
+              {task.addressDetails ? ` — ${task.addressDetails}` : ''}.
+            </p>
+          </div>
+        </ModalShell>
+      )}
     </article>
   );
 };

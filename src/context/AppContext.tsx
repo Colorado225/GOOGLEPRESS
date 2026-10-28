@@ -30,8 +30,12 @@ import { computeMovement } from '../lib/inventory';
 import { normalizeText } from '../lib/utils';
 import {
   LOGISTICS_TASKS_STORAGE_KEY, PAYMENT_METHOD_LABELS, getDefaultDeliveryTimeSlot,
-  isHomeDeliveryOrder, normalizeLogisticsFee,
+  isHomeDeliveryOrder, normalizeLogisticsFee, normalizeStoredLogisticsTask,
 } from '../lib/logistics';
+import {
+  buildDeliveryProof, generateDeliveryCode, normalizeDeliveryProofSettings,
+  validateDeliveryProofDraft, type DeliveryProofDraft,
+} from '../lib/deliveryProof';
 import {
   STORAGE_LOCATIONS_STORAGE_KEY, buildStorageLocationSeries,
   calculateStorageOccupancy, formatStorageLocation, getOrderPackageCount,
@@ -191,7 +195,13 @@ interface AppContextType {
   assignLogisticsTask: (taskId: string, employeeId: string) => ActionResult;
   startLogisticsTask: (taskId: string) => ActionResult;
   completePickupTask: (taskId: string, collectedBags?: number) => ActionResult;
-  completeDeliveryTask: (taskId: string, paymentMethod: PaymentMethod) => ActionResult;
+  completeDeliveryTask: (
+    taskId: string,
+    paymentMethod: PaymentMethod,
+    proof?: DeliveryProofDraft | null
+  ) => ActionResult;
+  /** Jalon « arrivé chez le client », entre le départ et la confirmation. */
+  markLogisticsTaskArrived: (taskId: string) => ActionResult;
   failLogisticsTask: (taskId: string, reason: LogisticsIssueReason, notes?: string) => ActionResult;
   cancelLogisticsTask: (taskId: string, reason: LogisticsIssueReason, notes?: string) => ActionResult;
   startOrderFromPickupTask: (taskId: string) => boolean;
@@ -399,7 +409,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       storageKey(LOGISTICS_TASKS_STORAGE_KEY),
       null
     );
-    if (saved) return saved;
+    if (saved) return saved.map(normalizeStoredLogisticsTask);
     // Espace réel : aucune tournée fictive, même sur un poste où la
     // démonstration a déjà été utilisée.
     if (liveWorkspace) return [];
@@ -460,6 +470,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         persisted.catalogOverrides === undefined
           ? base.catalogOverrides
           : normalizeCatalogOverrides(persisted.catalogOverrides),
+      deliveryProof:
+        persisted.deliveryProof === undefined
+          ? base.deliveryProof
+          : normalizeDeliveryProofSettings(persisted.deliveryProof),
     };
     return {
       ...merged,
@@ -481,6 +495,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       catalogOverrides: normalizeCatalogOverrides(next.catalogOverrides),
       pickupFee: normalizeLogisticsFee(next.pickupFee),
       deliveryFee: normalizeLogisticsFee(next.deliveryFee),
+      deliveryProof: normalizeDeliveryProofSettings(next.deliveryProof),
       storageAssignmentRequired: next.storageAssignmentRequired === true,
       storageAllowCapacityOverflow: next.storageAllowCapacityOverflow === true,
       storageSuggestionsEnabled: next.storageSuggestionsEnabled === true,
@@ -875,6 +890,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           timeSlot: deliveryTimeSlot,
           orderId,
           orderTicketNumber: nextTicketNum,
+          // Code communiqué au client, saisi par le coursier à la remise.
+          deliveryCode: generateDeliveryCode(),
           fee: deliveryFee,
           createdAt: nowIso,
           updatedAt: nowIso,
@@ -1586,6 +1603,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       issueReason: undefined,
       issueNotes: undefined,
       startedAt: undefined,
+      arrivedAt: undefined,
       completedAt: undefined,
     });
 
@@ -1651,6 +1669,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'en_route',
       assignedEmployeeName: employee.fullName,
       startedAt: nowISODateTime(),
+      arrivedAt: undefined,
       issueReason: undefined,
       issueNotes: undefined,
     });
@@ -1673,9 +1692,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  /**
+   * Jalon « arrivé sur place » : le coursier est chez le client mais la remise
+   * n'est pas encore constatée. Il ne change pas le statut de la tournée — la
+   * livraison reste « en route » jusqu'à la confirmation, avec une preuve.
+   */
+  const markLogisticsTaskArrived = (taskId: string): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status !== 'en_route') {
+      return { ok: false, error: 'Démarrez d’abord la tournée avant de signaler l’arrivée.' };
+    }
+    if (task.arrivedAt) {
+      return { ok: false, error: 'L’arrivée est déjà enregistrée pour cette tournée.' };
+    }
+    patchLogisticsTask(taskId, { arrivedAt: nowISODateTime() });
+    showToast(`📍 Arrivée enregistrée chez ${task.customerName}.`);
+    return { ok: true };
+  };
+
   const completeDeliveryTask = (
     taskId: string,
-    paymentMethodForBalance: PaymentMethod
+    paymentMethodForBalance: PaymentMethod,
+    proofDraft?: DeliveryProofDraft | null
   ): ActionResult => {
     const task = logisticsTasks.find((t) => t.id === taskId);
     if (!task || task.kind !== 'delivery') return { ok: false, error: 'Cette livraison est introuvable.' };
@@ -1687,6 +1726,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (order.status !== 'ready') {
       return { ok: false, error: 'La commande doit être prête et non encore remise pour être livrée.' };
     }
+
+    // La preuve est contrôlée AVANT de toucher à la commande : une livraison
+    // refusée pour preuve manquante ne doit ni solder le ticket ni créditer la
+    // caisse. Le code n'est exigé que si la tournée en possède un.
+    const proofErrors = validateDeliveryProofDraft(proofDraft, {
+      settings: normalizeDeliveryProofSettings(shopSettings.deliveryProof),
+      expectedCode: task.deliveryCode,
+    });
+    if (proofErrors.length > 0) {
+      return { ok: false, error: proofErrors[0] };
+    }
+
+    const proof = buildDeliveryProof(proofDraft, {
+      capturedAt: nowISODateTime(),
+      capturedByEmployeeId: task.assignedEmployeeId,
+      capturedByEmployeeName: task.assignedEmployeeName,
+    });
 
     const balance = Math.max(0, order.remainingBalance);
     const deliveredAt = nowDateTime();
@@ -1710,6 +1766,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     patchLogisticsTask(taskId, {
       status: 'completed',
       completedAt: nowISODateTime(),
+      // Livrer implique être arrivé : on comble le jalon s'il n'a pas été posé.
+      arrivedAt: task.arrivedAt ?? nowISODateTime(),
+      proof: proof ?? undefined,
       collectedAmount: balance,
       collectedPaymentMethod: balance > 0 ? paymentMethodForBalance : undefined,
     });
@@ -1733,10 +1792,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (activeHandoverOrder?.id === order.id) setActiveHandoverOrder(null);
+    const proofSuffix = proof ? ' · preuve de remise enregistrée' : ' · sans preuve de remise';
     showToast(
       balance > 0
-        ? `✓ ${order.ticketNumber} livrée — ${balance.toLocaleString('fr-FR')} FCFA encaissés via ${PAYMENT_METHOD_LABELS[paymentMethodForBalance]}.`
-        : `✓ ${order.ticketNumber} livrée — commande déjà soldée.`
+        ? `✓ ${order.ticketNumber} livrée — ${balance.toLocaleString('fr-FR')} FCFA encaissés via ${PAYMENT_METHOD_LABELS[paymentMethodForBalance]}${proofSuffix}.`
+        : `✓ ${order.ticketNumber} livrée — commande déjà soldée${proofSuffix}.`
     );
     return { ok: true };
   };
@@ -2327,6 +2387,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startLogisticsTask,
         completePickupTask,
         completeDeliveryTask,
+        markLogisticsTaskArrived,
         failLogisticsTask,
         cancelLogisticsTask,
         startOrderFromPickupTask,

@@ -49,6 +49,38 @@ export type LogisticsIssueReason =
  * déjà promise. Une livraison est toujours rattachée à une commande ; un
  * ramassage ne l'est qu'après comptage et conversion au POS.
  */
+/**
+ * Preuve de remise enregistrée à la confirmation d'une livraison.
+ *
+ * Elle est volontairement **immuable** : une fois attachée à une tournée
+ * terminée, elle n'est plus modifiée. En cas de litige, la fiche de remise
+ * affiche exactement ce qui a été capturé, ou dit clairement qu'aucune preuve
+ * n'a été enregistrée.
+ */
+export interface DeliveryProof {
+  /** Photo du linge remis (data URL image, ≤ 350 000 caractères). */
+  photoDataUrl?: string;
+  /** Signature du réceptionnaire (data URL image, ≤ 40 000 caractères). */
+  signatureDataUrl?: string;
+  /** Code à 4 chiffres effectivement saisi par le coursier. */
+  codeEntered?: string;
+  /** Nom de la personne qui a réceptionné le linge. */
+  receiverName?: string;
+  /** Précision libre du coursier (absence de code, remise à un voisin…). */
+  note?: string;
+  /** Horodatage de la capture (ISO). */
+  capturedAt: string;
+  capturedByEmployeeId?: string;
+  capturedByEmployeeName?: string;
+}
+
+/** Exigences du propriétaire avant de valider une livraison. */
+export interface DeliveryProofSettings {
+  requirePhoto: boolean;
+  requireSignature: boolean;
+  requireCode: boolean;
+}
+
 export interface LogisticsTask {
   id: string;
   kind: LogisticsTaskKind;
@@ -73,6 +105,15 @@ export interface LogisticsTask {
   issueNotes?: string;
   startedAt?: string; // ISO datetime
   completedAt?: string; // ISO datetime
+  /**
+   * Code de remise à 4 chiffres communiqué au client, contrôlé par le coursier.
+   * Généré pour les livraisons créées après l'ajout de la preuve de remise.
+   */
+  deliveryCode?: string;
+  /** Jalon « arrivé sur place », horodaté (ISO datetime). */
+  arrivedAt?: string;
+  /** Preuve de remise, enregistrée à la confirmation de la livraison. */
+  proof?: DeliveryProof;
   /** Solde réellement encaissé par le coursier lors d'une livraison. */
   collectedAmount?: number;
   collectedPaymentMethod?: PaymentMethod;
@@ -428,6 +469,8 @@ export interface ShopSettings {
   /** Forfaits appliqués aux NOUVEAUX ramassages / livraisons (0 = offert). */
   pickupFee: number;
   deliveryFee: number;
+  /** Ce qui doit être fourni pour confirmer une livraison (photo, signature, code). */
+  deliveryProof: DeliveryProofSettings;
   /** Règles du propriétaire pour le rangement des commandes terminées. */
   storageAssignmentRequired: boolean;
   storageAllowCapacityOverflow: boolean;

@@ -19,6 +19,8 @@ export default defineConfig({
         'src/lib/staffAccess.ts',
         'src/lib/staffAuth.ts',
         'src/lib/routes.ts',
+        'src/lib/deliveryProof.ts',
+        'src/lib/deliveryRoute.ts',
       ],
       thresholds: {
         statements: 70,

@@ -13,6 +13,8 @@ import {
   getOrderStorageLabel,
   hasStructuredStorage,
 } from '../../lib/storage';
+import { DeliveryProofFields } from './DeliveryProofFields';
+import type { DeliveryProofDraft } from '../../lib/deliveryProof';
 import type { LogisticsIssueReason, LogisticsTask, PaymentMethod } from '../../types';
 
 export type LogisticsActionRequest =
@@ -31,6 +33,7 @@ const PAYMENT_METHODS: PaymentMethod[] = ['especes', 'wave', 'momo', 'om'];
 export const LogisticsActionModal: React.FC<LogisticsActionModalProps> = ({ action, onClose }) => {
   const {
     orders,
+    shopSettings,
     completePickupTask,
     completeDeliveryTask,
     failLogisticsTask,
@@ -51,10 +54,18 @@ export const LogisticsActionModal: React.FC<LogisticsActionModalProps> = ({ acti
     action.type === 'cancel' ? 'customer_request' : 'customer_absent'
   );
   const [notes, setNotes] = useState('');
+  const [proofDraft, setProofDraft] = useState<DeliveryProofDraft>({});
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isDirty = notes.trim() !== '' || collectedBags.trim() !== '';
+  const hasProofDraft = Boolean(
+    proofDraft.photoDataUrl ||
+      proofDraft.signatureDataUrl ||
+      proofDraft.codeEntered ||
+      proofDraft.receiverName ||
+      proofDraft.note
+  );
+  const isDirty = notes.trim() !== '' || collectedBags.trim() !== '' || hasProofDraft;
 
   const title =
     action.type === 'complete_pickup'
@@ -98,7 +109,7 @@ export const LogisticsActionModal: React.FC<LogisticsActionModalProps> = ({ acti
       action.type === 'complete_pickup'
         ? completePickupTask(task.id, collectedBags.trim() ? Number(collectedBags) : undefined)
         : action.type === 'complete_delivery'
-          ? completeDeliveryTask(task.id, paymentMethod)
+          ? completeDeliveryTask(task.id, paymentMethod, proofDraft)
           : action.type === 'fail'
             ? failLogisticsTask(task.id, reason, notes || undefined)
             : cancelLogisticsTask(task.id, reason, notes || undefined);
@@ -212,6 +223,16 @@ export const LogisticsActionModal: React.FC<LogisticsActionModalProps> = ({ acti
                     <span>Commande déjà soldée : aucun montant n’est à encaisser par le coursier.</span>
                   </p>
                 )}
+                <DeliveryProofFields
+                  value={proofDraft}
+                  onChange={(next) => {
+                    setProofDraft(next);
+                    setError(null);
+                  }}
+                  settings={shopSettings.deliveryProof}
+                  expectedCode={task.deliveryCode}
+                  onError={setError}
+                />
               </>
             ) : (
               <p className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 px-3 py-2.5 font-medium text-red-700 dark:text-red-300">
