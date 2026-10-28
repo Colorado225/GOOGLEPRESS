@@ -53,6 +53,23 @@ Ce sont des **paramétrages**, pas des dossiers :
 
 Aucun de ces éléments ne contient de nom de client, de commande ou de montant.
 
+## Compteurs et identités de la barre latérale
+
+Trois éléments de l'interface annonçaient des chiffres ou des personnes qui
+n'existaient pas :
+
+| Élément | Avant | Après |
+|---|---|---|
+| Badge « Réception (POS) » | `receivedCount \|\| 12` : **12** affiché dès qu'aucune commande n'était reçue | Compteur réel uniquement ; le badge disparaît à zéro |
+| Encart « Objectif du mois » | 3 850 000 FCFA, 72 %, 2 772 000 FCFA codés en dur | Valeurs de `cashRegister` ; encart masqué tant que l'objectif n'est pas renseigné |
+| Équipe atelier / opératrice | « Lavage : Moussa + Yann… », « Opératrice : Awa Koné » | Employés non désactivés regroupés par poste ; libellé neutre s'il n'y en a aucun |
+| Carte « Formule Pro — Abonnement actif » | Fausse licence sur tous les comptes | Réservée à la démonstration, et renommée « Mode démonstration » |
+| Profil (barre latérale et en-tête) | « Awa Koné — Gérante • Poste 01 » | Nom réel du compte connecté (profil, sinon métadonnées Auth, sinon partie locale de l'e-mail) et rôle réel du rattachement (« Propriétaire », « Responsable d'agence »…), repli neutre sinon |
+
+Le badge bleu de la barre latérale signalait donc un **nombre de démonstration**
+et non une notification : c'était un `12` littéral utilisé comme valeur de
+repli (`|| 12`).
+
 ## Isolation de la persistance
 
 En espace réel, les clés locales sont préfixées par l'organisation :

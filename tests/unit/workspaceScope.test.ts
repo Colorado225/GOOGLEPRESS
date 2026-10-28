@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEMO_WORKSPACE_SCOPE,
+  getUserDisplayName,
+  getUserInitials,
+  getUserRoleLabel,
   getWorkspaceLabel,
   getWorkspaceStoragePrefix,
   isLiveWorkspace,
@@ -13,6 +16,8 @@ const liveScope = (overrides: Partial<WorkspaceScope> = {}): WorkspaceScope => (
   organizationId: '11111111-2222-3333-4444-555555555555',
   organizationName: 'Pressing Éclat',
   shopName: 'Agence Cocody',
+  userName: 'Awa Koné',
+  userRoleLabel: 'Propriétaire',
   ...overrides,
 });
 
@@ -69,11 +74,13 @@ describe('workspaceScope', () => {
       'Pressing Éclat'
     );
     expect(
-      getWorkspaceLabel({ mode: 'live', organizationId: 'org', organizationName: null, shopName: null })
+      getWorkspaceLabel(
+        liveScope({ organizationName: null, shopName: null })
+      )
     ).toBe('Espace professionnel');
     expect(
       getWorkspaceLabel(
-        { mode: 'live', organizationId: 'org', organizationName: '  ', shopName: '  ' },
+        liveScope({ organizationName: '  ', shopName: '  ' }),
         'Mon pressing'
       )
     ).toBe('Mon pressing');
@@ -82,5 +89,38 @@ describe('workspaceScope', () => {
   it('ne reprend jamais un nom de démonstration comme repli', () => {
     expect(getWorkspaceLabel(DEMO_WORKSPACE_SCOPE)).not.toContain('Cocody');
     expect(getWorkspaceLabel(DEMO_WORKSPACE_SCOPE)).toBe('Espace professionnel');
+  });
+});
+
+describe('identité affichée', () => {
+  it('affiche la personne réellement connectée', () => {
+    expect(getUserDisplayName(liveScope())).toBe('Awa Koné');
+    expect(getUserInitials(liveScope())).toBe('AK');
+    expect(getUserRoleLabel(liveScope())).toBe('Propriétaire');
+  });
+
+  it('reste neutre sans identité, jamais un nom d’exemple', () => {
+    expect(getUserDisplayName(liveScope({ userName: null }))).toBe('Mon compte');
+    expect(getUserInitials(liveScope({ userName: null }))).toBe('—');
+    expect(getUserRoleLabel(liveScope({ userRoleLabel: null }))).toBe(
+      'Compte professionnel'
+    );
+    expect(getUserDisplayName(liveScope({ userName: '   ' }))).toBe('Mon compte');
+  });
+
+  it('calcule des initiales robustes', () => {
+    expect(getUserInitials(liveScope({ userName: 'Koffi' }))).toBe('KO');
+    expect(getUserInitials(liveScope({ userName: '  aya  kouassi  ' }))).toBe('AK');
+    expect(getUserInitials(liveScope({ userName: 'Marie-Claire N’Guessan' }))).toBe('MN');
+  });
+
+  it('n’emprunte aucun nom de démonstration', () => {
+    const rendered = [
+      getUserDisplayName(liveScope({ userName: null })),
+      getUserInitials(liveScope({ userName: null })),
+      getUserRoleLabel(liveScope({ userRoleLabel: null })),
+    ].join(' | ');
+    expect(rendered).not.toContain('Awa');
+    expect(rendered).not.toContain('Moussa');
   });
 });

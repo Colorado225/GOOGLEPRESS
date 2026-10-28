@@ -27,6 +27,14 @@ import {
 } from 'lucide-react';
 import { formatTime } from '../../lib/dates';
 import { getAlertProducts } from '../../lib/inventory';
+import { formatFCFA } from '../../data/demoData';
+import {
+  getWorkspaceLabel,
+  getUserDisplayName,
+  getUserInitials,
+  getUserRoleLabel,
+  isLiveWorkspace,
+} from '../../lib/workspaceScope';
 
 export const AppSidebar: React.FC = () => {
   const {
@@ -44,6 +52,9 @@ export const AppSidebar: React.FC = () => {
     shopSettings,
     logisticsTasks,
     requestWorkshopTab,
+    cashRegister,
+    employees,
+    workspace,
   } = useApp();
 
   // En tiroir mobile, la barre est toujours rendue déployée (le repli ne concerne que le bureau)
@@ -52,6 +63,28 @@ export const AppSidebar: React.FC = () => {
   const receivedCount = orders.filter((o) => o.status === 'received').length;
   const stockAlertCount = getAlertProducts(products).length;
   const logisticsActionCount = logisticsTasks.filter(isLogisticsTaskActionable).length;
+  // Progression de l'objectif mensuel, bornée à 100 % pour la barre.
+  const goalPercent =
+    cashRegister.targetGoal > 0
+      ? Math.min(100, Math.round((cashRegister.monthAchieved / cashRegister.targetGoal) * 100))
+      : 0;
+
+  // Composition réelle de l'atelier : employés non désactivés, regroupés par
+  // poste. Aucun prénom d'exemple n'est injecté.
+  const activeTeam = Array.from(
+    employees
+      .filter((employee) => employee.status !== 'inactive')
+      .reduce((groups, employee) => {
+        const position = employee.position?.trim() || 'Atelier';
+        const names = groups.get(position) ?? [];
+        names.push(employee.fullName.split(' ')[0]);
+        groups.set(position, names);
+        return groups;
+      }, new Map<string, string[]>())
+  )
+    .map(([position, names]) => ({ position, names }))
+    .slice(0, 4);
+
   const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
   const storageActionCount = orders.filter(
     (order) =>
@@ -79,7 +112,8 @@ export const AppSidebar: React.FC = () => {
       id: 'pos',
       label: 'Réception (POS)',
       icon: <ShoppingBag className="w-[18px] h-[18px] shrink-0" />,
-      badge: receivedCount || 12,
+      // Compteur réel uniquement : aucun nombre de démonstration en repli.
+      badge: receivedCount > 0 ? receivedCount : undefined,
       shortcut: 'F2',
     },
     {
@@ -232,9 +266,12 @@ export const AppSidebar: React.FC = () => {
 
               {item.badge !== undefined && (
                 <span
-                  className={`text-[11px] px-2 py-0.5 rounded-full font-bold tabular-nums ${
-                    isActive ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'
-                  }`}
+                  className="text-[11px] px-2 py-0.5 rounded-full font-bold tabular-nums bg-blue-600 text-white"
+                  title={
+                    item.id === 'pos'
+                      ? `${item.badge} commande(s) reçue(s) en attente de traitement`
+                      : undefined
+                  }
                 >
                   {item.badge}
                 </span>
@@ -266,34 +303,46 @@ export const AppSidebar: React.FC = () => {
         <ExternalLink className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
       </a>
 
-      {/* Subscription Card (Formule Pro) */}
-      <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-zinc-900 to-zinc-900/90 border border-amber-500/20 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center">
-              <Crown className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <p className="text-[12px] font-bold text-amber-300 leading-tight">Formule Pro</p>
-              <p className="text-[10px] text-zinc-400">Abonnement actif</p>
+      {/* Aucun système d'abonnement n'existe : afficher « Formule Pro —
+          Abonnement actif » sur un compte réel serait une affirmation fausse.
+          La carte ne subsiste donc qu'en démonstration locale. */}
+      {!isLiveWorkspace(workspace) && (
+        <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-zinc-900 to-zinc-900/90 border border-amber-500/20 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                <Crown className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <p className="text-[12px] font-bold text-amber-300 leading-tight">Mode démonstration</p>
+                <p className="text-[10px] text-zinc-400">Données d’exemple</p>
+              </div>
             </div>
           </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Licence active" />
         </div>
-      </div>
+      )}
 
       {/* Contextual Bottom Widget */}
       <div className="mt-auto pt-4 space-y-3">
-        {activeScreen === 'dashboard' && (
+        {/* Objectif du mois : chiffres de la caisse réelle. Tant qu'aucun
+            objectif n'est renseigné, l'encart n'est pas affiché plutôt que de
+            montrer un montant d'exemple. */}
+        {activeScreen === 'dashboard' && cashRegister.targetGoal > 0 && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
             <p className="text-[11px] text-zinc-400 font-medium tracking-wider">OBJECTIF DU MOIS</p>
             <p className="font-bold text-[15px] tabular-nums mt-0.5">
-              3 850 000 <span className="text-[11px] font-normal text-zinc-400">FCFA</span>
+              {new Intl.NumberFormat('fr-FR').format(cashRegister.targetGoal)}{' '}
+              <span className="text-[11px] font-normal text-zinc-400">FCFA</span>
             </p>
             <div className="h-1.5 bg-zinc-800 rounded-full mt-2 overflow-hidden">
-              <div className="h-1.5 bg-blue-500 rounded-full transition-all duration-500" style={{ width: '72%' }} />
+              <div
+                className="h-1.5 bg-blue-500 rounded-full transition-all duration-500"
+                style={{ width: `${goalPercent}%` }}
+              />
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1.5 tabular-nums">72 % atteint — 2 772 000 FCFA</p>
+            <p className="text-[11px] text-zinc-400 mt-1.5 tabular-nums">
+              {goalPercent} % atteint — {formatFCFA(cashRegister.monthAchieved)}
+            </p>
           </div>
         )}
 
@@ -301,18 +350,20 @@ export const AppSidebar: React.FC = () => {
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white">
             <p className="text-[11px] text-zinc-400 font-semibold tracking-wider">TICKET EN COURS</p>
             <p className="font-bold text-[14px] text-blue-400">#TK-{nextTicketNumber} • {formatTime(new Date())}</p>
-            <p className="text-[11.5px] text-zinc-400 mt-0.5">Opératrice : Awa Koné</p>
+            <p className="text-[11.5px] text-zinc-400 mt-0.5">{getWorkspaceLabel(workspace)}</p>
           </div>
         )}
 
-        {activeScreen === 'workshop' && (
+        {activeScreen === 'workshop' && activeTeam.length > 0 && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white">
             <p className="font-bold text-[12px] text-zinc-200">👷 Équipe atelier</p>
-            <p className="text-[11px] text-zinc-400 mt-1 leading-snug">
-              Lavage : Moussa + Yann<br />
-              Repassage : Grâce + Divine<br />
-              Contrôle : Awa
-            </p>
+            <div className="text-[11px] text-zinc-400 mt-1 leading-snug space-y-0.5">
+              {activeTeam.map((group) => (
+                <p key={group.position}>
+                  {group.position} : {group.names.join(' + ')}
+                </p>
+              ))}
+            </div>
           </div>
         )}
 
@@ -341,19 +392,17 @@ export const AppSidebar: React.FC = () => {
           className={`flex items-center pt-2 border-t border-zinc-800/70 transition-all ${
             collapsed ? 'justify-center' : 'gap-2.5'
           }`}
-          title={collapsed ? (activeScreen === 'workshop' ? 'Moussa Diarra (Chef d\'atelier)' : 'Awa Koné (Gérante)') : undefined}
+          title={collapsed ? `${getUserDisplayName(workspace)} (${getUserRoleLabel(workspace)})` : undefined}
         >
           <div className="w-9 h-9 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center font-black text-sm shrink-0 shadow-inner">
-            {activeScreen === 'workshop' ? 'MD' : 'AK'}
+            {getUserInitials(workspace)}
           </div>
           {!collapsed && (
             <div className="overflow-hidden animate-in fade-in duration-200">
               <p className="text-[13px] font-semibold text-white truncate">
-                {activeScreen === 'workshop' ? 'Moussa Diarra' : 'Awa Koné'}
+                {getUserDisplayName(workspace)}
               </p>
-              <p className="text-[11px] text-zinc-400 truncate">
-                {activeScreen === 'workshop' ? "Chef d'atelier" : 'Gérante • Poste 01'}
-              </p>
+              <p className="text-[11px] text-zinc-400 truncate">{getUserRoleLabel(workspace)}</p>
             </div>
           )}
         </div>

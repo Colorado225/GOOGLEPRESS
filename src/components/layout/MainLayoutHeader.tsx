@@ -21,6 +21,7 @@ import {
 import { formatFCFA } from '../../data/demoData';
 import { formatShortDate } from '../../lib/dates';
 import { PressingAlertsButton } from './PressingAlertsButton';
+import { getUserDisplayName, getUserInitials, getUserRoleLabel } from '../../lib/workspaceScope';
 
 export const MainLayoutHeader: React.FC = () => {
   const {
@@ -38,6 +39,7 @@ export const MainLayoutHeader: React.FC = () => {
     setPreviewTicket,
     setSelectedCustomer,
     showToast,
+    workspace,
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -409,11 +411,15 @@ export const MainLayoutHeader: React.FC = () => {
           {/* User profile identifier */}
           <div className="flex items-center gap-2 pl-1 border-l border-zinc-200 dark:border-zinc-700">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500 text-zinc-950 dark:text-zinc-50 flex items-center justify-center font-bold text-xs shadow-xs">
-              AK
+              {getUserInitials(workspace)}
             </div>
             <div className="hidden 2xl:block text-left leading-tight">
-              <p className="text-[12px] font-bold text-zinc-900 dark:text-zinc-100">Awa Koné</p>
-              <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400">Gérante • Poste 01</p>
+              <p className="text-[12px] font-bold text-zinc-900 dark:text-zinc-100">
+                {getUserDisplayName(workspace)}
+              </p>
+              <p className="text-[10.5px] text-zinc-500 dark:text-zinc-400">
+                {getUserRoleLabel(workspace)}
+              </p>
             </div>
           </div>
         </div>

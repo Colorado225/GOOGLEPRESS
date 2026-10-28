@@ -20,6 +20,7 @@ import {
   listCurrentMemberships,
   type RemoteMembership,
 } from '../../lib/supabaseOrders';
+import { getCustomerProfile } from '../../lib/supabaseCustomer';
 import type { WorkspaceScope } from '../../lib/workspaceScope';
 import { WorkspaceScopeProvider } from '../../context/WorkspaceScopeContext';
 import { AuthPasswordField } from './AuthFields';
@@ -152,11 +153,30 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
         shopName = null;
       }
 
+      // Identité affichée : profil applicatif d'abord, puis métadonnées Auth,
+      // puis la partie locale de l'e-mail. Aucun nom d'exemple en repli.
+      let userName: string | null = null;
+      try {
+        const profile = await getCustomerProfile(session.user.id);
+        userName = profile?.display_name?.trim() || null;
+      } catch {
+        userName = null;
+      }
+      if (!userName) {
+        const metadataName =
+          session.user.user_metadata?.full_name ?? session.user.user_metadata?.name;
+        userName = typeof metadataName === 'string' && metadataName.trim()
+          ? metadataName.trim()
+          : (session.user.email?.split('@')[0] ?? null);
+      }
+
       setWorkspaceScope({
         mode: 'live',
         organizationId: primary.organization_id,
         organizationName,
         shopName,
+        userName,
+        userRoleLabel: formatStaffRole(primary.role),
       });
     } catch (membershipError) {
       setMemberships([]);

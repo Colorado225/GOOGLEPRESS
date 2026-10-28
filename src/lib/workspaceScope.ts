@@ -17,6 +17,8 @@
  * démonstration ne puisse « remonter » dans un espace réel.
  */
 
+import { getInitials } from './utils';
+
 export type WorkspaceDataScope = 'demo' | 'live';
 
 export interface WorkspaceScope {
@@ -24,6 +26,10 @@ export interface WorkspaceScope {
   organizationId: string | null;
   organizationName: string | null;
   shopName: string | null;
+  /** Nom affiché de la personne connectée (profil ou métadonnées Auth). */
+  userName: string | null;
+  /** Rôle réel déduit du rattachement actif, en français. */
+  userRoleLabel: string | null;
 }
 
 /** Portée par défaut : démonstration locale, aucun rattachement. */
@@ -32,6 +38,8 @@ export const DEMO_WORKSPACE_SCOPE: WorkspaceScope = {
   organizationId: null,
   organizationName: null,
   shopName: null,
+  userName: null,
+  userRoleLabel: null,
 };
 
 const WORKSPACE_STORAGE_ROOT = 'pressingpro_workspace_';
@@ -73,3 +81,24 @@ export const getWorkspaceLabel = (
   if (organization && shop && shop !== organization) return `${organization} — ${shop}`;
   return shop || organization || fallback;
 };
+
+/**
+ * Nom de la personne connectée. Aucun nom d'exemple n'est utilisé en repli :
+ * l'interface affiche un libellé neutre tant que l'identité n'est pas connue.
+ */
+export const getUserDisplayName = (scope: WorkspaceScope): string => {
+  const name = scope.userName?.trim();
+  if (name) return name;
+  return scope.mode === 'live' ? 'Mon compte' : 'Visiteur (démonstration)';
+};
+
+/** Initiales pour l'avatar : « Awa Koné » → « AK » (helper partagé lib/utils). */
+export const getUserInitials = (scope: WorkspaceScope): string => {
+  const name = scope.userName?.trim();
+  if (!name) return scope.mode === 'live' ? '—' : 'DÉ';
+  return getInitials(name);
+};
+
+/** Rôle affiché sous le nom ; neutre si le rattachement n'est pas encore lisible. */
+export const getUserRoleLabel = (scope: WorkspaceScope): string =>
+  scope.userRoleLabel?.trim() || (scope.mode === 'live' ? 'Compte professionnel' : 'Démonstration locale');
