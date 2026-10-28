@@ -171,6 +171,7 @@ statiques existants restent servis en priorité par Vercel.
 | Playwright local | BLOQUÉ — Chromium absent du bac à sable ; exécution par la CI de la PR #7 |
 | Serveur de développement (port 3000) | RÉUSSI — HTTP 200 sur les 10 chemins ERP + alias + route inconnue ; modules transformés sans erreur |
 | CI GitHub Actions (PR #7) | RÉUSSI — run `40719168109` au commit `d1cc020` : « Lint, tests et build » et « Smoke tests navigateur » (10 tests e2e, routage inclus) au vert |
+| CI GitHub Actions — lot parcours d'entrée | RÉUSSI — runs `40720587168`/`40720597047` au commit `bd94753` : les deux jobs au vert (10 e2e inchangés, onboarding inclus) |
 
 Mise à jour « parcours d'entrée » (section 5) : `npm run lint`,
 `npm run test:unit` (83/83) et `npm run build` RÉUSSIS ; le `git diff` de
