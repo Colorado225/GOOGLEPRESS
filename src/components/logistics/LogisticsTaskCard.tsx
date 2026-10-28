@@ -25,6 +25,11 @@ import {
   getPhoneHref,
   sortCourierCandidates,
 } from '../../lib/logistics';
+import {
+  formatPackageCount,
+  getOrderStorageLabel,
+  hasStructuredStorage,
+} from '../../lib/storage';
 import type { LogisticsTask, OrderStatus } from '../../types';
 import type { LogisticsActionRequest } from './LogisticsActionModal';
 
@@ -188,8 +193,16 @@ export const LogisticsTaskCard: React.FC<LogisticsTaskCardProps> = ({ task, onEd
               </dd>
             </div>
             <div>
-              <dt className="text-zinc-500 dark:text-zinc-400">Casier</dt>
-              <dd className="font-bold text-zinc-900 dark:text-zinc-100">{order?.rackLocation || 'Non renseigné'}</dd>
+              <dt className="text-zinc-500 dark:text-zinc-400">
+                {task.status === 'en_route' || task.status === 'completed'
+                  ? 'Dernier emplacement'
+                  : 'Emplacement'}
+              </dt>
+              <dd className="font-bold text-zinc-900 dark:text-zinc-100">
+                {order
+                  ? `${getOrderStorageLabel(order) ?? 'Non renseigné'}${hasStructuredStorage(order) ? ` • ${formatPackageCount(order)}` : ''}`
+                  : 'Non renseigné'}
+              </dd>
             </div>
             <div>
               <dt className="text-zinc-500 dark:text-zinc-400">À encaisser</dt>

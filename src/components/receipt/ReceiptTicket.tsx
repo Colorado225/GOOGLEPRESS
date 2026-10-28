@@ -9,6 +9,11 @@ import {
   isHomeDeliveryOrder,
   isHomePickupOrder,
 } from '../../lib/logistics';
+import {
+  formatPackageCount,
+  getOrderStorageLabel,
+  hasStructuredStorage,
+} from '../../lib/storage';
 
 export type ReceiptVariant = 'client' | 'atelier';
 
@@ -189,7 +194,9 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           {order.deliveredAt && (
             <MetaRow label={isHomeDelivery ? 'Livré le' : 'Remis le'} value={order.deliveredAt} />
           )}
-          {order.rackLocation && <MetaRow label="Casier" value={order.rackLocation} />}
+          {getOrderStorageLabel(order) && (
+            <MetaRow label="Emplacement" value={getOrderStorageLabel(order) as string} />
+          )}
         </div>
 
         <div className="border-2 border-zinc-950 rounded-sm text-center px-3 py-2 mt-3">
@@ -388,7 +395,12 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
               <p className="text-[9.5px] font-bold tracking-[0.18em] text-zinc-600 dark:text-zinc-400">PRODUCTION</p>
               <MetaRow label="Machine" value={order.machineAssigned ?? 'Non renseignée'} />
               <MetaRow label="Responsable" value={order.assignee ?? 'Non assigné'} />
-              <MetaRow label="Casier" value={order.rackLocation ?? 'Non renseigné'} />
+              <MetaRow label="Emplacement" value={getOrderStorageLabel(order) ?? 'Non renseigné'} />
+              {hasStructuredStorage(order) && (
+                <MetaRow label="Paquets" value={formatPackageCount(order)} />
+              )}
+              {order.storedAt && <MetaRow label="Rangée le" value={order.storedAt} />}
+              {order.storageNotes && <MetaRow label="Repère" value={order.storageNotes} />}
               {typeof order.progressPercent === 'number' && (
                 <div className="pt-1">
                   <div className="flex justify-between">

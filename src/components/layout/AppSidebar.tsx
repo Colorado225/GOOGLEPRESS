@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp, ScreenId, WorkshopTab } from '../../context/AppContext';
 import { isLogisticsTaskActionable } from '../../lib/logistics';
+import { getOrdersOutForDeliveryIds, hasStructuredStorage } from '../../lib/storage';
 import {
   Crown,
   ChevronLeft,
@@ -12,6 +13,7 @@ import {
   LayoutDashboard,
   ShoppingBag,
   Cog,
+  Archive,
   Truck,
   Wallet,
   Users,
@@ -48,6 +50,13 @@ export const AppSidebar: React.FC = () => {
   const receivedCount = orders.filter((o) => o.status === 'received').length;
   const stockAlertCount = getAlertProducts(products).length;
   const logisticsActionCount = logisticsTasks.filter(isLogisticsTaskActionable).length;
+  const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
+  const storageActionCount = orders.filter(
+    (order) =>
+      order.status === 'ready' &&
+      !outForDeliveryIds.has(order.id) &&
+      !hasStructuredStorage(order)
+  ).length;
 
   const navItems: {
     id: ScreenId;
@@ -77,6 +86,13 @@ export const AppSidebar: React.FC = () => {
       icon: <Cog className="w-[18px] h-[18px] shrink-0" />,
       shortcut: 'F3',
       workshopTab: 'production',
+    },
+    {
+      id: 'workshop',
+      label: 'Rangement atelier',
+      icon: <Archive className="w-[18px] h-[18px] shrink-0" />,
+      badge: storageActionCount || undefined,
+      workshopTab: 'storage',
     },
     {
       id: 'workshop',
@@ -178,9 +194,9 @@ export const AppSidebar: React.FC = () => {
           const isActive =
             item.action
               ? false
-              : idx === 3
-              ? false
-              : activeScreen === item.id;
+              : item.workshopTab && item.workshopTab !== 'production'
+                ? false
+                : activeScreen === item.id;
 
           return (
             <button

@@ -8,6 +8,11 @@ import {
   PAYMENT_METHOD_LABELS,
   formatLogisticsSchedule,
 } from '../../lib/logistics';
+import {
+  formatPackageCount,
+  getOrderStorageLabel,
+  hasStructuredStorage,
+} from '../../lib/storage';
 import type { LogisticsIssueReason, LogisticsTask, PaymentMethod } from '../../types';
 
 export type LogisticsActionRequest =
@@ -164,8 +169,13 @@ export const LogisticsActionModal: React.FC<LogisticsActionModalProps> = ({ acti
                     <strong className="text-[14px] tabular-nums text-zinc-950 dark:text-zinc-50">{formatFCFA(order.total)}</strong>
                   </div>
                   <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2">
-                    <span className="block text-zinc-500 dark:text-zinc-400">Casier</span>
-                    <strong className="text-[14px] text-zinc-950 dark:text-zinc-50">{order.rackLocation || 'Non renseigné'}</strong>
+                    <span className="block text-zinc-500 dark:text-zinc-400">
+                      {task.status === 'en_route' ? 'Dernier emplacement avant départ' : 'Emplacement à récupérer'}
+                    </span>
+                    <strong className="text-[14px] text-zinc-950 dark:text-zinc-50">
+                      {getOrderStorageLabel(order) ?? 'Non renseigné'}
+                      {hasStructuredStorage(order) ? ` • ${formatPackageCount(order)}` : ''}
+                    </strong>
                   </div>
                 </div>
 

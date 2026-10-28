@@ -2,7 +2,15 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { isHomeDeliveryOrder } from '../../lib/logistics';
-import { Check, Camera, CheckCircle2, ShieldCheck, Truck, Eye } from 'lucide-react';
+import {
+  formatPackageCount,
+  getOrderStorageCode,
+  getOrderStorageLabel,
+  hasLegacyStorage,
+  hasStructuredStorage,
+} from '../../lib/storage';
+import { StorageAssignmentModal } from './StorageAssignmentModal';
+import { Check, Camera, CheckCircle2, ShieldCheck, Truck, Eye, Archive, AlertTriangle, MapPin } from 'lucide-react';
 
 export const HandoverSection: React.FC = () => {
   const {
@@ -12,6 +20,7 @@ export const HandoverSection: React.FC = () => {
     showToast,
     focusLogisticsTask,
     setPreviewTicket,
+    focusStorageOrder,
   } = useApp();
 
   const [checkedItems, setCheckedItems] = useState<{ [id: string]: boolean }>({
@@ -25,6 +34,7 @@ export const HandoverSection: React.FC = () => {
     boutons: true,
     photo: false,
   });
+  const [storageModalOpen, setStorageModalOpen] = useState(false);
 
   // Toujours relire la version courante de la commande : l’objet sélectionné
   // peut dater d’avant un encaissement ou une livraison.
@@ -116,6 +126,11 @@ export const HandoverSection: React.FC = () => {
     settleAndDeliverOrder(order.id, method);
   };
 
+  const storageLabel = getOrderStorageLabel(order);
+  const storageCode = getOrderStorageCode(order);
+  const isStructuredStored = hasStructuredStorage(order);
+  const isLegacyStored = hasLegacyStorage(order);
+
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-4 shadow-2xs">
       {/* Header */}
@@ -124,9 +139,70 @@ export const HandoverSection: React.FC = () => {
           Remise en cours — {order.ticketNumber} • {order.customerName}{' '}
           <span className="font-normal text-zinc-500 dark:text-zinc-400 text-[12.5px]">{order.customerPhone}</span>
         </h2>
-        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 w-fit">
-          <CheckCircle2 className="w-3 h-3" /> Sac retrouvé : {order.rackLocation || 'Étagère B-04'} ✓
-        </span>
+        {isStructuredStored ? (
+          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 w-fit">
+            <MapPin className="w-3 h-3" aria-hidden="true" /> À récupérer : {storageCode} • {formatPackageCount(order)}
+          </span>
+        ) : isLegacyStored ? (
+          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1 w-fit">
+            <MapPin className="w-3 h-3" aria-hidden="true" /> Repère noté : {storageLabel}
+          </span>
+        ) : (
+          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1 w-fit">
+            <AlertTriangle className="w-3 h-3" aria-hidden="true" /> Emplacement non renseigné
+          </span>
+        )}
+      </div>
+
+      <div
+        className={`mb-3 flex flex-col gap-2 rounded-lg border px-3 py-2.5 text-[12.5px] sm:flex-row sm:items-center sm:justify-between ${
+          isStructuredStored
+            ? 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/80 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100'
+            : isLegacyStored
+              ? 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200'
+              : 'border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/50 text-amber-950 dark:text-amber-100'
+        }`}
+      >
+        <div className="flex items-start gap-2">
+          {isStructuredStored || isLegacyStored ? (
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          )}
+          <div>
+            <p className="font-bold">
+              {isStructuredStored
+                ? `Récupérez les paquets en ${storageLabel}`
+                : isLegacyStored
+                  ? `Ancien repère : ${storageLabel}`
+                  : 'Aucun casier n’a été enregistré pour cette commande'}
+            </p>
+            <p className="mt-0.5 leading-relaxed opacity-80">
+              {isStructuredStored
+                ? `${formatPackageCount(order)}${order.storedAt ? ` • rangée le ${order.storedAt}` : ''}${order.storageNotes ? ` • ${order.storageNotes}` : ''}`
+                : isLegacyStored
+                  ? 'Convertissez ce texte libre en emplacement configuré pour suivre les paquets et l’occupation.'
+                  : 'Rangez-la maintenant pour que l’équipe la retrouve immédiatement à l’arrivée du client.'}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setStorageModalOpen(true)}
+            className="inline-flex items-center gap-1 rounded-lg bg-zinc-950 dark:bg-zinc-100 px-2.5 py-1.5 text-[12px] font-bold text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+          >
+            <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+            {isStructuredStored ? 'Déplacer' : 'Ranger'}
+          </button>
+          <button
+            type="button"
+            onClick={() => focusStorageOrder(order.id)}
+            className="inline-flex items-center gap-1 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white/70 dark:bg-zinc-900/70 px-2.5 py-1.5 text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+          >
+            Voir dans Rangement
+          </button>
+        </div>
       </div>
 
       {/* Item Checkboxes Grid */}
@@ -247,6 +323,15 @@ export const HandoverSection: React.FC = () => {
           Orange Money
         </button>
       </div>
+
+      {storageModalOpen && (
+        <StorageAssignmentModal
+          key={`handover-storage-${order.id}`}
+          order={order}
+          mode="assign"
+          onClose={() => setStorageModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

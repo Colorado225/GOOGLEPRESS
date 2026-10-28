@@ -106,6 +106,50 @@ export interface LogisticsTaskScheduleFormData {
   instructions?: string;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Rangement atelier des commandes terminées                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Familles d'emplacements proposées pour organiser physiquement les articles
+ * terminés avant leur remise. Elles décrivent le mode de rangement, sans
+ * empêcher le personnel de placer exceptionnellement une commande ailleurs.
+ */
+export type StorageZone = 'hanging' | 'folded' | 'delivery' | 'bulky' | 'hold' | 'other';
+
+/**
+ * Un emplacement physique de l'atelier (portant, étagère, bac…). La capacité
+ * est indicative et exprimée en paquets/sacs afin de signaler la saturation.
+ */
+export interface StorageLocation {
+  id: string;
+  /** Code court à reporter sur l'étiquette physique, ex. « A-01 ». */
+  code: string;
+  label: string;
+  zone: StorageZone;
+  capacityPackages: number;
+  description?: string;
+  isActive: boolean;
+  createdAt?: string; // ISO datetime
+  updatedAt?: string; // ISO datetime
+}
+
+export interface StorageLocationFormData {
+  code: string;
+  label: string;
+  zone: StorageZone;
+  capacityPackages: number;
+  description?: string;
+  isActive: boolean;
+}
+
+/** Affectation physique d'une commande prête à un emplacement. */
+export interface StorageAssignmentInput {
+  locationId?: string;
+  packageCount: number;
+  notes?: string;
+}
+
 export interface ClothingItem {
   id: string;
   name: string;
@@ -210,7 +254,19 @@ export interface LaundryOrder {
   notes?: string;
   isLate?: boolean;
   isUrgent?: boolean;
-  rackLocation?: string; // e.g., "Étagère B-04"
+  /**
+   * Libellé d'affichage de l'emplacement, conservé pour les anciens tickets
+   * et comme instantané lisible (ex. « A-02 · Portant costumes »).
+   */
+  rackLocation?: string;
+  /** Emplacement structuré courant, pour recherche et taux d'occupation. */
+  storageLocationId?: string;
+  storageLocationCode?: string;
+  storageLocationLabel?: string;
+  /** Nombre de paquets/sacs physiquement présents à cet emplacement. */
+  storagePackageCount?: number;
+  storageNotes?: string;
+  storedAt?: string; // "JJ/MM/AAAA HH:mm"
   machineAssigned?: string; // e.g. "L1 • 40 min"
   assignee?: string; // e.g. "Grâce"
   progressPercent?: number; // for washing machines, e.g. 65%

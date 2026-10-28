@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2, Inbox, Shirt, Truck } from 'lucide-react';
+import { Search, Eye, Filter, ArrowLeft, ArrowUpDown, List, WashingMachine, PackageCheck, Clock, CheckCircle2, Inbox, Shirt, Truck, MapPin } from 'lucide-react';
 import { Tabs } from '../common/Tabs';
 import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Avatar, AvatarFallback, TablePaginationFooter, type BadgeVariant } from '../common/DataTable';
 import { usePagination } from '../../lib/pagination';
-import { getInitials } from '../../lib/utils';
+import { getInitials, normalizeText } from '../../lib/utils';
 import { isOrderLate } from '../../lib/reports';
 import { formatLogisticsSchedule, isHomeDeliveryOrder, isHomePickupOrder } from '../../lib/logistics';
+import {
+  formatPackageCount,
+  getOrderStorageCode,
+  getOrderStorageSearchText,
+  getOrdersOutForDeliveryIds,
+  hasStructuredStorage,
+} from '../../lib/storage';
 import { LaundryOrder } from '../../types';
 
 const ORDER_STATUS_BADGE_VARIANT: Record<LaundryOrder['status'], BadgeVariant> = {
@@ -32,22 +39,37 @@ const getOrderStatusLabel = (order: LaundryOrder): string =>
     : ORDER_STATUS_LABEL[order.status];
 
 export const OrdersPage: React.FC = () => {
-  const { orders, setPreviewTicket, setActiveScreen } = useApp();
+  const {
+    orders,
+    logisticsTasks,
+    setPreviewTicket,
+    setActiveScreen,
+    focusStorageOrder,
+    focusLogisticsTask,
+  } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [tab, setTab] = useState<'all' | 'received' | 'washing' | 'ironing' | 'ready' | 'late' | 'delivered'>('all');
 
   const searchedOrders = orders.filter((order) => {
-    const needle = searchTerm.toLowerCase();
-    return (
-      order.ticketNumber.toLowerCase().includes(needle) ||
-      order.customerName.toLowerCase().includes(needle) ||
-      order.customerPhone.toLowerCase().includes(needle) ||
-      (order.customerAddress ?? '').toLowerCase().includes(needle) ||
-      (order.deliveryAddress ?? '').toLowerCase().includes(needle) ||
-      (order.collectionAddress ?? '').toLowerCase().includes(needle) ||
-      order.lines.some((l) => l.name.toLowerCase().includes(needle))
+    const needle = normalizeText(searchTerm);
+    if (!needle) return true;
+    const haystack = normalizeText(
+      [
+        order.ticketNumber,
+        order.customerName,
+        order.customerPhone,
+        order.customerAddress ?? '',
+        order.deliveryAddress ?? '',
+        order.collectionAddress ?? '',
+        getOrderStorageSearchText(order),
+        order.storageNotes ?? '',
+        ...order.lines.map((line) => `${line.name} ${line.color ?? ''}`),
+      ].join(' ')
     );
+    return haystack.includes(needle);
   });
+
+  const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
 
   // Onglets par statut exact du workflow, plus la file transversale des retards à relancer
   const inTab = (order: LaundryOrder, t: typeof tab): boolean => {
@@ -113,7 +135,7 @@ export const OrdersPage: React.FC = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Ticket, client, téléphone, quartier, vêtement…"
+                placeholder="Ticket, client, téléphone, casier, vêtement…"
                 className="border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-64 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               />
             </div>
@@ -209,6 +231,44 @@ export const OrdersPage: React.FC = () => {
                     <Badge variant={ORDER_STATUS_BADGE_VARIANT[order.status]}>
                       {getOrderStatusLabel(order)}
                     </Badge>
+                    {order.status === 'ready' && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (outForDeliveryIds.has(order.id) && order.deliveryTaskId) {
+                            focusLogisticsTask(order.deliveryTaskId);
+                          } else {
+                            focusStorageOrder(order.id);
+                          }
+                        }}
+                        className={`mt-1 flex items-center gap-1 rounded px-1 py-0.5 text-[11px] font-bold underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
+                          outForDeliveryIds.has(order.id)
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : hasStructuredStorage(order)
+                              ? 'text-emerald-700 dark:text-emerald-300'
+                              : getOrderStorageCode(order)
+                                ? 'text-zinc-600 dark:text-zinc-400'
+                                : 'text-amber-700 dark:text-amber-300'
+                        }`}
+                        title={
+                          outForDeliveryIds.has(order.id)
+                            ? 'Ouvrir la tournée en cours'
+                            : 'Ouvrir dans le rangement atelier'
+                        }
+                      >
+                        {outForDeliveryIds.has(order.id) ? (
+                          <Truck className="h-3 w-3" aria-hidden="true" />
+                        ) : (
+                          <MapPin className="h-3 w-3" aria-hidden="true" />
+                        )}
+                        {outForDeliveryIds.has(order.id)
+                          ? `En livraison • ${formatPackageCount(order)}`
+                          : getOrderStorageCode(order)
+                            ? `${getOrderStorageCode(order)}${hasStructuredStorage(order) ? ` • ${formatPackageCount(order)}` : ''}`
+                            : 'Non rangée'}
+                      </button>
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right whitespace-nowrap">
                     <button

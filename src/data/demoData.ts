@@ -10,6 +10,7 @@ import {
   Expense,
   ExpenseCategory,
   LogisticsTask,
+  StorageLocation,
 } from '../types';
 import {
   daysFromToday,
@@ -187,6 +188,77 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   },
 ];
 
+/**
+ * Plan de rangement de départ proposé pour la zone des commandes terminées.
+ * Codes, libellés et capacités sont modifiables depuis Atelier → Rangement :
+ * ils doivent correspondre aux étiquettes réellement posées dans le local.
+ */
+export const INITIAL_STORAGE_LOCATIONS: StorageLocation[] = [
+  {
+    id: 'storage-A-01',
+    code: 'A-01',
+    label: 'Portant A — pressing sur cintres',
+    zone: 'hanging',
+    capacityPackages: 24,
+    description: 'Chemises, robes et pièces remises sur cintre ou sous housse.',
+    isActive: true,
+  },
+  {
+    id: 'storage-A-02',
+    code: 'A-02',
+    label: 'Portant A — costumes et pièces longues',
+    zone: 'hanging',
+    capacityPackages: 18,
+    description: 'Costumes, tailleurs, robes longues et manteaux.',
+    isActive: true,
+  },
+  {
+    id: 'storage-B-01',
+    code: 'B-01',
+    label: 'Étagère B — sacs retrait comptoir',
+    zone: 'folded',
+    capacityPackages: 30,
+    description: 'Commandes pliées et ensachées à retirer directement au pressing.',
+    isActive: true,
+  },
+  {
+    id: 'storage-B-02',
+    code: 'B-02',
+    label: 'Étagère B — linge maison plié',
+    zone: 'folded',
+    capacityPackages: 30,
+    description: 'Draps, serviettes, nappes et linge familial plié.',
+    isActive: true,
+  },
+  {
+    id: 'storage-C-01',
+    code: 'C-01',
+    label: 'Bac livraison C — départs planifiés',
+    zone: 'delivery',
+    capacityPackages: 20,
+    description: 'Paquets regroupés dans l’ordre des tournées, prêts à charger.',
+    isActive: true,
+  },
+  {
+    id: 'storage-D-01',
+    code: 'D-01',
+    label: 'Zone volumineux D — couettes et pro',
+    zone: 'bulky',
+    capacityPackages: 12,
+    description: 'Couettes, rideaux, gros volumes et lots professionnels.',
+    isActive: true,
+  },
+  {
+    id: 'storage-E-01',
+    code: 'E-01',
+    label: 'Attente E — contrôle ou rappel client',
+    zone: 'hold',
+    capacityPackages: 10,
+    description: 'Paquets à vérifier ou commandes en attente d’une décision client.',
+    isActive: true,
+  },
+];
+
 // Dates de démonstration RELATIVES au jour d'ouverture de l'application :
 // le tableau de bord reste cohérent quel que soit le jour de la démo
 // (commandes "du jour", une en retard depuis hier, retraits à venir…).
@@ -271,7 +343,13 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     receivedAt: formatDateTime(daysFromToday(-1, 11, 0)),
     promisedAt: formatPromised(daysFromToday(1, 18)),
     readyAt: formatDateTime(daysFromToday(0, 8, 0)),
-    rackLocation: 'Étagère B-04',
+    rackLocation: 'C-01 · Bac livraison C — départs planifiés',
+    storageLocationId: 'storage-C-01',
+    storageLocationCode: 'C-01',
+    storageLocationLabel: 'Bac livraison C — départs planifiés',
+    storagePackageCount: 2,
+    storageNotes: 'Deux paquets housse, prêts pour la tournée.',
+    storedAt: formatDateTime(daysFromToday(0, 8, 0)),
     notes: 'Boubous wax très colorés, cintre + housse plastique',
     smsSent: true,
     origin: 'counter',
@@ -379,7 +457,13 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     receivedAt: formatDateTime(daysFromToday(-2, 10, 0)),
     promisedAt: formatPromised(daysFromToday(0, 14)),
     readyAt: formatDateTime(daysFromToday(0, 9, 0)),
-    rackLocation: 'Étagère A-12',
+    rackLocation: 'A-02 · Portant A — costumes et pièces longues',
+    storageLocationId: 'storage-A-02',
+    storageLocationCode: 'A-02',
+    storageLocationLabel: 'Portant A — costumes et pièces longues',
+    storagePackageCount: 3,
+    storageNotes: 'Trois costumes sous housse.',
+    storedAt: formatDateTime(daysFromToday(0, 9, 0)),
     notes: 'Soldé par MTN MoMo',
     smsSent: true,
   },

@@ -18,9 +18,13 @@ clôture journalière Z.
   converti en commande ; la restitution se choisit entre retrait au comptoir
   et livraison à domicile (adresse, date et créneau de tournée).
 - **Production & suivi** — Kanban atelier (Reçu → Lavage → Repassage → Prêt),
-  onglet **Tournées** pour les ramassages/livraisons (programmation, coursier,
-  départ, échec/reprogrammation, encaissement du solde à la livraison),
-  remise au comptoir et clôture de caisse Z.
+  onglet **Rangement** pour retrouver les commandes terminées par ticket,
+  client ou code de casier (plan proposé : A portants/cintres, B étagères/plié,
+  C départs livraison, D volumineux/pro, E attente/contrôle ; codes et
+  capacités modifiables), onglet **Tournées** pour les
+  ramassages/livraisons (programmation, coursier, départ,
+  échec/reprogrammation, encaissement du solde à la livraison), remise au
+  comptoir et clôture de caisse Z.
 - **Commandes & Clients** — historique filtrable, fichier clients avec
   fidélité (%), statut VIP et solde dû.
 - **Personnel & présences** — registre des employés (postes, téléphone,
@@ -69,6 +73,7 @@ src/
 ├── lib/
 │   ├── dates.ts             dates dynamiques + règles de délais de retrait
 │   ├── logistics.ts         créneaux, statuts et règles des tournées domicile
+│   ├── storage.ts           zones, occupation et recherche des casiers de commandes prêtes
 │   ├── pricing.ts           calculs tarifaires uniques (totaux, express, frais, remises)
 │   └── utils.ts             helper cn() (classes Tailwind)
 └── components/              écrans par domaine (dashboard, pos, workshop…)
@@ -89,6 +94,13 @@ src/
   promesse ; les forfaits des nouvelles courses se règlent dans
   Paramètres → « Ramassage & livraison » (proposition initiale : 1 000 FCFA
   par course, 0 = offert).
+- Rangement des prêts : le passage en « Prêt » demande le casier réel et le
+  nombre de paquets/housses, avec possibilité explicite de laisser la
+  commande dans la file « À ranger ». Tous les paquets d'un ticket doivent
+  normalement rester ensemble. Un retour en production libère
+  l'emplacement ; une commande partie en livraison ne compte plus dans
+  l'occupation des rayons. Les anciens repères en texte libre restent
+  lisibles et peuvent être convertis vers un emplacement configuré.
 - Numérotation des tickets : compteur séquentiel persisté
   (`pressingpro_next_ticket_number`), initialisé au plus grand ticket
   existant + 1.
@@ -98,6 +110,7 @@ src/
 Sans backend, l'application stocke tout dans le **localStorage** du
 navigateur, sous les clés `pressingpro_orders`, `pressingpro_customers`,
 `pressingpro_cash_register`, `pressingpro_logistics_tasks`,
+`pressingpro_storage_locations` (plan des casiers de l'atelier),
 `pressingpro_next_ticket_number` et `pressingpro_theme` (thème d'interface
 choisi sur l'appareil) et `pressingpro_shop_settings` (identité, réglages
 et forfaits de ramassage/livraison saisis dans les Paramètres — affichés
@@ -159,6 +172,9 @@ ticket reste blanc, comme le papier.
 - **SMS et impression simulés** (aucun envoi réel, aucun pilote d'imprimante).
 - **Tournées sans GPS ni réservation client en ligne** : réservation prise par
   le personnel, suivi par statuts et créneaux dans ce navigateur uniquement.
+- **Rangement sans scan d'étiquettes** : la recherche se fait par saisie du
+  ticket, du client ou du code de casier ; les codes doivent être reportés
+  manuellement sur les étiquettes physiques du local.
 - Statistiques 7 jours de démo.
 
 Prochaine étape logique (P1) : brancher un backend (ex. Supabase) avec
