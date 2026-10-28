@@ -16,6 +16,7 @@ export default defineConfig({
         'src/lib/localPersistence.ts',
         'src/lib/orderTracking.ts',
         'src/lib/customerAuth.ts',
+        'src/lib/staffAccess.ts',
       ],
       thresholds: {
         statements: 70,
