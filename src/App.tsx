@@ -3,25 +3,88 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { CustomerPortalApp } from './components/customer/CustomerPortalApp';
+import { StaffAccessGate } from './components/auth/StaffAccessGate';
+
+const CustomerPortalApp = lazy(() =>
+  import('./components/customer/CustomerPortalApp').then((module) => ({
+    default: module.CustomerPortalApp,
+  }))
+);
+const StaffLoginPage = lazy(() =>
+  import('./components/auth/StaffLoginPage').then((module) => ({
+    default: module.StaffLoginPage,
+  }))
+);
+const StaffRegisterPage = lazy(() =>
+  import('./components/auth/StaffRegisterPage').then((module) => ({
+    default: module.StaffRegisterPage,
+  }))
+);
+const StaffOnboardingPage = lazy(() =>
+  import('./components/auth/StaffOnboardingPage').then((module) => ({
+    default: module.StaffOnboardingPage,
+  }))
+);
 import {
   getCanonicalCustomerPath,
   isCustomerPath,
   parseCustomerRoute,
 } from './lib/customerAuth';
+import { parseStaffRoute } from './lib/staffAuth';
 import { AppSidebar } from './components/layout/AppSidebar';
-import { DashboardPage } from './components/dashboard/DashboardPage';
-import { PosPage } from './components/pos/PosPage';
-import { WorkshopPage } from './components/workshop/WorkshopPage';
-import { OrdersPage } from './components/orders/OrdersPage';
-import { ClientsPage } from './components/clients/ClientsPage';
-import { EmployeesPage } from './components/employees/EmployeesPage';
-import { InventoryPage } from './components/inventory/InventoryPage';
-import { ExpensesPage } from './components/expenses/ExpensesPage';
-import { ReportsPage } from './components/reports/ReportsPage';
-import { SettingsPage } from './components/settings/SettingsPage';
+
+// Les écrans métier sont chargés à la demande : ouvrir le tableau de bord ne
+// doit plus télécharger d'emblée le POS, les rapports et les paramètres.
+const DashboardPage = lazy(() =>
+  import('./components/dashboard/DashboardPage').then((module) => ({
+    default: module.DashboardPage,
+  }))
+);
+const PosPage = lazy(() =>
+  import('./components/pos/PosPage').then((module) => ({ default: module.PosPage }))
+);
+const WorkshopPage = lazy(() =>
+  import('./components/workshop/WorkshopPage').then((module) => ({
+    default: module.WorkshopPage,
+  }))
+);
+const OrdersPage = lazy(() =>
+  import('./components/orders/OrdersPage').then((module) => ({
+    default: module.OrdersPage,
+  }))
+);
+const ClientsPage = lazy(() =>
+  import('./components/clients/ClientsPage').then((module) => ({
+    default: module.ClientsPage,
+  }))
+);
+const EmployeesPage = lazy(() =>
+  import('./components/employees/EmployeesPage').then((module) => ({
+    default: module.EmployeesPage,
+  }))
+);
+const InventoryPage = lazy(() =>
+  import('./components/inventory/InventoryPage').then((module) => ({
+    default: module.InventoryPage,
+  }))
+);
+const ExpensesPage = lazy(() =>
+  import('./components/expenses/ExpensesPage').then((module) => ({
+    default: module.ExpensesPage,
+  }))
+);
+const ReportsPage = lazy(() =>
+  import('./components/reports/ReportsPage').then((module) => ({
+    default: module.ReportsPage,
+  }))
+);
+const SettingsPage = lazy(() =>
+  import('./components/settings/SettingsPage').then((module) => ({
+    default: module.SettingsPage,
+  }))
+);
 import { TicketPreviewModal } from './components/modals/TicketPreviewModal';
 import { DailyClosingModal } from './components/modals/DailyClosingModal';
 import { NewCustomerModal } from './components/pos/NewCustomerModal';
@@ -29,6 +92,15 @@ import { KeyboardShortcutsModal } from './components/modals/KeyboardShortcutsMod
 import { ToastNotification } from './components/common/ToastNotification';
 import { MainLayoutHeader } from './components/layout/MainLayoutHeader';
 import { PWA_UPDATE_EVENT } from './lib/pwa';
+
+const ScreenLoadingFallback: React.FC = () => (
+  <div
+    role="status"
+    className="flex flex-1 items-center justify-center px-6 py-16 text-[13.5px] font-semibold text-zinc-500 dark:text-zinc-400"
+  >
+    Chargement de l’écran…
+  </div>
+);
 
 const MainLayout: React.FC = () => {
   const { activeScreen, isSidebarCollapsed, isMobileMenuOpen, setMobileMenuOpen, showToast } = useApp();
@@ -97,16 +169,18 @@ const MainLayout: React.FC = () => {
         <main className="flex-1 w-full min-w-0 flex flex-col transition-all duration-300 ease-in-out">
           {/* Transition d'écran : fondu + légère montée à chaque changement de page */}
           <div key={activeScreen} className="screen-enter flex-1 flex flex-col min-h-0">
-          {activeScreen === 'dashboard' && <DashboardPage />}
-          {activeScreen === 'pos' && <PosPage />}
-          {activeScreen === 'workshop' && <WorkshopPage />}
-          {activeScreen === 'orders' && <OrdersPage />}
-          {activeScreen === 'clients' && <ClientsPage />}
-          {activeScreen === 'employees' && <EmployeesPage />}
-          {activeScreen === 'inventory' && <InventoryPage />}
-          {activeScreen === 'expenses' && <ExpensesPage />}
-          {activeScreen === 'reports' && <ReportsPage />}
-          {activeScreen === 'settings' && <SettingsPage />}
+            <Suspense fallback={<ScreenLoadingFallback />}>
+              {activeScreen === 'dashboard' && <DashboardPage />}
+              {activeScreen === 'pos' && <PosPage />}
+              {activeScreen === 'workshop' && <WorkshopPage />}
+              {activeScreen === 'orders' && <OrdersPage />}
+              {activeScreen === 'clients' && <ClientsPage />}
+              {activeScreen === 'employees' && <EmployeesPage />}
+              {activeScreen === 'inventory' && <InventoryPage />}
+              {activeScreen === 'expenses' && <ExpensesPage />}
+              {activeScreen === 'reports' && <ReportsPage />}
+              {activeScreen === 'settings' && <SettingsPage />}
+            </Suspense>
           </div>
         </main>
       </div>
@@ -152,16 +226,35 @@ export default function App() {
   // données de démonstration du poste du pressing.
   if (isCustomerPath(pathname)) {
     return (
-      <CustomerPortalApp
-        route={parseCustomerRoute(pathname)}
-        onNavigate={navigate}
-      />
+      <Suspense fallback={<ScreenLoadingFallback />}>
+        <CustomerPortalApp
+          route={parseCustomerRoute(pathname)}
+          onNavigate={navigate}
+        />
+      </Suspense>
+    );
+  }
+
+  // Pages publiques du personnel : également hors AppProvider, pour ne
+  // charger ni l'état local ni les données de démonstration avant connexion.
+  const staffRoute = parseStaffRoute(pathname);
+  if (staffRoute) {
+    return (
+      <Suspense fallback={<ScreenLoadingFallback />}>
+        {staffRoute === 'login' && <StaffLoginPage onNavigate={navigate} />}
+        {staffRoute === 'register' && <StaffRegisterPage onNavigate={navigate} />}
+        {staffRoute === 'onboarding' && (
+          <StaffOnboardingPage onNavigate={navigate} />
+        )}
+      </Suspense>
     );
   }
 
   return (
-    <AppProvider>
-      <MainLayout />
-    </AppProvider>
+    <StaffAccessGate>
+      <AppProvider>
+        <MainLayout />
+      </AppProvider>
+    </StaffAccessGate>
   );
 }

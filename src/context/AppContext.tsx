@@ -40,9 +40,12 @@ import { ShopSettings } from '../types';
 import {
   TICKET_COUNTER_STORAGE_KEY as TICKET_COUNTER_KEY,
   createLocalId as genId,
+  hasPersistedValue,
   loadPersistedState,
+  loadPersistedString,
   parseTicketNumber,
   persistState,
+  persistString,
 } from '../lib/localPersistence';
 
 export type ScreenId =
@@ -252,60 +255,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedServiceCategory, setSelectedServiceCategory] = useState<ServiceCategory | null>('pressing');
   const [orderStep, setOrderStep] = useState<1 | 2 | 3>(1);
 
-  // LocalStorage-backed state for offline persistence & zero data loss on refresh
-  const [orders, setOrders] = useState<LaundryOrder[]>(() => {
-    try {
-      const saved = localStorage.getItem('pressingpro_orders');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('LocalStorage load error', e);
-    }
-    return INITIAL_ORDERS;
-  });
+  // États encore persistés localement pendant la migration progressive.
+  // Tous les accès passent par lib/localPersistence afin de centraliser la
+  // gestion des JSON illisibles et des écritures refusées par le navigateur.
+  const [orders, setOrders] = useState<LaundryOrder[]>(() =>
+    loadPersistedState('pressingpro_orders', INITIAL_ORDERS)
+  );
 
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    try {
-      const saved = localStorage.getItem('pressingpro_customers');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('LocalStorage load error', e);
-    }
-    return INITIAL_CUSTOMERS;
-  });
+  const [customers, setCustomers] = useState<Customer[]>(() =>
+    loadPersistedState('pressingpro_customers', INITIAL_CUSTOMERS)
+  );
 
-  const [cashRegister, setCashRegister] = useState<CashRegisterData>(() => {
-    try {
-      const saved = localStorage.getItem('pressingpro_cash_register');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('LocalStorage load error', e);
-    }
-    return INITIAL_CASH_REGISTER;
-  });
+  const [cashRegister, setCashRegister] = useState<CashRegisterData>(() =>
+    loadPersistedState('pressingpro_cash_register', INITIAL_CASH_REGISTER)
+  );
 
-  // Save to localStorage whenever state updates
   useEffect(() => {
-    try {
-      localStorage.setItem('pressingpro_orders', JSON.stringify(orders));
-    } catch (e) {
-      console.warn('LocalStorage save error', e);
-    }
+    persistState('pressingpro_orders', orders);
   }, [orders]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('pressingpro_customers', JSON.stringify(customers));
-    } catch (e) {
-      console.warn('LocalStorage save error', e);
-    }
+    persistState('pressingpro_customers', customers);
   }, [customers]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('pressingpro_cash_register', JSON.stringify(cashRegister));
-    } catch (e) {
-      console.warn('LocalStorage save error', e);
-    }
+    persistState('pressingpro_cash_register', cashRegister);
   }, [cashRegister]);
 
   // Compteur séquentiel de tickets, persisté dans localStorage.
@@ -316,21 +290,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [nextTicketNumber, setNextTicketNumber] = useState<number>(() => {
     const fallback =
       orders.reduce((max, o) => Math.max(max, parseTicketNumber(o.ticketNumber)), 0) + 1;
-    try {
-      const saved = parseInt(localStorage.getItem(TICKET_COUNTER_KEY) || '', 10);
-      if (!isNaN(saved)) return Math.max(saved, fallback);
-    } catch (e) {
-      console.warn('LocalStorage load error', e);
-    }
-    return fallback;
+    const saved = parseInt(loadPersistedString(TICKET_COUNTER_KEY) || '', 10);
+    return Number.isNaN(saved) ? fallback : Math.max(saved, fallback);
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(TICKET_COUNTER_KEY, String(nextTicketNumber));
-    } catch (e) {
-      console.warn('LocalStorage save error', e);
-    }
+    persistString(TICKET_COUNTER_KEY, String(nextTicketNumber));
   }, [nextTicketNumber]);
 
   // --- États des modules Personnel / Stocks / Dépenses ---
@@ -361,14 +326,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // d'aucun total de commande déjà enregistré, contrairement aux exemples
   // liés à un ticket de démonstration.
   const [logisticsTasks, setLogisticsTasks] = useState<LogisticsTask[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOGISTICS_TASKS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved) as LogisticsTask[];
-      if (localStorage.getItem('pressingpro_orders')) {
-        return INITIAL_LOGISTICS_TASKS.filter((task) => task.kind === 'pickup' && !task.orderId);
-      }
-    } catch (e) {
-      console.warn('LocalStorage load error', e);
+    const saved = loadPersistedState<LogisticsTask[] | null>(
+      LOGISTICS_TASKS_STORAGE_KEY,
+      null
+    );
+    if (saved) return saved;
+    if (hasPersistedValue('pressingpro_orders')) {
+      return INITIAL_LOGISTICS_TASKS.filter((task) => task.kind === 'pickup' && !task.orderId);
     }
     return INITIAL_LOGISTICS_TASKS;
   });
@@ -627,7 +591,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [
         ...prev,
         {
-          id: `cl-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          id: genId('cl'),
           clothingItemId: item.id,
           name: item.name,
           quantity: actualQty,

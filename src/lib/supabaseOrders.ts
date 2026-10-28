@@ -1,12 +1,20 @@
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Tables } from './database.types';
+import type { Database, Json, Tables } from './database.types';
 import { supabase } from './supabase';
+import { createLocalId } from './localPersistence';
 import {
   isLogisticsTaskStatus,
   isOrderStatus,
   type OrderEventVisibility,
 } from './orderTracking';
-import type { LogisticsTaskKind, LogisticsTaskStatus, OrderStatus } from '../types';
+import type {
+  LogisticsTaskKind,
+  LogisticsTaskStatus,
+  LogisticsTimeSlot,
+  OrderStatus,
+  PickupOption,
+  ServiceCategory,
+} from '../types';
 
 type Client = SupabaseClient<Database>;
 
@@ -42,6 +50,42 @@ export interface TransitionRemoteOrderInput {
   expectedStatus?: OrderStatus | null;
   note?: string | null;
   visibility?: OrderEventVisibility;
+}
+
+export interface CreateRemoteOrderLineInput {
+  catalogItemId?: string;
+  legacyKey?: string;
+  quantity: number;
+  color?: string | null;
+  serviceType?: string | null;
+}
+
+export interface CreateRemoteOrderInput {
+  shopId: string;
+  customerId: string;
+  lines: CreateRemoteOrderLineInput[];
+  promisedAt: string;
+  /**
+   * Clé stable du brouillon/intention de commande. L'écran doit la conserver
+   * pendant une reprise réseau ; la RPC renverra alors la même commande.
+   */
+  idempotencyKey: string;
+  serviceCategory?: ServiceCategory;
+  pickupOption?: PickupOption;
+  discountPercent?: number | null;
+  collectionFeeXof?: number | null;
+  deliveryFeeXof?: number | null;
+  notes?: string | null;
+  origin?: 'counter' | 'home_pickup';
+  fulfillmentMethod?: 'counter_pickup' | 'home_delivery';
+  collectionAddress?: string | null;
+  collectionAddressDetails?: string | null;
+  collectionDate?: string | null;
+  collectionTimeSlot?: LogisticsTimeSlot | null;
+  deliveryAddress?: string | null;
+  deliveryAddressDetails?: string | null;
+  deliveryDate?: string | null;
+  deliveryTimeSlot?: LogisticsTimeSlot | null;
 }
 
 const requireSupabaseClient = (client?: Client | null): Client => {
@@ -158,6 +202,64 @@ export async function listRemoteOrderEvents(
   return data ?? [];
 }
 
+/**
+ * Crée une commande via la RPC serveur. Le navigateur envoie uniquement les
+ * références catalogue et quantités : tarifs, remise, frais, total et ticket
+ * sont recalculés/attribués par PostgreSQL dans une seule transaction.
+ */
+export async function createRemoteOrder(
+  input: CreateRemoteOrderInput,
+  client?: Client | null
+): Promise<RemoteOrder> {
+  const resolved = requireSupabaseClient(client);
+  const idempotencyKey = input.idempotencyKey.trim();
+  if (idempotencyKey.length < 8 || idempotencyKey.length > 120) {
+    throw new Error('La clé d’idempotence doit contenir entre 8 et 120 caractères.');
+  }
+  if (input.lines.length === 0) {
+    throw new Error('La commande doit contenir au moins une ligne.');
+  }
+
+  const lines = input.lines.map((line) => ({
+    catalogItemId: line.catalogItemId ?? null,
+    legacyKey: line.legacyKey ?? null,
+    quantity: line.quantity,
+    color: line.color?.trim() || null,
+    serviceType: line.serviceType?.trim() || null,
+  })) as unknown as Json;
+
+  const { data, error } = await resolved.rpc('create_order', {
+    p_shop_id: input.shopId,
+    p_customer_id: input.customerId,
+    p_lines: lines,
+    p_promised_at: input.promisedAt,
+    p_idempotency_key: idempotencyKey,
+    p_service_category: input.serviceCategory ?? 'pressing',
+    p_pickup_option: input.pickupOption ?? 'standard',
+    p_discount_percent: input.discountPercent ?? null,
+    p_collection_fee_xof: input.collectionFeeXof ?? null,
+    p_delivery_fee_xof: input.deliveryFeeXof ?? null,
+    p_notes: input.notes?.trim() || null,
+    p_origin: input.origin ?? 'counter',
+    p_fulfillment_method: input.fulfillmentMethod ?? 'counter_pickup',
+    p_collection_address: input.collectionAddress?.trim() || null,
+    p_collection_address_details: input.collectionAddressDetails?.trim() || null,
+    p_collection_date: input.collectionDate ?? null,
+    p_collection_time_slot: input.collectionTimeSlot ?? null,
+    p_delivery_address: input.deliveryAddress?.trim() || null,
+    p_delivery_address_details: input.deliveryAddressDetails?.trim() || null,
+    p_delivery_date: input.deliveryDate ?? null,
+    p_delivery_time_slot: input.deliveryTimeSlot ?? null,
+  });
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('La RPC de création n’a renvoyé aucune commande.');
+
+  const normalized = normalizeRemoteOrder(data);
+  if (!normalized) throw new Error('La commande renvoyée par Supabase a un statut inconnu.');
+  return normalized;
+}
+
 export async function transitionRemoteOrderStatus(
   input: TransitionRemoteOrderInput,
   client?: Client | null
@@ -206,7 +308,7 @@ export function subscribeToRemoteOrderTracking(
 ): () => void {
   const resolved = requireSupabaseClient(client);
   const filter = options.shopId ? `shop_id=eq.${options.shopId}` : undefined;
-  const channelSuffix = `${options.shopId ?? 'all'}-${Math.random().toString(36).slice(2, 10)}`;
+  const channelSuffix = `${options.shopId ?? 'all'}-${createLocalId('channel')}`;
 
   options.onStatus?.('connecting');
 

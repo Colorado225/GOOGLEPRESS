@@ -3,6 +3,7 @@ import {
   calculateLineSubtotal,
   calculateOrderTotals,
   calculateSubtotal,
+  normalizeDiscountPercent,
 } from '../../src/lib/pricing';
 
 describe('pricing', () => {
@@ -55,5 +56,35 @@ describe('pricing', () => {
     expect(totals.collectionFee).toBe(0);
     expect(totals.deliveryFee).toBe(0);
     expect(totals.total).toBe(2000);
+  });
+
+  it('borne la remise fidélité entre 0 et 100 % et ne produit jamais un total négatif', () => {
+    expect(normalizeDiscountPercent(-10)).toBe(0);
+    expect(normalizeDiscountPercent(150)).toBe(100);
+    expect(normalizeDiscountPercent(Number.NaN)).toBe(0);
+
+    const totals = calculateOrderTotals([{ subtotal: 2000 }], {
+      pickupOption: 'standard',
+      loyaltyDiscountPercent: 150,
+      depositAmount: Number.POSITIVE_INFINITY,
+    });
+
+    expect(totals.discountPercent).toBe(100);
+    expect(totals.discountAmount).toBe(2000);
+    expect(totals.total).toBe(0);
+    expect(totals.deposit).toBe(0);
+    expect(totals.remaining).toBe(0);
+  });
+
+  it('neutralise les lignes négatives ou non finies au lieu de propager un montant invalide', () => {
+    expect(calculateLineSubtotal(-500, 2)).toBe(0);
+    expect(calculateLineSubtotal(500, Number.NaN)).toBe(0);
+    expect(
+      calculateSubtotal([
+        { subtotal: 1000.6 },
+        { subtotal: -200 },
+        { subtotal: Number.POSITIVE_INFINITY },
+      ])
+    ).toBe(1001);
   });
 });

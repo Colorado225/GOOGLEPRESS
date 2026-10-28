@@ -14,14 +14,37 @@ import type { OrderLine, PickupOption } from '../types';
 /** Majoration appliquée aux commandes express (+50 % du sous-total). */
 export const EXPRESS_SURCHARGE_RATE = 0.5;
 
-/** Sous-total d'une ligne : prix unitaire × quantité (ou poids en kg). */
-export function calculateLineSubtotal(unitPrice: number, quantity: number): number {
-  return Math.round(unitPrice * quantity);
+const sanitizeFiniteNumber = (value: number | undefined): number =>
+  Number.isFinite(value) ? (value as number) : 0;
+
+const sanitizeNonNegativeAmount = (value: number | undefined): number =>
+  Math.max(0, Math.round(sanitizeFiniteNumber(value)));
+
+/**
+ * Borne une remise fidélité exprimée en pourcentage.
+ *
+ * Le frontend doit rester affichable même si une ancienne donnée locale est
+ * corrompue : les valeurs non finies deviennent 0 et les valeurs hors
+ * intervalle sont ramenées à [0, 100]. La RPC serveur, elle, rejette une
+ * remise explicitement hors intervalle au lieu de la corriger silencieusement.
+ */
+export function normalizeDiscountPercent(value: number | undefined): number {
+  return Math.min(100, Math.max(0, sanitizeFiniteNumber(value)));
 }
 
-/** Somme des sous-totaux de lignes. */
+/** Sous-total d'une ligne : prix unitaire × quantité (ou poids en kg). */
+export function calculateLineSubtotal(unitPrice: number, quantity: number): number {
+  const safeUnitPrice = Math.max(0, sanitizeFiniteNumber(unitPrice));
+  const safeQuantity = Math.max(0, sanitizeFiniteNumber(quantity));
+  return Math.round(safeUnitPrice * safeQuantity);
+}
+
+/** Somme des sous-totaux de lignes, en FCFA entiers et jamais négative. */
 export function calculateSubtotal(lines: Pick<OrderLine, 'subtotal'>[]): number {
-  return lines.reduce((acc, line) => acc + line.subtotal, 0);
+  return lines.reduce(
+    (acc, line) => acc + sanitizeNonNegativeAmount(line.subtotal),
+    0
+  );
 }
 
 export interface OrderTotalsInput {
@@ -47,8 +70,7 @@ export interface OrderTotals {
   remaining: number;
 }
 
-const sanitizeFee = (fee: number | undefined): number =>
-  Number.isFinite(fee) ? Math.max(0, Math.round(fee as number)) : 0;
+const sanitizeFee = sanitizeNonNegativeAmount;
 
 export function calculateOrderTotals(
   lines: Pick<OrderLine, 'subtotal'>[],
@@ -65,11 +87,17 @@ export function calculateOrderTotals(
     pickupOption === 'express' ? Math.round(subtotal * EXPRESS_SURCHARGE_RATE) : 0;
   const safeCollectionFee = sanitizeFee(collectionFee);
   const safeDeliveryFee = sanitizeFee(deliveryFee);
-  const discountPercent = loyaltyDiscountPercent || 0;
+  const discountPercent = normalizeDiscountPercent(loyaltyDiscountPercent);
   // La remise fidélité ne porte que sur les prestations, jamais sur le transport.
-  const discountAmount = Math.round(subtotal * (discountPercent / 100));
-  const total = subtotal + expressFee + safeCollectionFee + safeDeliveryFee - discountAmount;
-  const deposit = Math.min(Math.max(0, depositAmount), total);
+  const discountAmount = Math.min(
+    subtotal,
+    Math.round(subtotal * (discountPercent / 100))
+  );
+  const total = Math.max(
+    0,
+    subtotal + expressFee + safeCollectionFee + safeDeliveryFee - discountAmount
+  );
+  const deposit = Math.min(sanitizeNonNegativeAmount(depositAmount), total);
   const remaining = total - deposit;
   return {
     subtotal,

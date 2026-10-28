@@ -7,6 +7,7 @@ import {
   OrderLine,
 } from '../../types';
 import { Palette } from 'lucide-react';
+import { loadPersistedState, persistState } from '../../lib/localPersistence';
 
 /* ————————————————————————————————————————————————————————————————
    Couleurs personnalisées récentes (saisies libres au comptoir),
@@ -16,25 +17,17 @@ const CUSTOM_COLORS_KEY = 'pressingpro_custom_colors';
 const MAX_CUSTOM_COLORS = 10;
 
 function loadCustomColors(): string[] {
-  try {
-    const raw = window.localStorage.getItem(CUSTOM_COLORS_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
-  } catch {
-    return [];
-  }
+  const parsed = loadPersistedState<unknown>(CUSTOM_COLORS_KEY, []);
+  return Array.isArray(parsed)
+    ? parsed.filter((v): v is string => typeof v === 'string')
+    : [];
 }
 
 function rememberCustomColor(name: string): void {
-  try {
-    const rest = loadCustomColors().filter((c) => c.toLowerCase() !== name.toLowerCase());
-    window.localStorage.setItem(
-      CUSTOM_COLORS_KEY,
-      JSON.stringify([name, ...rest].slice(0, MAX_CUSTOM_COLORS))
-    );
-  } catch {
-    // Stockage indisponible (navigation privée…) : la saisie libre reste fonctionnelle.
-  }
+  const rest = loadCustomColors().filter((c) => c.toLowerCase() !== name.toLowerCase());
+  // Stockage indisponible (navigation privée…) : persistState retourne false
+  // et la saisie libre reste fonctionnelle.
+  persistState(CUSTOM_COLORS_KEY, [name, ...rest].slice(0, MAX_CUSTOM_COLORS));
 }
 
 /** Suggestions proposées dans les champs "écrire la couleur" : palette + saisies récentes. */

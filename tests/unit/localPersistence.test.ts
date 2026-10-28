@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   createLocalId,
+  hasPersistedValue,
   loadPersistedState,
+  loadPersistedString,
   parseTicketNumber,
   persistState,
+  persistString,
   type JsonStorage,
 } from '../../src/lib/localPersistence';
 
@@ -57,7 +60,24 @@ describe('localPersistence', () => {
     warn.mockRestore();
   });
 
+  it('lit et écrit les valeurs textuelles simples par la même frontière', () => {
+    const storage = new MemoryStorage();
+
+    expect(hasPersistedValue('compteur', storage)).toBe(false);
+    expect(persistString('compteur', '42', storage)).toBe(true);
+    expect(hasPersistedValue('compteur', storage)).toBe(true);
+    expect(loadPersistedString('compteur', storage)).toBe('42');
+  });
+
   it('génère un identifiant local déterministe pour les tests', () => {
     expect(createLocalId('ord', 1761667200000, 0.123456789)).toMatch(/^ord-1761667200000-[a-z0-9]+$/);
+  });
+
+  it('génère des identifiants distincts sans injection de hasard faible', () => {
+    const first = createLocalId('ord', 1761667200000);
+    const second = createLocalId('ord', 1761667200000);
+
+    expect(first).toMatch(/^ord-1761667200000-[a-z0-9]+$/);
+    expect(second).not.toBe(first);
   });
 });

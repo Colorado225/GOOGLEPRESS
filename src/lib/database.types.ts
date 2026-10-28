@@ -1421,7 +1421,7 @@ export type Database = {
           "total_xof": number;
           "deposit_paid_xof": number;
           "remaining_balance_xof": number | null;
-          "payment_method": string;
+          "payment_method": string | null;
           "status": string;
           "received_at": string;
           "promised_at": string;
@@ -1454,6 +1454,7 @@ export type Database = {
           "created_by": string | null;
           "created_at": string;
           "updated_at": string;
+          "idempotency_key": string | null;
         };
         Insert: {
           "id"?: string;
@@ -1476,7 +1477,7 @@ export type Database = {
           "total_xof": number;
           "deposit_paid_xof"?: number;
           "remaining_balance_xof"?: number | null;
-          "payment_method": string;
+          "payment_method"?: string | null;
           "status"?: string;
           "received_at"?: string;
           "promised_at": string;
@@ -1509,6 +1510,7 @@ export type Database = {
           "created_by"?: string | null;
           "created_at"?: string;
           "updated_at"?: string;
+          "idempotency_key"?: string | null;
         };
         Update: {
           "id"?: string;
@@ -1531,7 +1533,7 @@ export type Database = {
           "total_xof"?: number;
           "deposit_paid_xof"?: number;
           "remaining_balance_xof"?: number | null;
-          "payment_method"?: string;
+          "payment_method"?: string | null;
           "status"?: string;
           "received_at"?: string;
           "promised_at"?: string;
@@ -1564,6 +1566,7 @@ export type Database = {
           "created_by"?: string | null;
           "created_at"?: string;
           "updated_at"?: string;
+          "idempotency_key"?: string | null;
         };
         Relationships: [
           {
@@ -1634,6 +1637,91 @@ export type Database = {
           {
             foreignKeyName: "organizations_created_by_fkey";
             columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
+      "payments": {
+        Row: {
+          "id": string;
+          "organization_id": string;
+          "shop_id": string;
+          "order_id": string;
+          "kind": string;
+          "status": string;
+          "amount_xof": number;
+          "currency": string;
+          "method": string;
+          "provider": string;
+          "external_reference": string | null;
+          "idempotency_key": string;
+          "reverses_payment_id": string | null;
+          "recorded_by": string | null;
+          "confirmed_at": string | null;
+          "metadata": Json;
+          "created_at": string;
+          "updated_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "organization_id": string;
+          "shop_id": string;
+          "order_id": string;
+          "kind": string;
+          "status"?: string;
+          "amount_xof": number;
+          "currency"?: string;
+          "method": string;
+          "provider": string;
+          "external_reference"?: string | null;
+          "idempotency_key": string;
+          "reverses_payment_id"?: string | null;
+          "recorded_by"?: string | null;
+          "confirmed_at"?: string | null;
+          "metadata"?: Json;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "organization_id"?: string;
+          "shop_id"?: string;
+          "order_id"?: string;
+          "kind"?: string;
+          "status"?: string;
+          "amount_xof"?: number;
+          "currency"?: string;
+          "method"?: string;
+          "provider"?: string;
+          "external_reference"?: string | null;
+          "idempotency_key"?: string;
+          "reverses_payment_id"?: string | null;
+          "recorded_by"?: string | null;
+          "confirmed_at"?: string | null;
+          "metadata"?: Json;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payments_organization_id_shop_id_order_id_fkey";
+            columns: ["organization_id","shop_id","order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["organization_id","shop_id","id"];
+          },
+          {
+            foreignKeyName: "payments_organization_id_shop_id_order_id_reverses_payment_fkey";
+            columns: ["organization_id","shop_id","order_id","reverses_payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["organization_id","shop_id","order_id","id"];
+          },
+          {
+            foreignKeyName: "payments_recorded_by_fkey";
+            columns: ["recorded_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["user_id"];
@@ -2421,6 +2509,76 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      "create_my_organization": {
+        Args: {
+          "p_organization_name": string;
+          "p_shop_name": string;
+          "p_city"?: string | null;
+          "p_address"?: string | null;
+          "p_phone_display"?: string | null;
+          "p_shop_email"?: string | null;
+          "p_tagline"?: string | null;
+          "p_pickup_fee_xof"?: number | null;
+          "p_delivery_fee_xof"?: number | null;
+          "p_seed_catalog"?: boolean | null;
+        };
+        Returns: Json;
+      };
+      "create_order": {
+        Args: {
+          "p_shop_id": string;
+          "p_customer_id": string;
+          "p_lines": Json;
+          "p_promised_at": string;
+          "p_idempotency_key": string;
+          "p_service_category"?: string | null;
+          "p_pickup_option"?: string | null;
+          "p_discount_percent"?: number | null;
+          "p_collection_fee_xof"?: number | null;
+          "p_delivery_fee_xof"?: number | null;
+          "p_notes"?: string | null;
+          "p_origin"?: string | null;
+          "p_fulfillment_method"?: string | null;
+          "p_collection_address"?: string | null;
+          "p_collection_address_details"?: string | null;
+          "p_collection_date"?: string | null;
+          "p_collection_time_slot"?: string | null;
+          "p_delivery_address"?: string | null;
+          "p_delivery_address_details"?: string | null;
+          "p_delivery_date"?: string | null;
+          "p_delivery_time_slot"?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["orders"]["Row"];
+      };
+      "get_payment_totals": {
+        Args: {
+          "p_shop_id": string;
+          "p_business_date": string;
+        };
+        Returns: Json;
+      };
+      "record_order_payment": {
+        Args: {
+          "p_order_id": string;
+          "p_amount_xof": number;
+          "p_method": string;
+          "p_provider": string;
+          "p_idempotency_key": string;
+          "p_external_reference"?: string | null;
+          "p_metadata"?: Json | null;
+        };
+        Returns: Database["public"]["Tables"]["payments"]["Row"];
+      };
+      "refund_order_payment": {
+        Args: {
+          "p_payment_id": string;
+          "p_amount_xof": number;
+          "p_idempotency_key": string;
+          "p_reason"?: string | null;
+          "p_external_reference"?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["payments"]["Row"];
+      };
       "transition_order_status": {
         Args: {
           "p_order_id": string;

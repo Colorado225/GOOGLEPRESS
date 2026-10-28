@@ -30,13 +30,18 @@ clôture journalière Z.
   encore le Kanban local.
 - **Commandes & Clients** — historique filtrable, fichier clients avec
   fidélité (%), statut VIP et solde dû.
+- **Accès personnel distant** — en production configurée avec Supabase, le
+  shell ERP exige une session et un membership actif (propriétaire,
+  responsable, caisse, atelier ou coursier). Il n’y a ni inscription libre du
+  personnel ni compte par défaut. La démonstration locale reste réservée au
+  développement ou au mode explicite `VITE_ALLOW_LOCAL_DEMO=true`.
 - **Espace client distant** — pages séparées `/client/connexion`,
   `/client/inscription`, `/client/nouveau-mot-de-passe` et `/client`, reliées
   à Supabase Auth. Après liaison vérifiée par le pressing, la cliente voit ses
-  commandes distantes et leur historique client. L’inscription publique reste
-  désactivée sur Pressing_Pro tant que l’ouverture n’est pas explicitement
-  autorisée ; aucun accès aux commandes n’est accordé par la seule création
-  d’un compte.
+  commandes distantes et leur historique client. L’inscription publique est
+  ouverte sur Pressing_Pro depuis le 28 octobre 2026, avec confirmation
+  e-mail exigée ; aucun accès aux commandes n’est accordé par la seule
+  création d’un compte.
 - **Personnel & présences** — registre des employés (postes, téléphone,
   salaire facultatif), activation/désactivation sans suppression, saisie
   des présences (présent, retard, absent, congé) par employé et par jour.
@@ -55,11 +60,14 @@ clôture journalière Z.
 
 ## Stack technique
 
-React 19 · TypeScript · Vite 8 · Tailwind CSS v4 · lucide-react ·
-canvas-confetti. SPA dont les écrans métier historiques restent pour
-l’instant locaux ; la fondation Supabase multi-tenant porte déjà un premier
-lot de suivi distant (lecture, Realtime et transition RPC) et les pages
-d’accès de l’espace client, sans bascule de la création des commandes au POS.
+React 19 · TypeScript strict · Vite 8 · Tailwind CSS v4 · lucide-react ·
+canvas-confetti. Les écrans ERP et le portail client sont découpés en chunks
+chargés à la demande. Les écrans métier historiques restent pour l’instant
+locaux ; la fondation Supabase multi-tenant porte le suivi distant et
+l’espace client. La création de commande serveur, le journal de paiements
+et l’onboarding propriétaire sont appliqués à Pressing_Pro depuis le
+28 octobre 2026 (testés sous PGlite et par recette hébergée annulée), mais
+le POS n’écrit pas encore dans Supabase à ce stade.
 
 ## Démarrage
 
@@ -77,16 +85,22 @@ npm run test:phase0 # tests d’isolation Supabase Phase 0 (PGlite)
 npm run test:e2e   # smoke tests navigateur (Playwright)
 ```
 
-Aucune variable d'environnement n'est requise (voir `.env.example`).
+Le serveur de développement peut démarrer sans variable Supabase : il ouvre
+alors explicitement la démonstration locale. En revanche, un build de
+production sans `VITE_SUPABASE_URL`/clé publique affiche une erreur de
+configuration au lieu d’ouvrir l’ERP, sauf si `VITE_ALLOW_LOCAL_DEMO=true`
+est choisi délibérément pour une démonstration sans données réelles (voir
+`.env.example`).
 
 ## Qualité et CI
 
-- **Tests unitaires** : Vitest couvre les cœurs `pricing`, `dates`,
-  `logistics`, `storage`, `backup`, `localPersistence`, `orderTracking` et
-  `customerAuth` ;
-  `test:coverage` applique des seuils anti-régression sur ce périmètre précis.
-- **Backend** : `test:phase0` vérifie l’isolation multi-tenant, la RLS et la
-  RPC de transition de statut sous PGlite.
+- **Tests unitaires** : 68 tests Vitest couvrent les cœurs `pricing`, `dates`,
+  `logistics`, `storage`, `backup`, `localPersistence`, `orderTracking`,
+  `customerAuth`, `staffAccess` et `staffAuth` ; `test:coverage` applique des
+  seuils anti-régression sur ce périmètre précis.
+- **Backend** : 56 vérifications `test:phase0` couvrent l’isolation
+  multi-tenant, la RLS, les transitions, la création tarifée côté serveur,
+  le journal de paiements et l’onboarding propriétaire sous PGlite.
 - **Navigateur** : `test:e2e` lance les smoke tests Playwright des parcours
   critiques.
 - **CI GitHub Actions** : `.github/workflows/ci.yml` exécute typage,
@@ -110,8 +124,12 @@ src/
 │   ├── backup.ts            export/import local chiffré et allowlist des clés
 │   ├── orderTracking.ts     étapes, transitions et libellés du suivi synchronisé
 │   ├── customerAuth.ts      routes, validations et erreurs des pages client
+│   ├── staffAccess.ts       modes d’accès ERP et memberships actifs du personnel
+│   ├── staffAuth.ts         routes, validations et erreurs des pages personnel
+│   ├── supabaseTenant.ts    RPC d’onboarding (création organisation + agence)
 │   ├── supabaseCustomer.ts  profil et liaisons clientes vérifiées
-│   ├── supabaseOrders.ts    lecture, RPC et abonnement Realtime des commandes
+│   ├── supabaseOrders.ts    commandes distantes, RPC de création/statut et Realtime
+│   ├── supabasePayments.ts  journal distant des paiements, remboursements et totaux
 │   ├── database.types.ts    types générés depuis les migrations Supabase
 │   └── utils.ts             helper cn() (classes Tailwind)
 └── components/              écrans par domaine (dashboard, pos, workshop…)
@@ -166,7 +184,10 @@ Au premier lancement, des données de démonstration datées du jour courant
 sont chargées (dates relatives, voir `src/data/demoData.ts`). Sur un
 navigateur contenant déjà des commandes, seuls deux exemples de ramassage
 non convertis sont ajoutés au premier affichage des Tournées ; aucun total
-de commande existante n'est modifié.
+de commande existante n'est modifié. Ces replis fictifs font partie du mode
+local historique : ils doivent disparaître du parcours distant avant tout
+pilote réel, même si la garde du personnel empêche déjà un visiteur non
+authentifié de les charger dans un build de production configuré.
 
 **Sauvegarde avant migration ou changement d’appareil** : Paramètres →
 Sauvegarde permet d’exporter ces données dans un JSON chiffré AES-GCM protégé
@@ -222,12 +243,16 @@ ticket reste blanc, comme le papier.
 
 - **Exploitation encore mono-poste** : les données métier historiques vivent
   dans un seul navigateur. Le socle de suivi distant est installé et testé
-  localement, mais la synchronisation réelle comptoir ↔ atelier ne sera
-  prouvée qu’après création du premier tenant, bascule de la création des
-  commandes et recette sur deux appareils.
-- **Aucune authentification applicative** : toute personne ayant accès à ce
-  navigateur peut modifier données et paramètres. La sonde Supabase Auth ne
-  verrouille pas encore l’application.
+  localement, et les migrations commandes/paiements et onboarding sont
+  appliquées à Pressing_Pro, mais la synchronisation réelle comptoir ↔
+  atelier ne sera prouvée qu’après création du premier tenant, bascule du
+  POS et recette sur deux appareils.
+- **Authentification du personnel livrée mais non recettée en réel** : un
+  build de production configuré exige désormais session + membership actif ;
+  les migrations et les inscriptions sont activées sur Pressing_Pro, mais
+  aucun compte réel n’a encore été créé pour tester le parcours complet. En mode de
+  démonstration locale explicite, toute personne ayant accès au navigateur
+  peut toujours modifier les données locales.
 - **Aucune notification externe envoyée** : les commandes prêtes sont
   marquées localement et un message peut être copié, mais aucun fournisseur
   SMS/WhatsApp ni accusé de livraison n’est branché.
@@ -242,6 +267,13 @@ ticket reste blanc, comme le papier.
   manuellement sur les étiquettes physiques du local.
 
 Le détail, la gravité résiduelle et les critères de clôture sont suivis dans
-[`docs/RISQUES-ET-FAIBLESSES.md`](docs/RISQUES-ET-FAIBLESSES.md). Prochaine
-étape structurante : créer le premier tenant Supabase réel, migrer les
-domaines un par un et imposer les rôles côté serveur.
+[`docs/RISQUES-ET-FAIBLESSES.md`](docs/RISQUES-ET-FAIBLESSES.md), avec les
+preuves de l’intervention dans
+[`docs/AUDIT-FINAL.md`](docs/AUDIT-FINAL.md) et
+[`docs/VALIDATION-TECHNIQUE.md`](docs/VALIDATION-TECHNIQUE.md) ; le chantier
+d’accès du personnel est détaillé dans
+[`docs/ACCES-PERSONNEL-ONBOARDING.md`](docs/ACCES-PERSONNEL-ONBOARDING.md).
+Prochaine
+étape structurante : créer le premier tenant Supabase réel, appliquer puis
+recetter la migration commandes/paiements, et brancher le POS domaine par
+domaine.
