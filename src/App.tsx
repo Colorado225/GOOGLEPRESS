@@ -6,6 +6,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { CustomerPortalApp } from './components/customer/CustomerPortalApp';
+import { StaffAccessGate, StaffAuthPage } from './components/auth/StaffAuthPage';
 import {
   getCanonicalCustomerPath,
   isCustomerPath,
@@ -159,9 +160,21 @@ export default function App() {
     );
   }
 
+  const staffPath = pathname.replace(/\\/+$/, '') || '/';
+  if (staffPath === '/connexion' || staffPath === '/inscription') {
+    return (
+      <StaffAuthPage
+        mode={staffPath === '/inscription' ? 'register' : 'login'}
+        onNavigate={navigate}
+      />
+    );
+  }
+
   return (
-    <AppProvider>
-      <MainLayout />
-    </AppProvider>
+    <StaffAccessGate onNavigate={navigate}>
+      <AppProvider>
+        <MainLayout />
+      </AppProvider>
+    </StaffAccessGate>
   );
 }
