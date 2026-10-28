@@ -24,7 +24,10 @@ clôture journalière Z.
   numérotées type B-01 → B-12, capacités et règles de travail), onglet **Tournées** pour les
   ramassages/livraisons (programmation, coursier, départ,
   échec/reprogrammation, encaissement du solde à la livraison), remise au
-  comptoir et clôture de caisse Z.
+  comptoir et clôture de caisse Z. Un onglet séparé **Suivi distant** lit les
+  commandes déjà présentes dans Supabase, s’abonne à Realtime et fait passer
+  leurs étapes par une RPC qui journalise l’historique ; il ne remplace pas
+  encore le Kanban local.
 - **Commandes & Clients** — historique filtrable, fichier clients avec
   fidélité (%), statut VIP et solde dû.
 - **Personnel & présences** — registre des employés (postes, téléphone,
@@ -46,9 +49,10 @@ clôture journalière Z.
 ## Stack technique
 
 React 19 · TypeScript · Vite 8 · Tailwind CSS v4 · lucide-react ·
-canvas-confetti. SPA dont les écrans métier restent pour l’instant locaux ;
-une fondation Supabase multi-tenant et une sonde Auth/PostgREST existent,
-mais elles ne portent pas encore les données métier.
+canvas-confetti. SPA dont les écrans métier historiques restent pour
+l’instant locaux ; la fondation Supabase multi-tenant porte déjà un premier
+lot de suivi distant (lecture, Realtime et transition RPC), sans bascule de
+la création des commandes au POS.
 
 ## Démarrage
 
@@ -71,10 +75,10 @@ Aucune variable d'environnement n'est requise (voir `.env.example`).
 ## Qualité et CI
 
 - **Tests unitaires** : Vitest couvre les cœurs `pricing`, `dates`,
-  `logistics`, `storage`, `backup` et `localPersistence` ; `test:coverage`
-  applique des seuils anti-régression sur ce périmètre précis.
-- **Backend** : `test:phase0` vérifie l’isolation multi-tenant et la RLS sous
-  PGlite.
+  `logistics`, `storage`, `backup`, `localPersistence` et `orderTracking` ;
+  `test:coverage` applique des seuils anti-régression sur ce périmètre précis.
+- **Backend** : `test:phase0` vérifie l’isolation multi-tenant, la RLS et la
+  RPC de transition de statut sous PGlite.
 - **Navigateur** : `test:e2e` lance les smoke tests Playwright des parcours
   critiques.
 - **CI GitHub Actions** : `.github/workflows/ci.yml` exécute typage,
@@ -96,6 +100,9 @@ src/
 │   ├── pricing.ts           calculs tarifaires uniques (totaux, express, frais, remises)
 │   ├── localPersistence.ts  lecture/écriture JSON locale et identifiants locaux
 │   ├── backup.ts            export/import local chiffré et allowlist des clés
+│   ├── orderTracking.ts     étapes, transitions et libellés du suivi synchronisé
+│   ├── supabaseOrders.ts    lecture, RPC et abonnement Realtime des commandes
+│   ├── database.types.ts    types générés depuis les migrations Supabase
 │   └── utils.ts             helper cn() (classes Tailwind)
 └── components/              écrans par domaine (dashboard, pos, workshop…)
 ```
@@ -136,12 +143,13 @@ src/
 
 ## Données
 
-Tant que la bascule métier Supabase n’est pas livrée, les écrans stockent
-leurs données dans le **localStorage** du navigateur, sous des clés
+Tant que la bascule métier complète n’est pas livrée, les écrans historiques
+stockent leurs données dans le **localStorage** du navigateur, sous des clés
 `pressingpro_*` : commandes, clients, caisse, tournées, personnel, stocks,
 dépenses, emplacements, paramètres, compteur de tickets et préférences de
 l’appareil. La liste exacte reprise par la sauvegarde fait foi dans
-`src/lib/backup.ts` (`BACKUP_KEYS`).
+`src/lib/backup.ts` (`BACKUP_KEYS`). L’exception est Atelier → Suivi distant,
+qui ne lit et ne modifie que des commandes déjà présentes dans Supabase.
 Au premier lancement, des données de démonstration datées du jour courant
 sont chargées (dates relatives, voir `src/data/demoData.ts`). Sur un
 navigateur contenant déjà des commandes, seuls deux exemples de ramassage
@@ -200,9 +208,11 @@ ticket reste blanc, comme le papier.
 
 ## Limites actuelles
 
-- **Mono-poste** : les données métier vivent dans un seul navigateur — pas de
-  synchronisation entre le comptoir et l'atelier. L’export chiffré manuel
-  atténue le risque de perte, sans créer de sauvegarde serveur.
+- **Exploitation encore mono-poste** : les données métier historiques vivent
+  dans un seul navigateur. Le socle de suivi distant est installé et testé
+  localement, mais la synchronisation réelle comptoir ↔ atelier ne sera
+  prouvée qu’après création du premier tenant, bascule de la création des
+  commandes et recette sur deux appareils.
 - **Aucune authentification applicative** : toute personne ayant accès à ce
   navigateur peut modifier données et paramètres. La sonde Supabase Auth ne
   verrouille pas encore l’application.

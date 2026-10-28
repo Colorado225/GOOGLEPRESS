@@ -8,10 +8,12 @@ import {
   Loader2,
   LogIn,
   LogOut,
+  RadioTower,
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
 import { Badge } from '../common/DataTable';
+import { useApp } from '../../context/AppContext';
 import { getSupabaseConfigStatus, supabase } from '../../lib/supabase';
 
 interface ProbeResult {
@@ -30,10 +32,12 @@ const secondaryButtonClassName =
 
 /**
  * Premier branchement front du backend : configuration, session Auth et sonde
- * PostgREST. Les écrans métier restent sur leurs données locales tant que la
- * bascule par domaine n’est pas livrée et testée.
+ * PostgREST. L’onglet Atelier → Suivi distant lit déjà les commandes
+ * Supabase et leurs transitions, tandis que les écrans métier historiques
+ * restent sur leurs données locales tant que leur bascule n’est pas testée.
  */
 export const SupabaseBackendSection: React.FC = () => {
+  const { requestWorkshopTab } = useApp();
   const config = getSupabaseConfigStatus();
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(Boolean(supabase));
@@ -161,10 +165,11 @@ export const SupabaseBackendSection: React.FC = () => {
       </div>
 
       <p className="leading-relaxed text-zinc-600 dark:text-zinc-400">
-        Cet onglet branche progressivement l’Auth et PostgREST. Les écrans métier
-        continuent pour l’instant d’utiliser leurs données locales : aucune
-        commande, cliente ou écriture de caisse n’est basculée tant que la couche
-        d’accès distante n’est pas testée domaine par domaine.
+        Cet onglet branche progressivement l’Auth et PostgREST. Un premier écran
+        Atelier → Suivi distant lit les commandes déjà présentes dans Supabase,
+        s’abonne à Realtime et change leurs étapes par RPC. La création au POS,
+        les clientes et la caisse restent locales tant que chaque domaine n’est
+        pas basculé et testé séparément.
       </p>
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -263,6 +268,14 @@ export const SupabaseBackendSection: React.FC = () => {
         >
           {probeBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
           Tester l’accès PostgREST
+        </button>
+        <button
+          type="button"
+          onClick={() => requestWorkshopTab('remote')}
+          className={secondaryButtonClassName}
+        >
+          <RadioTower className="h-4 w-4" aria-hidden="true" />
+          Ouvrir Atelier → Suivi distant
         </button>
       </div>
 

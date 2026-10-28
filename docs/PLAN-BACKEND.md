@@ -1,18 +1,21 @@
 # Plan backend multi-tenant, espace client et messagerie — PressingPro CI
 
-> **Statut : socle phase 0 hébergé installé et premier branchement front
-> livré le 28 octobre 2026.** Les quatre migrations versionnées dans ce dépôt
-> ont été appliquées à Pressing_Pro après purge autorisée de son héritage.
-> La base contient 37 tables vides protégées par RLS. Le client Supabase et
-> l’onglet Paramètres → Backend sont branchés progressivement, mais les
-> données métier des écrans restent locales et aucun tenant réel n’a encore
-> été créé.
+> **Statut : socle phase 0 hébergé installé, premier branchement front et
+> premier lot de suivi distant livrés le 28 octobre 2026.** Les quatre
+> migrations Phase 0, puis `order_tracking_realtime`, ont été appliquées à
+> Pressing_Pro après purge autorisée de son héritage. La base contient
+> 37 tables vides protégées par RLS. Le client Supabase, l’onglet Paramètres
+> → Backend et Atelier → Suivi distant sont branchés progressivement, mais
+> les données métier des écrans historiques restent locales et aucun tenant
+> réel n’a encore été créé.
 >
 > **Phase 0 : inventaire, Option B, purge, installation et porte de
 > branchement terminés.** Les Edge Functions héritées sont physiquement
 > supprimées et le domaine `https://laundrypressing.vercel.app` est déclaré
 > dans Auth. La chronologie complète est dans
-> [`backend/phase-0/04-branchement-progressif-et-domaine.md`](backend/phase-0/04-branchement-progressif-et-domaine.md).
+> [`backend/phase-0/04-branchement-progressif-et-domaine.md`](backend/phase-0/04-branchement-progressif-et-domaine.md)
+> et le lot de suivi dans
+> [`backend/phase-0/05-suivi-commandes-temps-reel.md`](backend/phase-0/05-suivi-commandes-temps-reel.md).
 >
 > **Environnement actuel : Pressing_Pro nettoyé**
 > (`phjstsydxvggtduohfrl`, `eu-west-1`). Son statut définitif
@@ -797,21 +800,28 @@ un test hébergé avec claims JWT en rollback, les types TypeScript et le
 premier client front sont maintenant documentés dans
 [`backend/phase-0/04-branchement-progressif-et-domaine.md`](backend/phase-0/04-branchement-progressif-et-domaine.md).
 
+Le premier lot de suivi distant — RPC atomique, historique, publication
+Realtime et onglet Atelier dédié — est documenté dans
+[`backend/phase-0/05-suivi-commandes-temps-reel.md`](backend/phase-0/05-suivi-commandes-temps-reel.md).
+Sa recette deux appareils reste à 0/9 tant qu’aucun tenant ni compte de
+validation n’existe.
+
 La prochaine étape est donc :
 
 - fournir les informations réelles du premier tenant et de son propriétaire,
   puis créer le compte, l’organisation, la première agence et le membership ;
 - exécuter `npm run test:supabase-rest` avec les comptes de validation ;
+- éprouver Atelier → Suivi distant sur deux navigateurs/appareils ;
 - auditer/purger les anciennes variables Vercel et traiter les index de clés
   étrangères signalés par les contrôles catalogue ;
-- brancher un premier domaine métier en lecture/écriture distante, sans
-  reconstruire les écrans ni abandonner le repli local tant que la recette
-  n’est pas signée.
+- brancher la création distante des clientes et commandes, sans reconstruire
+  les écrans ni abandonner le repli local tant que la recette n’est pas
+  signée.
 
 ---
 
-*Plan mis à jour le 28 octobre 2026 à partir de l’application livrée sur la
-branche `arena/e0c13218-googlepress`, incluant logistique, rangement et
-configuration propriétaire. Pressing_Pro contient désormais le socle backend
-Phase 0 vide et protégé par RLS ; le front dispose du client et de la sonde
-Auth/PostgREST, sans bascule des données métier.*
+*Plan mis à jour le 28 octobre 2026 à partir de l’application livrée,
+incluant logistique, rangement et configuration propriétaire. Pressing_Pro
+contient le socle backend Phase 0 vide, protégé par RLS, et le premier lot de
+suivi distant ; le front dispose du client, de la sonde Auth/PostgREST et du
+panneau de suivi, sans bascule des données métier historiques.*

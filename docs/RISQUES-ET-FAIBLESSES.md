@@ -9,7 +9,7 @@ clôture que lorsque son critère d’acceptation est démontré.
 
 | ID | Risque | Gravité résiduelle | État |
 |---|---|---:|---|
-| R1 | Données uniquement locales | Élevée | Ouvert, atténué par sauvegarde manuelle |
+| R1 | Données uniquement locales | Élevée | Ouvert, atténué par sauvegarde manuelle et socle de suivi distant non encore exploité |
 | R2 | Absence d’authentification et de rôles applicatifs | Élevée | Ouvert |
 | R3 | Aucun SMS/WhatsApp réellement envoyé | Moyenne | Ouvert, libellés rendus honnêtes |
 | R4 | Pas de pilote direct d’imprimante thermique | Moyenne | Ouvert, impression navigateur réelle mais limitée |
@@ -20,27 +20,34 @@ clôture que lorsque son critère d’acceptation est démontré.
 
 ## R1 — Données uniquement locales
 
-**Constat.** Les écrans métier lisent et écrivent encore dans le
-`localStorage` du poste courant. Il n’y a ni synchronisation comptoir/atelier,
-ni sauvegarde serveur, ni résolution de conflits. La fondation Supabase et la
-sonde Auth/PostgREST existent, mais elles ne portent pas encore les données
-métier.
+**Constat.** Les écrans métier historiques lisent et écrivent encore dans le
+`localStorage` du poste courant. Il n’y a donc toujours ni synchronisation
+exploitable comptoir/atelier, ni sauvegarde serveur des données créées au POS.
+Le premier lot distant est néanmoins installé : RPC atomique de transition,
+historique `order_events`, publication Realtime et onglet Atelier → Suivi
+distant. Pressing_Pro reste vide et la création des commandes n’est pas
+basculée, donc ce socle ne ferme pas encore le risque.
 
 **Atténuation actuelle.** Paramètres → Sauvegarde exporte un JSON chiffré
 AES-GCM des clés locales et permet une restauration contrôlée. Cela protège
 contre certains effacements si l’utilisateur exporte réellement le fichier et
-conserve sa phrase secrète ; cela ne crée ni copie automatique ni partage.
+conserve sa phrase secrète ; cela ne crée ni copie automatique ni partage. La
+RPC distante protège en outre ses futures transitions par verrouillage de
+ligne et statut attendu, mais uniquement pour des commandes déjà présentes
+dans Supabase.
 
-**Clôture attendue.** Premier tenant réel, migration domaine par domaine,
-tests HTTP avec jetons Auth, RLS vérifiée entre tenants, procédure de retour
-arrière et restauration serveur testée.
+**Clôture attendue.** Premier tenant réel, création distante des clientes et
+commandes, bascule des écrans domaine par domaine, tests HTTP avec jetons
+Auth, recette Realtime sur deux appareils, RLS vérifiée entre tenants,
+procédure de retour arrière et restauration serveur testée.
 
 ## R2 — Absence d’authentification applicative
 
 **Constat.** Aucun compte n’est requis pour ouvrir les écrans ou modifier les
-données. L’onglet Backend peut établir une session Supabase de test, mais cette
-session ne protège ni les Paramètres ni les données locales et aucun tenant ou
-profil de rôle n’est encore créé.
+données locales. L’onglet Backend peut établir une session Supabase et
+l’onglet Suivi distant respecte les memberships renvoyés par RLS/RPC, mais
+cette session ne protège ni les Paramètres ni les données locales ; aucun
+tenant ou profil de rôle réel n’est encore créé.
 
 **Clôture attendue.** Comptes Supabase Auth reliés à des profils d’agence :
 propriétaire, caissier/responsable, atelier et coursier. Les autorisations
@@ -110,13 +117,14 @@ pures dans `src/lib` et des tests de transition avant déplacement.
 
 **Constat corrigé.** Les tests ne ciblent plus seulement Supabase :
 
-- 32 tests unitaires Vitest sur `pricing`, `dates`, `logistics`, `storage`,
-  `backup` et `localPersistence` ;
-- couverture V8 mesurée sur ces cœurs : 75,5 % des instructions, 65,4 % des
-  branches, 76,6 % des fonctions et 78,4 % des lignes au 28/10/2026 ;
+- 39 tests unitaires Vitest sur `pricing`, `dates`, `logistics`, `storage`,
+  `backup`, `localPersistence` et `orderTracking` ;
+- couverture V8 mesurée sur ces cœurs : 76,9 % des instructions, 67,4 % des
+  branches, 79,1 % des fonctions et 79,4 % des lignes au 28/10/2026 ;
 - seuils anti-régression configurés à 70/60/70/72 % ;
-- 19 vérifications d’isolation Supabase Phase 0 sous PGlite ;
-- 5 smoke tests navigateur Playwright.
+- 28 vérifications Supabase sous PGlite, dont isolation, RLS et RPC de
+  transition ;
+- 6 smoke tests navigateur Playwright.
 
 **Angles encore faibles.** Transitions complètes d’`AppContext`, rapports,
 clôture de caisse, périodes, inventaire et parcours longs POS/atelier restent

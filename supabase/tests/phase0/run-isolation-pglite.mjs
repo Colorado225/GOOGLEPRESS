@@ -328,6 +328,222 @@ try {
     assert.equal(events.rows[0].count, 1);
   });
 
+  await check('la RPC déplace une étape et journalise acteur, note et visibilité', async () => {
+    const transitioned = await queryAs(
+      users.workshopA2,
+      `
+        select status
+        from public.transition_order_status(
+          $1::uuid,
+          'washing',
+          'ironing',
+          'Retour fictif pour contrôle',
+          'internal'
+        )
+      `,
+      ['50000000-0000-4000-8000-000000000002']
+    );
+    assert.equal(transitioned.rows[0].status, 'washing');
+
+    const latestEvent = await db.query(`
+      select from_status, to_status, visibility, actor_type, actor_user_id,
+             payload->>'note' as note, payload->>'source' as source
+      from public.order_events
+      where order_id = '50000000-0000-4000-8000-000000000002'
+      order by created_at desc, id desc
+      limit 1
+    `);
+    assert.deepEqual(latestEvent.rows[0], {
+      from_status: 'ironing',
+      to_status: 'washing',
+      visibility: 'internal',
+      actor_type: 'staff',
+      actor_user_id: users.workshopA2,
+      note: 'Retour fictif pour contrôle',
+      source: 'production_rpc',
+    });
+
+    const customerEvents = await queryAs(
+      users.otherCustomer,
+      `
+        select visibility
+        from public.order_events
+        where order_id = '50000000-0000-4000-8000-000000000002'
+        order by created_at, id
+      `
+    );
+    assert.ok(customerEvents.rows.length > 0);
+    assert.ok(customerEvents.rows.every((row) => row.visibility === 'customer'));
+  });
+
+  await expectFailure('la RPC refuse une commande d’une autre agence', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select status
+        from public.transition_order_status(
+          '50000000-0000-4000-8000-000000000002'::uuid,
+          'ironing',
+          'washing'
+        )
+      `
+    );
+  }, /introuvable ou inaccessible/i);
+
+  await expectFailure('la RPC refuse un statut déjà modifié sur un autre poste', async () => {
+    await queryAs(
+      users.workshopA2,
+      `
+        select status
+        from public.transition_order_status(
+          '50000000-0000-4000-8000-000000000002'::uuid,
+          'ironing',
+          'ironing'
+        )
+      `
+    );
+  }, /déjà changé/i);
+
+  await expectFailure('la RPC refuse les sauts d’étape', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select status
+        from public.transition_order_status(
+          '50000000-0000-4000-8000-000000000001'::uuid,
+          'ready',
+          'washing'
+        )
+      `
+    );
+  }, /sans saut/i);
+
+  await expectFailure('la RPC refuse la remise générique sans encaissement', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select status
+        from public.transition_order_status(
+          '50000000-0000-4000-8000-000000000001'::uuid,
+          'delivered',
+          'washing'
+        )
+      `
+    );
+  }, /remise finale/i);
+
+  await expectFailure('un UPDATE générique ne peut plus contourner la RPC de statut', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        update public.orders
+        set status = 'ironing'
+        where id = '50000000-0000-4000-8000-000000000001'
+      `
+    );
+  }, /permission denied/i);
+
+  await check('une livraison en route bloque la production puis la RPC reprend après retour à programmée', async () => {
+    await db.query(`
+      update public.logistics_tasks
+      set status = 'en_route'
+      where id = '70000000-0000-4000-8000-000000000001'
+    `);
+    try {
+      await assert.rejects(
+        queryAs(
+          users.cashierA1,
+          `
+            select status
+            from public.transition_order_status(
+              '50000000-0000-4000-8000-000000000001'::uuid,
+              'ironing',
+              'washing'
+            )
+          `
+        ),
+        /déjà en livraison/i
+      );
+    } finally {
+      await db.query(`
+        update public.logistics_tasks
+        set status = 'scheduled'
+        where id = '70000000-0000-4000-8000-000000000001'
+      `);
+    }
+
+    const transitioned = await queryAs(
+      users.cashierA1,
+      `
+        select status
+        from public.transition_order_status(
+          '50000000-0000-4000-8000-000000000001'::uuid,
+          'ironing',
+          'washing',
+          'Passage fictif au repassage',
+          'customer'
+        )
+      `
+    );
+    assert.equal(transitioned.rows[0].status, 'ironing');
+  });
+
+  await check('le rangement obligatoire bloque le passage générique en prêt', async () => {
+    const backToIroning = await queryAs(
+      users.workshopA2,
+      `
+        select status
+        from public.transition_order_status(
+          '50000000-0000-4000-8000-000000000002'::uuid,
+          'ironing',
+          'washing'
+        )
+      `
+    );
+    assert.equal(backToIroning.rows[0].status, 'ironing');
+
+    await db.query(`
+      update public.shop_settings
+      set storage_assignment_required = true
+      where shop_id = '20000000-0000-4000-8000-000000000002'
+    `);
+    try {
+      await assert.rejects(
+        queryAs(
+          users.workshopA2,
+          `
+            select status
+            from public.transition_order_status(
+              '50000000-0000-4000-8000-000000000002'::uuid,
+              'ready',
+              'ironing'
+            )
+          `
+        ),
+        /emplacement de rangement/i
+      );
+    } finally {
+      await db.query(`
+        update public.shop_settings
+        set storage_assignment_required = false
+        where shop_id = '20000000-0000-4000-8000-000000000002'
+      `);
+    }
+  });
+
+  await expectFailure('anon ne peut pas exécuter la RPC de transition', async () => {
+    await asRole('anon', null, () =>
+      db.query(`
+        select status
+        from public.transition_order_status(
+          '50000000-0000-4000-8000-000000000001'::uuid,
+          'washing',
+          'ironing'
+        )
+      `)
+    );
+  }, /permission denied/i);
+
   await check('la cliente peut créer une demande d’enlèvement en attente', async () => {
     const inserted = await queryAs(
       users.sharedCustomer,

@@ -44,6 +44,20 @@ test.describe('PressingPro — parcours critiques', () => {
     await expect(page.getByText('Machines : L1')).toHaveCount(0);
   });
 
+  test('le suivi distant explique l’absence de configuration et ouvre le backend', async ({ page }) => {
+    await page.getByRole('button', { name: /Production & Suivi/ }).click();
+    await page.getByRole('tab', { name: /Suivi distant/ }).click();
+
+    await expect(
+      page.getByRole('heading', { name: 'Suivi distant non configuré' })
+    ).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Ouvrir Paramètres → Backend Supabase' })
+      .click();
+
+    await expect(page.getByRole('heading', { name: 'Backend Supabase' })).toBeVisible();
+  });
+
   test('l’onglet Sauvegarde affiche l’export chiffré local', async ({ page }) => {
     await page.getByRole('button', { name: /Paramètres/ }).click();
     await page.getByRole('tab', { name: /Sauvegarde/ }).click();

@@ -58,7 +58,13 @@ export type ScreenId =
   | 'settings';
 
 /** Onglets de l’écran Production & remises. */
-export type WorkshopTab = 'production' | 'storage' | 'logistics' | 'handover' | 'cash';
+export type WorkshopTab =
+  | 'production'
+  | 'storage'
+  | 'logistics'
+  | 'handover'
+  | 'cash'
+  | 'remote';
 
 /** Sous-vues du panneau Rangement (commandes prêtes ou plan des emplacements). */
 export type StoragePanelView = 'orders' | 'locations';
