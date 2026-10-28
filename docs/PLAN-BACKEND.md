@@ -1,20 +1,26 @@
 # Plan backend multi-tenant, espace client et messagerie — PressingPro CI
 
-> **Statut : document de cadrage mis à jour le 28 octobre 2026.
-> Aucun code backend n’a été écrit dans ce dépôt, aucune table n’a été créée
-> et aucun paramètre Supabase n’a été modifié dans le cadre de ce plan.**
+> **Statut : document de cadrage et socle phase 0 local mis à jour le
+> 28 octobre 2026.** Quatre migrations SQL et une suite d’isolation sont
+> désormais versionnées dans ce dépôt. En revanche, aucune n’a été appliquée
+> à un projet Supabase externe, le front n’est pas encore branché et aucun
+> paramètre Supabase n’a été modifié.
 >
-> **Phase 0 commencée le 28 octobre 2026 : inventaire en lecture seule
-> terminé.** Pressing_Pro contient les traces d’un backend préexistant
-> désynchronisé (historique et fonctions présents, tables `public` absentes).
-> Voir [`backend/phase-0/01-inventaire-et-porte-de-decision.md`](backend/phase-0/01-inventaire-et-porte-de-decision.md).
-> Aucun schéma ne doit être appliqué avant décision sur le sort de cet
-> existant.
+> **Phase 0 : inventaire terminé, Option B retenue.** Pressing_Pro contient
+> les traces d’un backend préexistant désynchronisé (historique et fonctions
+> présents, tables `public` absentes). Le propriétaire a choisi de repartir
+> proprement et confirmé qu’aucun usage réel ne dépend de cet existant. Voir
+> [`backend/phase-0/01-inventaire-et-porte-de-decision.md`](backend/phase-0/01-inventaire-et-porte-de-decision.md)
+> puis
+> [`backend/phase-0/02-socle-option-b-et-validation-locale.md`](backend/phase-0/02-socle-option-b-et-validation-locale.md).
 >
-> **Cible retenue : projet Supabase `Pressing_Pro`, Project ID
-> `phjstsydxvggtduohfrl`, région `eu-west-1` (Irlande).**
-> L’ancien projet envisagé (`waalxvtncxcpbyozhhhp`, `us-east-1`) est abandonné
-> comme cible de ce plan ; aucune opération n’y a été effectuée.
+> **Environnement de déploiement : à désigner séparément.** Pressing_Pro
+> (`phjstsydxvggtduohfrl`, `eu-west-1`) est le projet hérité inventorié ; le
+> nouveau socle ne doit pas y être appliqué sans une décision explicite de
+> réinitialisation après archive/sauvegarde. La voie recommandée est un
+> environnement Supabase propre de validation. L’ancien projet envisagé
+> (`waalxvtncxcpbyozhhhp`, `us-east-1`) reste abandonné ; aucune opération n’y
+> a été effectuée.
 >
 > **Trajectoire recommandée : construire le socle en multi-tenant dès la
 > phase 0, lancer d’abord le pressing pilote et l’espace client, puis ouvrir
@@ -142,14 +148,15 @@ Limites à lever :
 - les données d’un futur deuxième pressing ne peuvent pas coexister de façon
   sûre dans le modèle local actuel.
 
-## 3. Projet Supabase cible : Pressing_Pro
+## 3. Projet hérité inventorié et environnements à désigner
 
-| Élément | Cible |
+| Élément | État |
 |---|---|
-| Projet | `Pressing_Pro` |
+| Projet hérité | `Pressing_Pro` |
 | Project ID | `phjstsydxvggtduohfrl` |
 | Région | `eu-west-1` — Irlande |
-| Rôle dans ce plan | cible backend envisagée ; inventaire phase 0 terminé, décision d’usage en attente |
+| Rôle dans ce plan | existant inventorié et laissé inchangé ; **Option B retenue**, nouveau socle construit dans le dépôt |
+| Environnement propre de validation | à désigner/créer séparément avant tout déploiement du nouveau socle |
 | Ancien projet `waalxvtncxcpbyozhhhp` | abandonné comme cible ; aucune opération effectuée |
 
 L’inventaire en lecture seule du 28 octobre 2026 a confirmé un projet
@@ -159,15 +166,20 @@ CinetPay et un compte Auth, mais aucune table métier `public` au moment du
 contrôle. Le rapport complet est dans
 [`backend/phase-0/01-inventaire-et-porte-de-decision.md`](backend/phase-0/01-inventaire-et-porte-de-decision.md).
 
-Avant toute écriture, il reste notamment à décider du sort de cet existant et
-à confirmer :
+Le propriétaire a depuis retenu l’**Option B** et confirmé qu’aucun site,
+application ou client réel n’utilise cet existant. Les migrations v1 ont donc
+été construites et validées localement, sans écriture externe. Avant tout
+déploiement, il reste à confirmer :
 
-- le propriétaire du projet et l’organisation Supabase ;
+- l’environnement Supabase propre de validation, son propriétaire et son
+  organisation Supabase ;
 - la formule souscrite, les quotas et les sauvegardes ;
 - la stratégie d’environnements : production, préproduction et développement
   ne doivent pas être confondus ;
 - les personnes ayant accès au projet et la procédure de récupération du
-  compte propriétaire.
+  compte propriétaire ;
+- le sort final de production : environnement propre distinct ou
+  réinitialisation explicitement autorisée d’un projet existant.
 
 Il est recommandé de ne pas développer directement dans un schéma de
 production sans migrations versionnées et environnement de validation.
@@ -177,7 +189,7 @@ production sans migrations versionnées et environnement de validation.
 ```text
 Application métier (comptoir / atelier / gérance)
                     ┐
-Espace client PWA   ├─ HTTPS / WebSocket ─► Supabase Pressing_Pro (eu-west-1)
+Espace client PWA   ├─ HTTPS / WebSocket ─► Supabase propre à désigner
                     │                         ├─ PostgreSQL + Row Level Security
                     │                         ├─ Auth (employés et clients)
                     │                         ├─ Realtime (commandes, tournées, chat)
@@ -628,7 +640,9 @@ séparé, jamais dans le tenant de production d’un pressing réel.
 
 - **Front** : Vercel, build Vite actuel, variables publiques Supabase par
   environnement, aperçus de branche pour les validations.
-- **Base cible** : Supabase Pressing_Pro (`phjstsydxvggtduohfrl`, `eu-west-1`).
+- **Base cible** : environnement Supabase propre à désigner ; Pressing_Pro
+  (`phjstsydxvggtduohfrl`, `eu-west-1`) reste l’héritage inventorié et
+  inchangé, sauf décision séparée de réinitialisation.
 - **Environnements** : définir production et préproduction/développement
   avant la phase 1 ; appliquer les mêmes migrations versionnées.
 - **Domaines** : domaine de l’application métier et adresse publique client à
@@ -654,7 +668,7 @@ numéros/modèles WhatsApp, choix juridiques et temps de recette du propriétair
 
 | Phase | Contenu | Jalon de sortie | Effort estimé |
 |---|---|---|---|
-| 0 | Vérification Pressing_Pro, environnements, modèle tenant, schéma v1, RLS et menaces | schéma et règles relus ; projet prêt, sans donnée réelle | 1–2 sessions |
+| 0 | Vérification Pressing_Pro, Option B, modèle tenant, schéma v1, RLS et menaces | **socle local terminé : 4 migrations, 37 tables, 19 vérifications PGlite ; validation Supabase hébergée encore à faire** | 1–2 sessions |
 | 1 | Socle données du pressing pilote : Supabase, AppContext adapté, catalogue/paramètres, ticket atomique, stock, logistique et rangement | application métier actuelle fonctionnelle sur données distantes | 3–5 sessions |
 | 2 | Auth, organisations/agences, invitations, rôles et onboarding interne | deux tenants fictifs prouvent l’isolation ; rôles effectifs | 2–3 sessions |
 | 3 | Realtime équipe, migration pilote et recette | comptoir/atelier synchronisés ; totaux migrés validés | 2–3 sessions |
@@ -731,10 +745,13 @@ Contrôles minimums :
   conversation, push comme alerte applicative, WhatsApp/SMS comme canaux de
   portée et de secours.
 
-## 17. Décisions à valider avant la phase 0
+## 17. Décisions à valider avant la validation hébergée et la phase 1
 
-1. Confirmer que Pressing_Pro (`phjstsydxvggtduohfrl`, `eu-west-1`) est la
-   cible de production et choisir l’environnement de préproduction.
+1. Désigner l’environnement Supabase propre de validation, puis décider
+   séparément de la production : environnement propre distinct ou
+   réinitialisation explicitement autorisée d’un projet existant. Pressing_Pro
+   (`phjstsydxvggtduohfrl`, `eu-west-1`) ne doit pas recevoir le nouveau socle
+   sans cette seconde décision.
 2. Valider le modèle **organisation → agences**, avec le pressing pilote comme
    premier tenant.
 3. Valider un compte par employé et la liste initiale des rôles.
@@ -761,20 +778,26 @@ La phase 0 a commencé par l’inventaire en lecture seule de Pressing_Pro,
 terminé le 28 octobre 2026. Son rapport et sa porte de décision sont dans
 [`backend/phase-0/01-inventaire-et-porte-de-decision.md`](backend/phase-0/01-inventaire-et-porte-de-decision.md).
 
-La prochaine étape est de décider du sort du backend préexistant découvert
-dans le projet : l’auditer/restaurer dans un environnement isolé, repartir
-proprement, ou réaligner Pressing_Pro après sauvegarde et autorisation
-explicite. Ensuite seulement :
+L’Option B ayant été retenue, le schéma SQL v1, les politiques RLS et le
+prototype à deux tenants fictifs sont terminés localement. Leur détail, les
+19 vérifications PGlite et les limites sont dans
+[`backend/phase-0/02-socle-option-b-et-validation-locale.md`](backend/phase-0/02-socle-option-b-et-validation-locale.md).
 
-- choix de l’environnement de validation ;
-- schéma SQL v1 et politiques RLS versionnés dans le dépôt, sans données
-  réelles ;
-- prototype technique minimal prouvant l’isolation de deux tenants fictifs ;
-- validation de fin de phase 0 avant tout branchement de l’application.
+La prochaine étape est donc :
+
+- désigner ou créer l’environnement Supabase propre de validation ;
+- y rejouer les quatre migrations avec la CLI, puis tester Auth/PostgREST et
+  les advisors avec des comptes fictifs ;
+- générer les types TypeScript depuis l’environnement validé ;
+- valider cette répétition hébergée avant tout branchement de l’application ;
+- décider ensuite séparément de l’environnement de production.
+
+Aucune migration n’a été appliquée à Pressing_Pro pendant la construction du
+socle local.
 
 ---
 
 *Plan mis à jour le 28 octobre 2026 à partir de l’application livrée sur la
 branche `arena/e0c13218-googlepress`, incluant logistique, rangement et
-configuration propriétaire. Aucun élément backend n’existe encore dans le
-dépôt.*
+configuration propriétaire. Le dépôt contient désormais les migrations et
+tests backend de phase 0, sans déploiement externe ni branchement du front.*

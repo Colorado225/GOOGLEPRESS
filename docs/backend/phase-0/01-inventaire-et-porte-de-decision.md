@@ -11,6 +11,12 @@
 > préexistant, mais son schéma de tables `public` est actuellement absent.
 > Il faut d’abord décider du sort de cet existant avant toute nouvelle
 > migration.
+>
+> **Décision postérieure du propriétaire : Option B, avec confirmation
+> qu’aucun usage réel ne dépend de cet existant.** Le socle neuf, ses tests
+> locaux et ses limites sont documentés dans
+> `02-socle-option-b-et-validation-locale.md`. Cette décision n’a entraîné
+> aucune écriture dans Pressing_Pro.
 
 ---
 
@@ -427,9 +433,12 @@ encore de l’existant.
 | Modèle logique multi-tenant proposé | **Présent dans le plan et résumé ici** |
 | Matrice des rôles | **Proposée ci-dessus** |
 | Menaces et principes RLS | **Proposés ci-dessus** |
-| Choix d’environnement de validation | **En attente de décision** |
-| Schéma SQL v1 appliqué | **Non — bloqué par l’existant désynchronisé** |
-| Prototype de deux tenants fictifs | **Non — après choix d’environnement et de trajectoire** |
+| Trajectoire de l’existant Pressing_Pro | **Option B retenue ; aucun usage réel confirmé par le propriétaire** |
+| Choix d’environnement Supabase de validation | **En attente — aucun environnement externe créé** |
+| Schéma SQL v1 versionné | **Terminé localement — quatre migrations sous `supabase/migrations/`** |
+| Schéma SQL v1 appliqué à Pressing_Pro | **Non — aucune écriture externe** |
+| Prototype de deux tenants fictifs | **Terminé localement — 19 vérifications PGlite** |
 
-La phase 0 reprendra dès que le sort de l’existant Pressing_Pro sera tranché.
-Aucune phase 1 ne doit commencer avant cette décision.
+La prochaine porte est la désignation d’un environnement Supabase propre de
+validation pour y rejouer les migrations avec Auth/PostgREST réels. Voir
+`02-socle-option-b-et-validation-locale.md`.
