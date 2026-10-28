@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
+import { calculateOrderTotals } from '../../lib/pricing';
+import { formatPromised, getPromisedDate, nowDateTime } from '../../lib/dates';
 import { Trash2, Plus, Minus, Printer, MessageSquare, Check, ShieldAlert, Sparkles } from 'lucide-react';
 import { ConfettiButton } from '../../registry/magicui/confetti';
 
@@ -16,14 +19,18 @@ export const OrderCartTicket: React.FC = () => {
     paymentMethod,
     setPaymentMethod,
     submitNewOrder,
+    nextTicketNumber,
   } = useApp();
 
-  const subtotal = cartLines.reduce((acc, curr) => acc + curr.subtotal, 0);
-  const expressFee = pickupOption === 'express' ? Math.round(subtotal * 0.5) : 0;
-  const discountPercent = selectedCustomer.loyaltyDiscountPercent || 0;
-  const discountAmount = Math.round(subtotal * (discountPercent / 100));
-  const finalTotal = subtotal + expressFee - discountAmount;
-  const remaining = Math.max(0, finalTotal - depositAmount);
+  const { subtotal, expressFee, discountPercent, discountAmount, total: finalTotal, remaining } =
+    calculateOrderTotals(cartLines, {
+      pickupOption,
+      loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
+      depositAmount,
+    });
+
+  // Date/heure figées à l'ouverture du ticket (évite un affichage qui bouge à chaque rendu).
+  const [ticketDateTime] = useState(() => nowDateTime());
 
   const [customDeposit, setCustomDeposit] = useState<string>(depositAmount.toString());
 
@@ -45,16 +52,16 @@ export const OrderCartTicket: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-zinc-200/90 rounded-xl overflow-hidden shadow-sm sticky top-3">
+    <div className="card-3d rounded-xl overflow-hidden sticky top-3">
       {/* Dark Ticket Header */}
-      <div className="bg-[#09090b] text-white px-5 py-4 flex justify-between items-center border-b border-zinc-800">
+      <div className="bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 px-5 py-4 flex justify-between items-center border-b border-zinc-800">
         <div>
-          <p className="font-bold text-[15px] tracking-tight">Ticket #TK-2855</p>
-          <p className="text-[12px] text-zinc-400 mt-0.5">
-            {selectedCustomer.name} • 27/10/2026 09:42
+          <p className="font-bold text-[15px] tracking-tight">Ticket #TK-{nextTicketNumber}</p>
+          <p className="text-[12px] text-zinc-400 dark:text-zinc-500 mt-0.5">
+            {selectedCustomer.name} • {ticketDateTime}
           </p>
         </div>
-        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-400 text-black tracking-wide">
+        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-400 text-black dark:text-zinc-50 tracking-wide">
           {remaining === 0 && finalTotal > 0 ? 'SOLDÉ ✓' : 'À ENCAISSER'}
         </span>
       </div>
@@ -62,8 +69,8 @@ export const OrderCartTicket: React.FC = () => {
       <div className="p-4 space-y-3 text-[13px]">
         {/* Cart Item Lines */}
         {cartLines.length === 0 ? (
-          <div className="p-8 text-center text-zinc-400 border-2 border-dashed border-zinc-200 rounded-lg">
-            <p className="text-[13px] font-medium text-zinc-600">Le panier est vide</p>
+          <div className="p-8 text-center text-zinc-400 dark:text-zinc-500 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
+            <p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Le panier est vide</p>
             <p className="text-[11.5px] mt-1">Sélectionnez des vêtements dans le catalogue à gauche.</p>
           </div>
         ) : (
@@ -71,35 +78,36 @@ export const OrderCartTicket: React.FC = () => {
             {cartLines.map((line) => (
               <div
                 key={line.id}
-                className="flex items-center justify-between border border-zinc-200 rounded-lg p-2.5 bg-zinc-50/50 hover:bg-zinc-50 transition-colors"
+                className="flex items-center justify-between border border-zinc-200 dark:border-zinc-700 rounded-lg p-2.5 bg-zinc-50/50 dark:bg-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
               >
                 <div className="flex-1 pr-2">
-                  <p className="font-bold text-zinc-900 leading-snug">
+                  <p className="font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
                     <span className="tabular-nums">{line.quantity} ×</span> {line.name}{' '}
-                    <span className="font-normal text-zinc-500 text-[11.5px]">— {line.serviceType}</span>
+                    <span className="font-normal text-zinc-500 dark:text-zinc-400 text-[11.5px]">— {line.serviceType}</span>
                   </p>
-                  <p className="text-[11.5px] text-zinc-500 truncate">
+                  <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 truncate">
                     {line.notes || `${formatFCFA(line.unitPrice)} / pièce`}
                   </p>
+                  <LineColorSelect line={line} />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center border border-zinc-200 rounded-md bg-white">
+                  <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-900">
                     <button
                       type="button"
                       onClick={() => updateCartItemQty(line.id, -1)}
-                      className="px-1.5 py-0.5 text-zinc-600 hover:text-black hover:bg-zinc-100 rounded-l transition-colors"
+                      className="px-1.5 py-0.5 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-l transition-colors"
                       title="Diminuer"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
-                    <span className="px-1.5 font-bold text-[12px] tabular-nums text-zinc-900">
+                    <span className="px-1.5 font-bold text-[12px] tabular-nums text-zinc-900 dark:text-zinc-100">
                       {line.quantity}
                     </span>
                     <button
                       type="button"
                       onClick={() => updateCartItemQty(line.id, 1)}
-                      className="px-1.5 py-0.5 text-zinc-600 hover:text-black hover:bg-zinc-100 rounded-r transition-colors"
+                      className="px-1.5 py-0.5 text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-r transition-colors"
                       title="Augmenter"
                     >
                       <Plus className="w-3 h-3" />
@@ -107,13 +115,13 @@ export const OrderCartTicket: React.FC = () => {
                   </div>
 
                   <div className="text-right min-w-[70px]">
-                    <p className="font-bold text-zinc-900 tabular-nums">
+                    <p className="font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">
                       {formatFCFA(line.subtotal)}
                     </p>
                     <button
                       type="button"
                       onClick={() => removeCartItem(line.id)}
-                      className="text-red-500 hover:text-red-700 text-[11px] font-semibold transition-colors"
+                      className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-[11px] font-semibold transition-colors"
                     >
                       retirer
                     </button>
@@ -126,36 +134,36 @@ export const OrderCartTicket: React.FC = () => {
 
         {/* Loyalty Discount Box */}
         {discountPercent > 0 && cartLines.length > 0 && (
-          <div className="flex justify-between items-center border border-blue-200 bg-blue-50/80 rounded-lg px-3 py-2 text-blue-900">
+          <div className="flex justify-between items-center border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/80 rounded-lg px-3 py-2 text-blue-900 dark:text-blue-100">
             <div>
               <p className="font-bold text-[12.5px]">Remise fidélité −{discountPercent} %</p>
-              <p className="text-[11px] text-blue-700">Carte Gold • dès 20 dépôts</p>
+              <p className="text-[11px] text-blue-700 dark:text-blue-300">Carte Gold • dès 20 dépôts</p>
             </div>
-            <p className="font-bold text-blue-700 tabular-nums text-[13.5px]">
+            <p className="font-bold text-blue-700 dark:text-blue-300 tabular-nums text-[13.5px]">
               −{formatFCFA(discountAmount)}
             </p>
           </div>
         )}
 
         {/* Financial Summary */}
-        <div className="border-t border-dashed border-zinc-300 pt-3 space-y-1 text-zinc-700 text-[12.5px]">
+        <div className="border-t border-dashed border-zinc-300 dark:border-zinc-600 pt-3 space-y-1 text-zinc-700 dark:text-zinc-300 text-[12.5px]">
           <div className="flex justify-between">
             <span>Sous-total</span>
-            <span className="font-semibold text-zinc-900 tabular-nums">{formatFCFA(subtotal)}</span>
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatFCFA(subtotal)}</span>
           </div>
           {expressFee > 0 && (
-            <div className="flex justify-between text-amber-800">
+            <div className="flex justify-between text-amber-800 dark:text-amber-200">
               <span>Supplément Express (+50 %)</span>
               <span className="font-semibold tabular-nums">+{formatFCFA(expressFee)}</span>
             </div>
           )}
           {discountAmount > 0 && (
-            <div className="flex justify-between text-blue-700">
+            <div className="flex justify-between text-blue-700 dark:text-blue-300">
               <span>Remise</span>
               <span className="font-semibold tabular-nums">−{formatFCFA(discountAmount)}</span>
             </div>
           )}
-          <div className="flex justify-between text-[18px] font-black text-zinc-950 pt-1 border-t border-zinc-200">
+          <div className="flex justify-between text-[18px] font-black text-zinc-950 dark:text-zinc-50 pt-1 border-t border-zinc-200 dark:border-zinc-700">
             <span>Total</span>
             <span className="tabular-nums">{formatFCFA(finalTotal)}</span>
           </div>
@@ -164,21 +172,21 @@ export const OrderCartTicket: React.FC = () => {
         {/* Acompte reçu payment block */}
         <div className="pt-1">
           <div className="flex justify-between items-center mb-1.5">
-            <p className="font-bold text-[11.5px] uppercase tracking-wide text-zinc-500">
+            <p className="font-bold text-[11.5px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Acompte reçu
             </p>
             <div className="flex gap-1">
               <button
                 type="button"
                 onClick={handleQuickDepositHalf}
-                className="text-[10.5px] text-zinc-600 hover:text-black bg-zinc-100 hover:bg-zinc-200 px-1.5 py-0.5 rounded"
+                className="text-[10.5px] text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 px-1.5 py-0.5 rounded"
               >
                 50%
               </button>
               <button
                 type="button"
                 onClick={handleQuickDepositAll}
-                className="text-[10.5px] text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded font-semibold"
+                className="text-[10.5px] text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 px-1.5 py-0.5 rounded font-semibold"
               >
                 100% (Soldé)
               </button>
@@ -192,8 +200,8 @@ export const OrderCartTicket: React.FC = () => {
               onClick={() => setPaymentMethod('especes')}
               className={`py-2 rounded-lg border transition-all ${
                 paymentMethod === 'especes'
-                  ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs'
-                  : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50'
+                  ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs dark:bg-zinc-100 dark:text-zinc-950 dark:border-zinc-100'
+                  : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
               }`}
             >
               Espèces
@@ -214,8 +222,8 @@ export const OrderCartTicket: React.FC = () => {
               onClick={() => setPaymentMethod('momo')}
               className={`py-2 rounded-lg border transition-all ${
                 paymentMethod === 'momo' || paymentMethod === 'om'
-                  ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs'
-                  : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50'
+                  ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs dark:bg-zinc-100 dark:text-zinc-950 dark:border-zinc-100'
+                  : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'
               }`}
             >
               MTN / Orange
@@ -229,17 +237,17 @@ export const OrderCartTicket: React.FC = () => {
                 type="number"
                 value={customDeposit}
                 onChange={(e) => handleDepositChange(e.target.value)}
-                className="border border-zinc-300 rounded-lg px-3 py-2 w-full font-bold text-[15px] text-zinc-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                className="border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 w-full font-bold text-[15px] text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
                 placeholder="Montant FCFA"
               />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400 font-semibold">
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400 dark:text-zinc-500 font-semibold">
                 FCFA
               </span>
             </div>
-            <div className="text-[12px] text-zinc-500 self-center shrink-0 text-right">
+            <div className="text-[12px] text-zinc-500 dark:text-zinc-400 self-center shrink-0 text-right">
               <span>Reste :</span>
               <br />
-              <b className={`text-[15px] tabular-nums ${remaining > 0 ? 'text-black' : 'text-emerald-600'}`}>
+              <b className={`text-[15px] tabular-nums ${remaining > 0 ? 'text-black dark:text-zinc-50' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {formatFCFA(remaining)}
               </b>
             </div>
@@ -258,8 +266,8 @@ export const OrderCartTicket: React.FC = () => {
           }}
           className={`w-full font-bold rounded-lg py-3 text-[14.5px] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer ${
             cartLines.length === 0
-              ? 'bg-zinc-300 text-zinc-500 cursor-not-allowed'
-              : 'bg-[#09090b] hover:bg-zinc-800 text-white active:scale-[0.99]'
+              ? 'bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed'
+              : 'bg-[#09090b] dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 active:scale-[0.99]'
           }`}
         >
           <Check className="w-4 h-4" />
@@ -268,8 +276,8 @@ export const OrderCartTicket: React.FC = () => {
         </ConfettiButton>
 
         {/* SMS Preview footnote */}
-        <p className="text-center text-[11.5px] text-zinc-500 leading-relaxed bg-zinc-50 p-2 rounded-md border border-zinc-200">
-          Reçu SMS : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-2855 : {formatFCFA(finalTotal)}. Retrait {pickupOption === 'express' ? 'demain 12h' : 'mer. 28 oct 17h'}. Pressing Pro Cocody »
+        <p className="text-center text-[11.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed bg-zinc-50 dark:bg-zinc-800 p-2 rounded-md border border-zinc-200 dark:border-zinc-700">
+          Reçu SMS : « Merci {selectedCustomer.name.split(' ')[0]} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}. Retrait {formatPromised(getPromisedDate(pickupOption)).toLowerCase()}. Pressing Pro Cocody »
         </p>
       </div>
     </div>

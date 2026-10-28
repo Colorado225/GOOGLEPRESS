@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { CurrentColorSelector, LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
+import { calculateSubtotal } from '../../lib/pricing';
 import { ClothingItem, OrderLine } from '../../types';
 import {
   ArrowLeft,
@@ -13,6 +15,8 @@ import {
   ShoppingBag,
   Info,
 } from 'lucide-react';
+import { Badge } from '../common/DataTable';
+import { SegmentedControl } from '../common/SegmentedControl';
 
 export const Step2ArticlesAndServices: React.FC = () => {
   const {
@@ -62,7 +66,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
     return matchesCategory && matchesTab;
   });
 
-  const subtotal = cartLines.reduce((acc, curr) => acc + curr.subtotal, 0);
+  const subtotal = calculateSubtotal(cartLines);
 
   const getItemCount = (itemId: string) => {
     return cartLines
@@ -78,44 +82,27 @@ export const Step2ArticlesAndServices: React.FC = () => {
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Intro Bar */}
-      <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-extrabold text-zinc-950 flex items-center gap-2">
+          <h2 className="text-lg font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
             <span>Étape 2 • Articles & Prestations</span>
-            <span
-              className={`text-[11.5px] font-bold px-2.5 py-0.5 rounded-full border ${
-                isPressing
-                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                  : 'bg-teal-50 text-teal-700 border-teal-200'
-              }`}
-            >
+            <Badge variant={isPressing ? 'info' : 'teal'} className={isPressing ? 'bg-blue-50 dark:bg-blue-950' : 'bg-teal-50 dark:bg-teal-950'}>
               {isPressing ? 'Catalogue Pressing' : 'Catalogue Blanchisserie'}
-            </span>
+            </Badge>
           </h2>
-          <p className="text-[13px] text-zinc-500 mt-0.5">
+          <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-0.5">
             Sélectionnez les vêtements ou le linge apporté par {selectedCustomer?.name || 'le client'}.
           </p>
         </div>
 
-        {/* Treatment service filter chips */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {currentServicesList.map((srv) => (
-            <button
-              key={srv}
-              type="button"
-              onClick={() => setSelectedServiceFilter(srv)}
-              className={`text-[11.5px] font-semibold border rounded-full px-3 py-1 transition-all ${
-                selectedServiceFilter === srv
-                  ? isPressing
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                    : 'bg-teal-600 text-white border-teal-600 shadow-2xs'
-                  : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
-              }`}
-            >
-              {srv}
-            </button>
-          ))}
-        </div>
+        {/* Filtre du traitement appliqué aux articles ajoutés (code couleur pressing/blanchisserie) */}
+        <SegmentedControl
+          ariaLabel="Choisir le traitement appliqué aux articles ajoutés"
+          tone={isPressing ? 'blue' : 'teal'}
+          options={currentServicesList.map((srv) => ({ id: srv, label: srv }))}
+          value={selectedServiceFilter}
+          onChange={setSelectedServiceFilter}
+        />
       </div>
 
       {/* Main Grid: Left Catalog, Right Cart summary */}
@@ -123,51 +110,50 @@ export const Step2ArticlesAndServices: React.FC = () => {
         {/* Left Column: Catalog Items */}
         <div className="lg:col-span-3 space-y-3">
           {/* Sub-category tabs */}
-          <div className="bg-white border border-zinc-200/90 rounded-xl p-3 shadow-2xs flex items-center justify-between gap-2">
-            <span className="text-[12px] font-bold text-zinc-600">Catégories :</span>
-            <div className="flex flex-wrap gap-1.5">
-              {[
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3 shadow-2xs flex items-center justify-between gap-2">
+            <span className="text-[12px] font-bold text-zinc-600 dark:text-zinc-400">Catégories :</span>
+            <SegmentedControl
+              ariaLabel="Filtrer le catalogue par catégorie"
+              options={[
                 { id: 'all', label: 'Tous' },
                 { id: 'men', label: 'Hommes' },
                 { id: 'women', label: 'Femmes' },
                 { id: 'home', label: 'Linge maison' },
                 { id: 'pro', label: 'B2B / Pro' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveCategoryFilter(tab.id)}
-                  className={`text-[11.5px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                    activeCategoryFilter === tab.id
-                      ? 'bg-[#09090b] text-white'
-                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+              ]}
+              value={activeCategoryFilter}
+              onChange={setActiveCategoryFilter}
+            />
+          </div>
+
+          <div className="card-3d rounded-xl p-3">
+            <CurrentColorSelector />
           </div>
 
           {/* Catalog Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {catalogItems.map((item) => {
+            {catalogItems.map((item, index) => {
               const count = getItemCount(item.id);
               const isKilo = item.pricingType === 'kilo';
 
               return (
                 <div
                   key={item.id}
-                  className={`bg-white border-1.5 rounded-xl p-3 flex flex-col justify-between transition-all duration-150 hover:shadow-xs select-none ${
+                  className={`bg-white dark:bg-zinc-900 border-1.5 rounded-xl p-3 flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 select-none group animate-in fade-in zoom-in-95 ${
                     count > 0
                       ? isPressing
-                        ? 'border-blue-500 bg-blue-50/20 shadow-2xs'
-                        : 'border-teal-500 bg-teal-50/20 shadow-2xs'
-                      : 'border-zinc-200 hover:border-zinc-400'
+                        ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/20 shadow-pop'
+                        : 'border-teal-500 bg-teal-50/20 dark:bg-teal-950/20 shadow-pop'
+                      : 'border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 shadow-card hover:shadow-card-hover'
                   }`}
+                  style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <span className="text-3xl filter drop-shadow-xs">{item.emoji}</span>
+                    {item.image ? (
+                      <img src={item.image} alt="" className="w-12 h-12 rounded-lg object-cover shadow-xs shrink-0 transition-transform duration-300 group-hover:scale-105" />
+                    ) : (
+                      <span className="text-3xl filter drop-shadow-xs inline-block transition-transform duration-300 group-hover:scale-110">{item.emoji}</span>
+                    )}
                     {count > 0 && (
                       <span
                         className={`text-[11px] font-black px-2 py-0.5 rounded-full tabular-nums text-white ${
@@ -180,15 +166,15 @@ export const Step2ArticlesAndServices: React.FC = () => {
                   </div>
 
                   <div className="my-2">
-                    <p className="font-bold text-[13px] text-zinc-900 leading-tight">
+                    <p className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100 leading-tight">
                       {item.name}
                     </p>
-                    <p className="text-[11.5px] text-zinc-500 font-semibold tabular-nums mt-0.5">
+                    <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 font-semibold tabular-nums mt-0.5">
                       {formatFCFA(item.unitPrice)}{' '}
-                      <span className="font-normal text-zinc-400">/ {item.unitLabel || 'pièce'}</span>
+                      <span className="font-normal text-zinc-400 dark:text-zinc-500">/ {item.unitLabel || 'pièce'}</span>
                     </p>
                     {item.description && (
-                      <p className="text-[10.5px] text-zinc-400 line-clamp-1 mt-0.5">
+                      <p className="text-[10.5px] text-zinc-400 dark:text-zinc-500 line-clamp-1 mt-0.5">
                         {item.description}
                       </p>
                     )}
@@ -196,9 +182,9 @@ export const Step2ArticlesAndServices: React.FC = () => {
 
                   {/* Kilo input or standard click button */}
                   {isKilo ? (
-                    <div className="mt-1 pt-2 border-t border-zinc-100 space-y-1.5">
+                    <div className="mt-1 pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-medium text-zinc-600">Poids :</span>
+                        <span className="font-medium text-zinc-600 dark:text-zinc-400">Poids :</span>
                         <div className="flex items-center gap-1 font-bold">
                           <input
                             type="number"
@@ -206,7 +192,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
                             min="0.5"
                             value={kiloWeightInput}
                             onChange={(e) => setKiloWeightInput(parseFloat(e.target.value) || 1)}
-                            className="w-14 border border-zinc-300 rounded px-1.5 py-0.5 text-center text-[12px] tabular-nums"
+                            className="w-14 border border-zinc-300 dark:border-zinc-600 rounded px-1.5 py-0.5 text-center text-[12px] tabular-nums"
                           />
                           <span>kg</span>
                         </div>
@@ -229,7 +215,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
                           ? isPressing
                             ? 'bg-blue-600 text-white hover:bg-blue-700'
                             : 'bg-teal-600 text-white hover:bg-teal-700'
-                          : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800'
+                          : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200'
                       }`}
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -244,7 +230,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
 
         {/* Right Column: Live Order Cart Ticket */}
         <div className="lg:col-span-2">
-          <div className="bg-white border border-zinc-200/90 rounded-2xl overflow-hidden shadow-sm sticky top-16">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-2xl overflow-hidden shadow-sm sticky top-16">
             <div
               className={`p-4 text-white flex items-center justify-between ${
                 isPressing ? 'bg-blue-900' : 'bg-teal-950'
@@ -256,18 +242,18 @@ export const Step2ArticlesAndServices: React.FC = () => {
                   {cartLines.length} référence{cartLines.length > 1 ? 's' : ''} ajoutée{cartLines.length > 1 ? 's' : ''}
                 </p>
               </div>
-              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 text-white uppercase">
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 dark:bg-zinc-900/20 text-white uppercase">
                 {isPressing ? 'Pressing' : 'Blanchisserie'}
               </span>
             </div>
 
             {/* List of cart lines */}
-            <div className="p-4 space-y-2.5 max-h-[320px] overflow-y-auto divide-y divide-zinc-100">
+            <div className="p-4 space-y-2.5 max-h-[320px] overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
               {cartLines.length === 0 ? (
-                <div className="p-8 text-center text-zinc-400 border-2 border-dashed border-zinc-200 rounded-xl">
+                <div className="p-8 text-center text-zinc-400 dark:text-zinc-500 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl">
                   <ShoppingBag className="w-8 h-8 mx-auto text-zinc-300 mb-2" />
-                  <p className="text-[13px] font-bold text-zinc-600">Aucun article sélectionné</p>
-                  <p className="text-[11.5px] text-zinc-400 mt-0.5">
+                  <p className="text-[13px] font-bold text-zinc-600 dark:text-zinc-400">Aucun article sélectionné</p>
+                  <p className="text-[11.5px] text-zinc-400 dark:text-zinc-500 mt-0.5">
                     Cliquez sur les vêtements ou le linge à gauche pour remplir le panier.
                   </p>
                 </div>
@@ -275,20 +261,21 @@ export const Step2ArticlesAndServices: React.FC = () => {
                 cartLines.map((line) => (
                   <div key={line.id} className="pt-2 flex items-center justify-between gap-2 text-[12.5px]">
                     <div className="flex-1 min-w-0 pr-1">
-                      <p className="font-bold text-zinc-900 truncate">
+                      <p className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
                         {line.quantity} {line.pricingType === 'kilo' ? 'kg' : '×'} {line.name}
                       </p>
-                      <p className="text-[11px] text-zinc-500 truncate">
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
                         {line.serviceType} • {formatFCFA(line.unitPrice)} / {line.pricingType === 'kilo' ? 'kg' : 'pc'}
                       </p>
+                      <LineColorSelect line={line} />
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center border border-zinc-200 rounded-lg bg-zinc-50">
+                      <div className="flex items-center border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800">
                         <button
                           type="button"
                           onClick={() => updateCartItemQty(line.id, -1)}
-                          className="px-1.5 py-0.5 hover:bg-zinc-200 text-zinc-600 rounded-l"
+                          className="px-1.5 py-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-l"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
@@ -298,20 +285,20 @@ export const Step2ArticlesAndServices: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => updateCartItemQty(line.id, 1)}
-                          className="px-1.5 py-0.5 hover:bg-zinc-200 text-zinc-600 rounded-r"
+                          className="px-1.5 py-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-r"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
 
-                      <span className="font-bold text-zinc-900 tabular-nums min-w-[65px] text-right">
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100 tabular-nums min-w-[65px] text-right">
                         {formatFCFA(line.subtotal)}
                       </span>
 
                       <button
                         type="button"
                         onClick={() => removeCartItem(line.id)}
-                        className="text-red-500 hover:text-red-700 p-1"
+                        className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
                         title="Supprimer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -324,20 +311,20 @@ export const Step2ArticlesAndServices: React.FC = () => {
 
             {/* Financial subtotal preview */}
             {cartLines.length > 0 && (
-              <div className="p-4 bg-zinc-50 border-t border-zinc-200 space-y-1.5 text-[12.5px]">
-                <div className="flex justify-between text-zinc-600">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border-t border-zinc-200 dark:border-zinc-700 space-y-1.5 text-[12.5px]">
+                <div className="flex justify-between text-zinc-600 dark:text-zinc-400">
                   <span>Sous-total articles</span>
-                  <span className="font-bold text-zinc-900 tabular-nums">{formatFCFA(subtotal)}</span>
+                  <span className="font-bold text-zinc-900 dark:text-zinc-100 tabular-nums">{formatFCFA(subtotal)}</span>
                 </div>
                 {(selectedCustomer?.loyaltyDiscountPercent || 0) > 0 && (
-                  <div className="flex justify-between text-blue-700">
+                  <div className="flex justify-between text-blue-700 dark:text-blue-300">
                     <span>Remise fidélité ({selectedCustomer?.loyaltyDiscountPercent}%)</span>
                     <span className="font-bold tabular-nums">
                       −{formatFCFA(Math.round(subtotal * ((selectedCustomer?.loyaltyDiscountPercent || 0) / 100)))}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between text-zinc-950 font-black text-[15px] pt-1.5 border-t border-zinc-200">
+                <div className="flex justify-between text-zinc-950 dark:text-zinc-50 font-black text-[15px] pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
                   <span>Montant estimé</span>
                   <span className="tabular-nums">
                     {formatFCFA(
@@ -352,11 +339,11 @@ export const Step2ArticlesAndServices: React.FC = () => {
       </div>
 
       {/* Step 2 Actions Bar */}
-      <div className="bg-white border border-zinc-200/90 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => setOrderStep(1)}
-          className="w-full sm:w-auto border border-zinc-300 hover:bg-zinc-100 text-zinc-700 font-bold px-5 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5 text-[13px]"
+          className="w-full sm:w-auto border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold px-5 py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5 text-[13px]"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>← Revenir aux informations</span>
@@ -374,7 +361,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
           disabled={cartLines.length === 0}
           className={`w-full sm:w-auto font-bold px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-[13.5px] ${
             cartLines.length === 0
-              ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+              ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
               : isPressing
               ? 'bg-blue-600 hover:bg-blue-700 text-white'
               : 'bg-teal-600 hover:bg-teal-700 text-white'

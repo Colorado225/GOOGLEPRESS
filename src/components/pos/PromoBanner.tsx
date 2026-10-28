@@ -1,14 +1,16 @@
 import React from 'react';
 import { Sparkles, ShieldCheck } from 'lucide-react';
+// Import statique : Vite embarque le fichier dans le build de production
+// (l'ancien chemin texte "/src/assets/..." produisait une image cassée en prod).
+import bannerImage from '../../assets/images/dry_clean_rack_banner_1793109060337.jpg';
 
 export const PromoBanner: React.FC = () => {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-zinc-200/90 shadow-2xs bg-zinc-950 text-white min-h-[110px] flex items-center">
+    <div className="relative overflow-hidden rounded-xl border border-zinc-200/90 dark:border-zinc-700/90 shadow-2xs bg-zinc-950 text-white min-h-[110px] flex items-center">
       {/* Background Image */}
       <img
-        src="/src/assets/images/dry_clean_rack_banner_1793109060337.jpg"
+        src={bannerImage}
         alt="Atelier pressing moderne"
-        referrerPolicy="no-referrer"
         className="absolute inset-0 w-full h-full object-cover opacity-25 filter brightness-90 mix-blend-luminosity"
       />
       <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-900/90 to-blue-950/70" />
@@ -33,8 +35,8 @@ export const PromoBanner: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <div className="bg-white/10 backdrop-blur-xs border border-white/15 px-3 py-1.5 rounded-lg text-center">
-            <p className="text-[10px] text-zinc-400 font-semibold uppercase">Garantie</p>
+          <div className="bg-white/10 dark:bg-zinc-900/10 backdrop-blur-xs border border-white/15 px-3 py-1.5 rounded-lg text-center">
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold uppercase">Garantie</p>
             <p className="text-[12px] font-bold text-emerald-400 flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5" /> 100% Soigné
             </p>

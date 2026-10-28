@@ -40,7 +40,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       {/* Cards List */}
       <div className="flex-1 space-y-2 min-h-[300px]">
         {orders.length === 0 ? (
-          <div className="p-6 text-center text-zinc-400 text-[12px] border-2 border-dashed border-zinc-200 rounded-xl bg-white/40">
+          <div className="p-6 text-center text-zinc-400 dark:text-zinc-500 text-[12px] border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl bg-white/40 dark:bg-zinc-900/40">
             Aucun vêtement à cette étape
           </div>
         ) : (
