@@ -8,10 +8,12 @@ import type { WorkspaceScope } from './workspaceScope';
  * couvre le quotidien d'une agence, une offre Business pour les enseignes à
  * plusieurs points de vente et les besoins d'accompagnement.
  *
- * **Aucun paiement n'est encaissé dans l'application.** Le choix d'une formule
- * est une demande commerciale enregistrée localement ; l'activation se fait
- * avec l'équipe. Les limites affichées sont des engagements commerciaux, pas
- * encore des blocages techniques — c'est dit tel quel dans l'écran.
+ * **Aucun paiement n'est encaissé dans l'application.** Sur un compte réel, le
+ * choix d'une formule dépose une **demande en base** (`requested_plan`) que
+ * l'équipe applique ; la formule, l'essai et les quotas sont lus côté serveur
+ * (voir `supabaseSubscription.ts` et la RPC `get_shop_subscription_state`).
+ * Ce module ne sert plus qu'à décrire les formules et à tenir l'état de la
+ * démonstration locale.
  */
 
 export type SubscriptionPlanId = 'free' | 'pro' | 'business';
@@ -126,10 +128,25 @@ export interface SubscriptionState {
   /** Date de fin de période connue ; `null` = aucune échéance enregistrée. */
   renewsOn: string | null;
   /**
-   * Début de l'essai de 14 jours. Fixé une seule fois par espace : recharger
-   * l'application ne remet jamais le compteur à zéro.
+   * Début de l'essai de 14 jours. En espace réel, la date vient de la base
+   * (`shop_subscriptions.trial_started_at`) : effacer le stockage du navigateur
+   * ne remet jamais le compteur à zéro.
    */
   trialStartedAt: string | null;
+  /**
+   * Fin d'essai renvoyée par la base. Prioritaire sur le calcul local quand
+   * elle est présente : c'est le serveur qui arbitre l'échéance.
+   */
+  trialEndsAt?: string | null;
+  /**
+   * Formule réellement appliquée, calculée par la base (essai et suspension
+   * compris). Absente en démonstration locale, où le calcul reste local.
+   */
+  effectivePlan?: SubscriptionPlanId | null;
+  /** Demande de formule déposée, en attente d'activation par l'éditeur. */
+  requestedPlan?: SubscriptionPlanId | null;
+  /** Date de dépôt de cette demande, renseignée par la base. */
+  requestedAt?: string | null;
 }
 
 export interface TrialInfo {
@@ -150,15 +167,27 @@ export interface TrialInfo {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** État du compteur de 14 jours, calculé à partir de la date de départ. */
+const parseDate = (value: string | null | undefined): Date | null => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/**
+ * État du compteur de 14 jours.
+ *
+ * La fin d'essai du serveur (`trialEndsAt`) prime : c'est la base qui fixe
+ * l'échéance en espace réel. À défaut — démonstration locale, ancienne
+ * sauvegarde — on la recalcule depuis la date de départ.
+ */
 export const getTrialInfo = (
-  state: Pick<SubscriptionState, 'trialStartedAt'>,
+  state: Pick<SubscriptionState, 'trialStartedAt'> & { trialEndsAt?: string | null },
   now: Date = new Date()
 ): TrialInfo => {
-  const startedAt = state.trialStartedAt;
-  const started = startedAt ? new Date(startedAt) : null;
-  const valid = started !== null && !Number.isNaN(started.getTime());
-  if (!started || !valid) {
+  const started = parseDate(state.trialStartedAt);
+  const serverEnd = parseDate(state.trialEndsAt);
+  const endsAt = serverEnd ?? (started ? new Date(started.getTime() + TRIAL_DAYS * DAY_MS) : null);
+  if (!endsAt) {
     return {
       active: false,
       startedAt: null,
@@ -170,17 +199,17 @@ export const getTrialInfo = (
       elapsedPercent: 100,
     };
   }
-  const endsAt = new Date(started.getTime() + TRIAL_DAYS * DAY_MS);
   const remainingMs = Math.max(0, endsAt.getTime() - now.getTime());
+  const totalMs = Math.max(1, endsAt.getTime() - (started?.getTime() ?? endsAt.getTime() - TRIAL_DAYS * DAY_MS));
   return {
     active: remainingMs > 0,
-    startedAt: started.toISOString(),
+    startedAt: started ? started.toISOString() : null,
     endsAt: endsAt.toISOString(),
     totalDays: TRIAL_DAYS,
     daysLeft: Math.ceil(remainingMs / DAY_MS),
     hoursLeft: Math.ceil(remainingMs / (60 * 60 * 1000)),
     remainingMs,
-    elapsedPercent: Math.min(100, Math.max(0, Math.round((1 - remainingMs / (TRIAL_DAYS * DAY_MS)) * 100))),
+    elapsedPercent: Math.min(100, Math.max(0, Math.round((1 - remainingMs / totalMs) * 100))),
   };
 };
 
@@ -198,7 +227,14 @@ export const SUBSCRIPTION_STORAGE_KEY = 'pressingpro_subscription';
 export const getSubscriptionPlan = (planId: SubscriptionPlanId): SubscriptionPlanDefinition =>
   SUBSCRIPTION_PLANS.find((plan) => plan.id === planId) ?? SUBSCRIPTION_PLANS[0];
 
-/** Espace réel : Free, sans facturation. Démonstration : Pro, marqué « essai ». */
+/**
+ * Valeur par défaut, avant toute lecture serveur.
+ *
+ * En démonstration : Pro, marqué « essai », sans chronomètre. En espace réel,
+ * ce n'est qu'un point de départ : `AppContext` le remplace immédiatement par
+ * l'état de la base (ou par un état « non vérifié » fermé si la base ne
+ * répond pas).
+ */
 export const resolveDefaultSubscription = (
   scope: Pick<WorkspaceScope, 'mode'>,
   now: Date = new Date()
@@ -234,13 +270,16 @@ const resolvePlanId = (value: unknown): SubscriptionPlanId | null => {
 };
 
 /** Valide une sauvegarde locale ; toute valeur douteuse retombe sur le défaut. */
+const optionalIsoDate = (value: unknown): string | null =>
+  typeof value === 'string' && value.trim() ? value : null;
+
 export const normalizeSubscription = (
   value: unknown,
   fallback: SubscriptionState
 ): SubscriptionState => {
   if (!value || typeof value !== 'object') return fallback;
   const candidate = value as Partial<SubscriptionState>;
-  return {
+  const normalized: SubscriptionState = {
     plan: resolvePlanId(candidate.plan) ?? fallback.plan,
     status: isStatus(candidate.status) ? candidate.status : fallback.status,
     renewsOn:
@@ -252,6 +291,17 @@ export const normalizeSubscription = (
         ? candidate.trialStartedAt
         : fallback.trialStartedAt,
   };
+  // Les champs serveur restent absents tant qu'aucune valeur valide n'existe :
+  // une sauvegarde ancienne garde exactement sa forme.
+  const trialEndsAt = optionalIsoDate(candidate.trialEndsAt);
+  if (trialEndsAt) normalized.trialEndsAt = trialEndsAt;
+  const effectivePlan = resolvePlanId(candidate.effectivePlan);
+  if (effectivePlan) normalized.effectivePlan = effectivePlan;
+  const requestedPlan = resolvePlanId(candidate.requestedPlan);
+  if (requestedPlan) normalized.requestedPlan = requestedPlan;
+  const requestedAt = optionalIsoDate(candidate.requestedAt);
+  if (requestedAt) normalized.requestedAt = requestedAt;
+  return normalized;
 };
 
 /** « 12 000 FCFA » — espace insécable fine pour la lecture à l'écran. */

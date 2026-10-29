@@ -49,19 +49,23 @@ Où le compteur se voit :
 
 Règles de calcul :
 
-- la date de départ est **figée au premier lancement** du compte et conservée
-  par espace (`pressingpro_subscription`) : recharger la page ne remet jamais
-  le compteur à zéro ;
-- le décompte se fait sur l'horloge de l'appareil ; une date système fausse
-  décale le compteur — acceptable à ce stade, à sécuriser côté serveur ;
+- la date de départ est **fixée par la base** (`shop_subscriptions.trial_started_at`,
+  valeur par défaut `now()` à la création de la ligne) : recharger la page,
+  effacer le stockage du navigateur ou changer d'appareil ne remet jamais le
+  compteur à zéro ;
+- la fin d'essai (`trial_ends_at`) et le nombre de jours restants sont
+  **calculés par la base** : une horloge système fausse ne décale plus rien ;
 - choisir Pro ou Business met fin au décompte (la formule payante prend le
   relais) ; une formule **suspendue** retombe sur les plafonds Free ;
-- la **démonstration locale** n'a pas de chronomètre : elle reste en Pro.
+- la **démonstration locale** n'a pas de chronomètre et reste en Pro : elle ne
+  touche jamais la base.
 
-**Limite assumée** : l'essai est stocké sur l'appareil. Effacer les données du
-navigateur le redémarre. Comme les autres garde-fous, il devra être déplacé en
-base (`trial_started_at` sur l'abonnement serveur) avant le premier
-encaissement.
+**Source de vérité** : la fonction `public.get_shop_subscription_state(shop_id)`
+renvoie `plan`, `status`, `effective_plan`, la demande en cours, les dates
+d'essai, les plafonds et l'usage. L'application lit cette réponse à l'ouverture
+de l'espace et après chaque demande de formule. Si la base ne répond pas,
+l'écran affiche « Abonnement non vérifié » et **aucune fonction payante n'est
+ouverte** : on préfère fermer que d'ouvrir une formule que rien ne prouve.
 
 ## 2. Pourquoi ces prix
 
@@ -133,14 +137,22 @@ jamais en supprimant des données existantes.
   restent ouverts : sauvegarder ses données n'est pas une fonction premium.
 - **Le multi-agences** n'est pas facturable puisqu'il n'existe pas.
 
-### Limite honnête : ces garde-fous sont côté client
+### Où vivent la formule, l'essai et les quotas
 
-Le choix de formule vit sur l'appareil (`pressingpro_subscription`). Un
-utilisateur techniquement curieux peut donc le modifier dans le stockage du
-navigateur. C'est acceptable pour une **phase commerciale sans encaissement**,
-pas pour de la facturation réelle : la formule devra être stockée en base et
-vérifiée par la RLS et les RPC, et les quotas calculés côté serveur. C'est le
-lot suivant (§ 4).
+Depuis la migration `20261029120000_shop_subscriptions.sql` :
+
+| Élément | Emplacement | Contournable depuis le navigateur ? |
+| --- | --- | --- |
+| Formule et statut | `public.shop_subscriptions.plan/status` | Non : écriture réservée à l'éditeur, `UPDATE` client limité à `requested_plan/requested_at` |
+| Date de départ de l'essai | `shop_subscriptions.trial_started_at` | Non : aucune colonne accordée en écriture au client |
+| Demande de formule | `shop_subscriptions.requested_plan`, RPC `request_subscription_plan` | Dépôt seulement, et par le propriétaire uniquement |
+| Plafonds d'équipe, de commandes et de casiers | triggers `enforce_membership_quota`, `enforce_order_quota`, `enforce_storage_quota` | Non : le refus vient de la base (`check_violation`) |
+| Affichage des plafonds et de l'usage | RPC `get_shop_subscription_state` | Lecture seule, réservée aux membres |
+
+Les écrans gardent leurs propres verrous (panneaux de fonction, messages
+explicites) pour expliquer le blocage **avant** l'action, mais la décision
+finale est prise en base. La démonstration locale reste hors de ce dispositif :
+elle n'a ni essai ni quotas serveur.
 
 ## 4. Feuille de route facturation
 
@@ -151,9 +163,11 @@ lot suivant (§ 4).
 3. **Encaissement en ligne** : agrégateur local (CinetPay, PayDunya, Wave,
    Orange Money / MTN MoMo) plutôt qu'une intégration bancaire directe.
    À décider avec les frais réels par transaction.
-4. **Garde-fous côté serveur** : formule en base, quotas et fonctions
-   vérifiés par la RLS / les RPC, pour que le client ne puisse plus les
-   contourner. À faire **avant** d'encaisser le premier abonnement.
+4. **Garde-fous côté serveur** — *fait le 29 octobre 2026* : table
+   `shop_subscriptions`, RLS fermée, quotas vérifiés par triggers et état lu par
+   RPC. Reste à appliquer la migration au projet Supabase distant, puis à
+   écrire l'outil d'activation côté éditeur (passer `status` à `actif`, poser
+   `renews_on`).
 5. **Multi-agences** : la formule Business ne tient sa promesse qu'une fois le
    rattachement de plusieurs agences livré.
 

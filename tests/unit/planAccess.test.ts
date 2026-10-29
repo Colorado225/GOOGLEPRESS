@@ -158,4 +158,31 @@ describe('planAccess — formule effective et essai', () => {
     const state = { plan: 'free' as const, status: 'essai' as const, trialStartedAt: null };
     expect(resolveEffectivePlanId(state, now)).toBe('free');
   });
+
+  it('fait primer la formule effective calculée par la base', () => {
+    // La base a arbitré (essai prolongé, formule suspendue, etc.) : sa
+    // réponse passe avant tout calcul local.
+    expect(
+      resolveEffectivePlanId(
+        {
+          plan: 'free',
+          status: 'essai',
+          trialStartedAt: '2026-09-01T12:00:00.000Z',
+          effectivePlan: 'pro',
+        },
+        now
+      )
+    ).toBe('pro');
+    expect(
+      resolveEffectivePlanId(
+        {
+          plan: 'business',
+          status: 'actif',
+          trialStartedAt: null,
+          effectivePlan: 'free',
+        },
+        now
+      )
+    ).toBe('free');
+  });
 });

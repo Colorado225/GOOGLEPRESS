@@ -121,9 +121,14 @@ export const PLAN_CAPABILITIES: Record<SubscriptionPlanId, PlanCapabilities> = {
  * Une formule suspendue retombe aussi sur Free.
  */
 export const resolveEffectivePlanId = (
-  state: Pick<SubscriptionState, 'plan' | 'status' | 'trialStartedAt'>,
+  state: Pick<SubscriptionState, 'plan' | 'status' | 'trialStartedAt'> &
+    Partial<Pick<SubscriptionState, 'effectivePlan'>>,
   now: Date = new Date()
 ): SubscriptionPlanId => {
+  // En espace réel, la base a déjà arbitré essai et suspension : sa réponse
+  // fait foi. Le calcul local ne sert qu'à la démonstration et aux anciennes
+  // sauvegardes.
+  if (state.effectivePlan) return state.effectivePlan;
   if (state.status === 'suspendu') return 'free';
   if (state.plan !== 'free') return state.plan;
   return getTrialInfo(state, now).active ? 'pro' : 'free';

@@ -2563,6 +2563,19 @@ export type Database = {
         };
         Returns: Json;
       };
+      "get_shop_subscription_state": {
+        Args: {
+          "p_shop_id": string;
+        };
+        Returns: Json;
+      };
+      "request_subscription_plan": {
+        Args: {
+          "p_shop_id": string;
+          "p_plan": string;
+        };
+        Returns: Json;
+      };
       "record_order_payment": {
         Args: {
           "p_order_id": string;

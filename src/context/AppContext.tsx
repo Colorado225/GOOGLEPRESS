@@ -80,6 +80,11 @@ import {
   type SubscriptionPlanId,
   type SubscriptionState,
 } from '../lib/subscription';
+import {
+  fetchRemoteSubscription,
+  requestRemotePlanChange,
+  toSubscriptionState,
+} from '../lib/supabaseSubscription';
 import { isValidLogoDataUrl } from '../lib/shopIdentity';
 import { normalizeBlanchisserieSettings } from '../lib/blanchisserie';
 import { normalizePressingSettings } from '../lib/pressing';
@@ -280,11 +285,20 @@ interface AppContextType {
   /** État d'enregistrement des emplacements de rangement. */
   storageSync: StorageSyncState;
   retryStorageSync: () => void;
-  /** Formule choisie (Free / Pro / Business) — demande commerciale locale. */
+  /**
+   * Abonnement de l'agence. En espace réel, la formule et la date d'essai
+   * viennent de la base (`shop_subscriptions`) ; en démonstration, elles
+   * restent locales.
+   */
   subscription: SubscriptionState;
+  /** Provenance de l'état affiché, pour rester honnête à l'écran. */
+  subscriptionSource: SubscriptionSource;
   /** Formule réellement appliquée (essai de 14 jours inclus). */
   effectivePlanId: SubscriptionPlanId;
-  chooseSubscriptionPlan: (planId: SubscriptionPlanId) => void;
+  /** Dépose une demande de formule (le propriétaire seul y a droit). */
+  chooseSubscriptionPlan: (planId: SubscriptionPlanId) => Promise<ActionResult>;
+  /** Relit l'abonnement dans la base (après une demande, par exemple). */
+  refreshSubscription: () => Promise<ActionResult>;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -333,6 +347,32 @@ const createEmptyCashRegister = (): CashRegisterData => ({
 });
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+/**
+ * Provenance de l'abonnement affiché.
+ *
+ * - `local` : démonstration locale, aucun serveur ;
+ * - `chargement` : lecture de la base en cours ;
+ * - `serveur` : formule et essai lus dans la base ;
+ * - `indisponible` : la base n'a pas répondu, aucune formule payante n'est
+ *   ouverte (on ne peut pas vérifier le droit).
+ */
+export type SubscriptionSource = 'local' | 'chargement' | 'serveur' | 'indisponible';
+
+/**
+ * État d'attente d'un espace réel : Free sans essai, donc sans fonction
+ * payante tant que la base n'a pas répondu. On préfère fermer que d'ouvrir
+ * une formule que rien ne prouve.
+ */
+const unverifiedSubscription = (): SubscriptionState => ({
+  plan: 'free',
+  status: 'essai',
+  renewsOn: null,
+  trialStartedAt: null,
+  trialEndsAt: null,
+  effectivePlan: 'free',
+  requestedPlan: null,
+});
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Portée des données (lib/workspaceScope.ts) :
@@ -566,45 +606,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [storageLocations, liveWorkspace, workspace.shopId]);
 
   // --- Abonnement --------------------------------------------------------
-  // Le choix d'une formule est une demande commerciale : elle est conservée
-  // sur cet appareil et présentée comme telle, aucun paiement n'étant encaissé
-  // par l'application.
+  // En espace réel, la formule et la date de départ de l'essai vivent dans la
+  // base (`public.shop_subscriptions`). Le navigateur ne conserve donc plus
+  // aucune date d'essai : effacer le stockage local ne remet pas le compteur à
+  // zéro. La démonstration locale, elle, reste autonome.
   const [subscription, setSubscription] = useState<SubscriptionState>(() =>
-    resolveDefaultSubscription(workspace)
+    workspace.mode === 'live' ? unverifiedSubscription() : resolveDefaultSubscription(workspace)
+  );
+  const [subscriptionSource, setSubscriptionSource] = useState<SubscriptionSource>(() =>
+    workspace.mode === 'live' ? 'chargement' : 'local'
   );
 
+  const subscriptionShopId = workspace.mode === 'live' ? workspace.shopId : null;
+
   useEffect(() => {
-    const fallback = resolveDefaultSubscription(workspace);
-    const stored = loadPersistedString(scopeStorageKey(workspace, SUBSCRIPTION_STORAGE_KEY));
-    if (!stored) {
-      setSubscription(fallback);
+    if (!subscriptionShopId) {
+      setSubscription(resolveDefaultSubscription(workspace));
+      setSubscriptionSource('local');
       return;
     }
-    try {
-      const normalized = normalizeSubscription(JSON.parse(stored), fallback);
-      setSubscription(normalized);
-      // La date de départ de l'essai est figée dès la première lecture : le
-      // compteur ne repart jamais de zéro au rechargement.
-      persistString(
-        scopeStorageKey(workspace, SUBSCRIPTION_STORAGE_KEY),
-        JSON.stringify(normalized)
-      );
-    } catch {
-      setSubscription(fallback);
-    }
-  }, [workspace]);
+    let cancelled = false;
+    setSubscriptionSource('chargement');
+    void (async () => {
+      try {
+        const remote = await fetchRemoteSubscription(subscriptionShopId);
+        if (cancelled) return;
+        setSubscription(toSubscriptionState(remote));
+        setSubscriptionSource('serveur');
+      } catch {
+        if (cancelled) return;
+        // Repli fermé et assumé : sans état serveur, aucune fonction payante
+        // n'est ouverte. L'écran Paramètres l'explique en une phrase.
+        setSubscription(unverifiedSubscription());
+        setSubscriptionSource('indisponible');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscriptionShopId, workspace]);
 
   // Essai de 14 jours : un compte Free dispose des fonctions Pro jusqu'à
-  // l'échéance, puis retombe sur ses plafonds sans rien perdre.
+  // l'échéance, puis retombe sur ses plafonds sans rien perdre. La formule
+  // effective vient du serveur dès qu'elle est lue.
   const effectivePlanId = resolveEffectivePlanId(subscription);
 
-  const chooseSubscriptionPlan = (planId: SubscriptionPlanId) => {
-    const next: SubscriptionState = { ...subscription, plan: planId };
-    setSubscription(next);
-    persistString(
-      scopeStorageKey(workspace, SUBSCRIPTION_STORAGE_KEY),
-      JSON.stringify(next)
-    );
+  const refreshSubscription = async (): Promise<ActionResult> => {
+    if (!subscriptionShopId) return { ok: true };
+    try {
+      const remote = await fetchRemoteSubscription(subscriptionShopId);
+      setSubscription(toSubscriptionState(remote));
+      setSubscriptionSource('serveur');
+      return { ok: true };
+    } catch (error) {
+      setSubscription(unverifiedSubscription());
+      setSubscriptionSource('indisponible');
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Abonnement indisponible.',
+      };
+    }
+  };
+
+  const chooseSubscriptionPlan = async (planId: SubscriptionPlanId): Promise<ActionResult> => {
+    if (!subscriptionShopId) {
+      const next: SubscriptionState = { ...subscription, plan: planId };
+      setSubscription(next);
+      persistString(
+        scopeStorageKey(workspace, SUBSCRIPTION_STORAGE_KEY),
+        JSON.stringify(next)
+      );
+      return { ok: true };
+    }
+    try {
+      // Le client ne fait que déposer une demande : la formule est appliquée
+      // par l'éditeur, côté base.
+      const remote = await requestRemotePlanChange(subscriptionShopId, planId);
+      setSubscription(toSubscriptionState(remote));
+      setSubscriptionSource('serveur');
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Demande de formule impossible.',
+      };
+    }
   };
 
   const [focusedStorageOrderId, setFocusedStorageOrderId] = useState<string | null>(null);
@@ -2753,8 +2840,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         storageSync,
         retryStorageSync,
         subscription,
+        subscriptionSource,
         effectivePlanId,
         chooseSubscriptionPlan,
+        refreshSubscription,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,

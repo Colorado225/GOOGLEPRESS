@@ -21,28 +21,50 @@ type Billing = 'monthly' | 'yearly';
 /**
  * Formules Free / Pro / Business.
  *
- * L'écran dit ce qu'il fait vraiment : le choix d'une formule enregistre une
- * **demande** sur cet appareil, aucun paiement n'étant encaissé par
- * l'application. Les limites sont des engagements commerciaux ; elles ne sont
- * pas encore bloquantes techniquement, et l'écran ne prétend pas le contraire.
+ * L'écran dit ce qu'il fait vraiment : sur un compte réel, choisir une formule
+ * **dépose une demande en base**, que l'éditeur applique ; aucun paiement n'est
+ * encaissé dans l'application. La formule, la date d'essai et les plafonds
+ * viennent du serveur, pas du navigateur.
  */
 export const SubscriptionSection: React.FC = () => {
-  const { subscription, chooseSubscriptionPlan, shopSettings, workspace, showToast } = useApp();
+  const {
+    subscription,
+    subscriptionSource,
+    chooseSubscriptionPlan,
+    refreshSubscription,
+    shopSettings,
+    workspace,
+    showToast,
+  } = useApp();
   const [billing, setBilling] = useState<Billing>('monthly');
   const [requested, setRequested] = useState<SubscriptionPlanDefinition | null>(null);
+  const [requestPending, setRequestPending] = useState(false);
 
   const currentPlan = getSubscriptionPlan(subscription.plan);
   const trial = getTrialInfo(subscription);
   const showTrial = Boolean(subscription.trialStartedAt);
+  const live = workspace.mode === 'live';
+  const pendingPlan =
+    subscription.requestedPlan && subscription.requestedPlan !== subscription.plan
+      ? getSubscriptionPlan(subscription.requestedPlan)
+      : null;
 
-  const choose = (plan: SubscriptionPlanDefinition) => {
-    chooseSubscriptionPlan(plan.id);
+  const choose = async (plan: SubscriptionPlanDefinition) => {
+    setRequestPending(true);
+    const result = await chooseSubscriptionPlan(plan.id);
+    setRequestPending(false);
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    if (live) {
+      setRequested(plan);
+      await refreshSubscription();
+      showToast(`Demande envoyée pour la formule ${plan.label}.`);
+      return;
+    }
     setRequested(plan);
-    showToast(
-      plan.id === 'free'
-        ? 'Formule Free sélectionnée sur cet appareil.'
-        : `Formule ${plan.label} enregistrée comme demande sur cet appareil.`
-    );
+    showToast(`Formule ${plan.label} sélectionnée (démonstration locale).`);
   };
 
   const requestMessage = requested
@@ -91,6 +113,27 @@ export const SubscriptionSection: React.FC = () => {
             </span>
           </p>
         </div>
+
+        {subscriptionSource === 'indisponible' && (
+          <p
+            role="status"
+            className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-[11.5px] leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            <strong className="font-bold">Abonnement non vérifié.</strong> La base n’a pas répondu :
+            les fonctions payantes restent fermées jusqu’à la prochaine connexion. Aucune formule
+            n’a été modifiée.
+          </p>
+        )}
+
+        {pendingPlan && (
+          <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-2 text-[11.5px] leading-relaxed text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+            Demande de formule <strong className="font-bold">{pendingPlan.label}</strong> déposée
+            {subscription.requestedAt
+              ? ` le ${new Date(subscription.requestedAt).toLocaleDateString('fr-FR')}`
+              : ''}{' '}
+            — l’équipe l’active après paiement.
+          </p>
+        )}
 
         {showTrial && (
           <div
@@ -141,17 +184,11 @@ export const SubscriptionSection: React.FC = () => {
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span>
             <strong className="font-bold">Aucun paiement n’est encaissé dans l’application.</strong>{' '}
-            Choisir une formule l’applique immédiatement sur cet appareil (déblocage des fonctions
-            et des plafonds) et enregistre votre demande ; l’encaissement se fait avec l’équipe.
+            {live
+              ? 'Choisir une formule dépose une demande dans votre espace ; l’équipe l’active après paiement. La formule, la date d’essai et les plafonds sont lus dans la base, jamais dans le navigateur.'
+              : 'En démonstration locale, le choix ne change que cet appareil. Sur un compte réel, la demande est enregistrée dans la base et l’équipe l’active après paiement.'}
           </span>
         </p>
-
-        {workspace.mode !== 'live' && (
-          <p className="mt-2 text-[11.5px] text-zinc-500 dark:text-zinc-400">
-            Démonstration locale : le choix ne change que cet appareil. Sur un compte réel, il
-            s’applique à votre agence et sert de demande auprès de l’équipe.
-          </p>
-        )}
       </section>
 
       {/* Rythme de facturation */}
@@ -280,8 +317,8 @@ export const SubscriptionSection: React.FC = () => {
 
               <button
                 type="button"
-                disabled={isCurrent}
-                onClick={() => choose(plan)}
+                disabled={isCurrent || requestPending}
+                onClick={() => void choose(plan)}
                 className={`mt-4 w-full rounded-lg px-3 py-2 text-[12.5px] font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
                   isCurrent
                     ? 'cursor-default border border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-500'
@@ -290,7 +327,13 @@ export const SubscriptionSection: React.FC = () => {
                       : 'border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800'
                 }`}
               >
-                {isCurrent ? 'Formule actuelle' : `Choisir ${plan.label}`}
+                {isCurrent
+                  ? 'Formule actuelle'
+                  : subscription.requestedPlan === plan.id
+                    ? 'Demande en attente'
+                    : requestPending
+                      ? 'Envoi…'
+                      : `Choisir ${plan.label}`}
               </button>
             </section>
           );
@@ -309,8 +352,9 @@ export const SubscriptionSection: React.FC = () => {
                 Demande pour la formule {requested.label}
               </p>
               <p className="mt-0.5 text-[11.5px] text-blue-800/80 dark:text-blue-300/80">
-                Enregistrée sur cet appareil. Envoyez-la à l’équipe pour activer la formule et
-                convenir du paiement.
+                {live
+                  ? 'Demande déposée dans votre espace. Envoyez ce message à l’équipe pour convenir du paiement.'
+                  : 'Enregistrée sur cet appareil (démonstration). Envoyez-la à l’équipe pour activer la formule et convenir du paiement.'}
               </p>
             </div>
             <button

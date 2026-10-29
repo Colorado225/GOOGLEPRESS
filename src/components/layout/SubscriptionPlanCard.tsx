@@ -11,6 +11,11 @@ import {
 
 interface SubscriptionPlanCardProps {
   subscription: SubscriptionState;
+  /**
+   * Provenance de l'état : la carte ne prétend pas connaître la formule
+   * quand la base n'a pas répondu.
+   */
+  source?: 'local' | 'chargement' | 'serveur' | 'indisponible';
   /** Barre latérale repliée : n'affiche que l'icône. */
   collapsed?: boolean;
   /** Ouvre les Paramètres (onglet boutique) pour gérer la formule. */
@@ -26,6 +31,7 @@ interface SubscriptionPlanCardProps {
  */
 export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
   subscription,
+  source = 'local',
   collapsed = false,
   onManage,
 }) => {
@@ -33,15 +39,39 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
   const trial = getTrialInfo(subscription);
   const showTrial = Boolean(subscription.trialStartedAt);
   const tone = getSubscriptionStatusTone(subscription.status);
-  const statusLabel = showTrial
-    ? trial.active
-      ? `Essai Pro · ${formatTrialRemaining(trial)}`
-      : 'Essai terminé — formule Free'
-    : getSubscriptionStatusLabel(subscription.status);
-  const chipLabel = showTrial ? (trial.active ? `${trial.daysLeft} j` : 'terminé') : subscription.status;
+  const loading = source === 'chargement';
+  const unverified = source === 'indisponible';
+  const requestedPlan =
+    subscription.requestedPlan && subscription.requestedPlan !== subscription.plan
+      ? getSubscriptionPlan(subscription.requestedPlan)
+      : null;
+  const statusLabel = loading
+    ? 'Lecture de la formule dans la base…'
+    : unverified
+      ? 'Abonnement non vérifié — connexion requise'
+      : showTrial
+        ? trial.active
+          ? `Essai Pro · ${formatTrialRemaining(trial)}`
+          : 'Essai terminé — formule Free'
+        : getSubscriptionStatusLabel(subscription.status);
+  const chipLabel = loading
+    ? '…'
+    : unverified
+      ? '?'
+      : showTrial
+        ? trial.active
+          ? `${trial.daysLeft} j`
+          : 'terminé'
+        : subscription.status;
   // Pendant l'essai, c'est Pro qui est réellement appliqué : l'afficher ainsi
   // évite le paradoxe « Free » + « fonctions Pro ouvertes ».
-  const displayLabel = showTrial && trial.active ? 'Essai Pro' : plan.label;
+  const displayLabel = unverified
+    ? 'Abonnement'
+    : loading
+      ? 'Abonnement'
+      : showTrial && trial.active
+        ? 'Essai Pro'
+        : plan.label;
 
   if (collapsed) {
     return (
@@ -84,10 +114,20 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
       </div>
 
       <p className="mt-2 text-[11px] leading-snug text-zinc-400">
-        {showTrial && trial.active
-          ? `Essai de 14 jours : fonctions Pro ouvertes.`
-          : plan.tagline}
+        {unverified
+          ? 'Fonctions payantes fermées tant que la base ne répond pas.'
+          : loading
+            ? 'La formule vient de la base, pas de cet appareil.'
+            : showTrial && trial.active
+              ? 'Essai de 14 jours : fonctions Pro ouvertes.'
+              : plan.tagline}
       </p>
+
+      {requestedPlan && (
+        <p className="mt-1 text-[10.5px] font-semibold text-amber-300/90">
+          Demande envoyée : {requestedPlan.label}
+        </p>
+      )}
 
       <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-zinc-300">
         <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} aria-hidden="true" />

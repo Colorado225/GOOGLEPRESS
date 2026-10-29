@@ -208,3 +208,65 @@ describe('subscription — chronomètre de 14 jours', () => {
     expect(info.endsAt).toBeNull();
   });
 });
+
+describe('subscription — état lu dans la base', () => {
+  const day = 24 * 60 * 60 * 1000;
+
+  it('fait primer la fin d’essai du serveur sur le calcul local', () => {
+    const startedAt = '2026-10-01T09:00:00.000Z';
+    const now = new Date('2026-10-20T09:00:00.000Z');
+    // Le calcul local dirait « terminé » (19 jours écoulés) ; la base a
+    // prolongé l'essai de trois jours : c'est elle qui fait foi.
+    const endsAt = new Date(now.getTime() + 3 * day).toISOString();
+    const info = getTrialInfo({ trialStartedAt: startedAt, trialEndsAt: endsAt }, now);
+    expect(info.active).toBe(true);
+    expect(info.daysLeft).toBe(3);
+  });
+
+  it('ignore une fin d’essai illisible et retombe sur le calcul local', () => {
+    const startedAt = '2026-10-01T09:00:00.000Z';
+    const info = getTrialInfo(
+      { trialStartedAt: startedAt, trialEndsAt: 'pas une date' },
+      new Date('2026-10-02T09:00:00.000Z')
+    );
+    expect(info.active).toBe(true);
+    expect(info.daysLeft).toBe(13);
+  });
+
+  it('conserve la formule effective et la demande déposée', () => {
+    const fallback = resolveDefaultSubscription({ mode: 'demo' });
+    const normalized = normalizeSubscription(
+      {
+        plan: 'free',
+        status: 'essai',
+        renewsOn: null,
+        trialStartedAt: '2026-10-01T09:00:00.000Z',
+        trialEndsAt: '2026-10-15T09:00:00.000Z',
+        effectivePlan: 'pro',
+        requestedPlan: 'business',
+        requestedAt: '2026-10-10T12:00:00.000Z',
+      },
+      fallback
+    );
+    expect(normalized.effectivePlan).toBe('pro');
+    expect(normalized.requestedPlan).toBe('business');
+    expect(normalized.requestedAt).toBe('2026-10-10T12:00:00.000Z');
+    expect(normalized.trialEndsAt).toBe('2026-10-15T09:00:00.000Z');
+  });
+
+  it('rejette une formule effective inconnue sans casser la sauvegarde', () => {
+    const fallback = resolveDefaultSubscription({ mode: 'demo' });
+    const normalized = normalizeSubscription(
+      {
+        plan: 'free',
+        status: 'essai',
+        renewsOn: null,
+        trialStartedAt: null,
+        effectivePlan: 'platinum',
+      },
+      fallback
+    );
+    expect(normalized.effectivePlan).toBeUndefined();
+    expect(normalized.plan).toBe('free');
+  });
+});

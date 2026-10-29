@@ -30,6 +30,7 @@ export default defineConfig({
         'src/lib/supabaseWrite.ts',
         'src/lib/planAccess.ts',
         'src/lib/subscription.ts',
+        'src/lib/supabaseSubscription.ts',
       ],
       thresholds: {
         statements: 70,

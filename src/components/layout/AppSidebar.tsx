@@ -117,6 +117,7 @@ export const AppSidebar: React.FC = () => {
     employees,
     workspace,
     subscription,
+    subscriptionSource,
     requestSettingsTab,
   } = useApp();
 
