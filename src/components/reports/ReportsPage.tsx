@@ -42,9 +42,9 @@ export const ReportsPage: React.FC = () => {
     products,
     shopSettings,
     workspace,
-    subscription,
+    effectivePlanId,
   } = useApp();
-  const canUseDetailedReports = isFeatureIncluded(subscription.plan, 'detailedReports');
+  const canUseDetailedReports = isFeatureIncluded(effectivePlanId, 'detailedReports');
   const [activeReport, setActiveReport] = useState<ReportId | null>(null);
   const [preset, setPreset] = useState<PeriodPreset>('month');
   const [customStart, setCustomStart] = useState('');

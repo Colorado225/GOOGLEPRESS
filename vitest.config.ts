@@ -29,6 +29,7 @@ export default defineConfig({
         'src/lib/storageLocationsSync.ts',
         'src/lib/supabaseWrite.ts',
         'src/lib/planAccess.ts',
+        'src/lib/subscription.ts',
       ],
       thresholds: {
         statements: 70,

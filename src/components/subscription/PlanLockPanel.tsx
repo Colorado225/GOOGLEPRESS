@@ -10,8 +10,8 @@ import { formatXof, getSubscriptionPlan } from '../../lib/subscription';
 
 /** Cette fonction est-elle incluse dans la formule courante ? */
 export const usePlanFeature = (feature: PlanFeature): boolean => {
-  const { subscription } = useApp();
-  return isFeatureIncluded(subscription.plan, feature);
+  const { effectivePlanId } = useApp();
+  return isFeatureIncluded(effectivePlanId, feature);
 };
 
 /**

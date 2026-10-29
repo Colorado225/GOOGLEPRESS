@@ -1,9 +1,11 @@
 import React from 'react';
 import { Crown, ChevronRight } from 'lucide-react';
 import {
+  formatTrialRemaining,
   getSubscriptionPlan,
   getSubscriptionStatusLabel,
   getSubscriptionStatusTone,
+  getTrialInfo,
   type SubscriptionState,
 } from '../../lib/subscription';
 
@@ -28,8 +30,15 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
   onManage,
 }) => {
   const plan = getSubscriptionPlan(subscription.plan);
+  const trial = getTrialInfo(subscription);
+  const showTrial = Boolean(subscription.trialStartedAt);
   const tone = getSubscriptionStatusTone(subscription.status);
-  const statusLabel = getSubscriptionStatusLabel(subscription.status);
+  const statusLabel = showTrial
+    ? trial.active
+      ? `Essai Pro · ${formatTrialRemaining(trial)}`
+      : 'Essai terminé — formule Free'
+    : getSubscriptionStatusLabel(subscription.status);
+  const chipLabel = showTrial ? (trial.active ? `${trial.daysLeft} j` : 'terminé') : subscription.status;
 
   if (collapsed) {
     return (
@@ -67,11 +76,15 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
         <span
           className={`mt-0.5 shrink-0 rounded-full border px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide ${tone.chip}`}
         >
-          {subscription.status}
+          {chipLabel}
         </span>
       </div>
 
-      <p className="mt-2 text-[11px] leading-snug text-zinc-400">{plan.tagline}</p>
+      <p className="mt-2 text-[11px] leading-snug text-zinc-400">
+        {showTrial && trial.active
+          ? `Essai de 14 jours : fonctions Pro ouvertes.`
+          : plan.tagline}
+      </p>
 
       <div className="mt-2 flex items-center gap-1.5 text-[10.5px] text-zinc-300">
         <span className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} aria-hidden="true" />

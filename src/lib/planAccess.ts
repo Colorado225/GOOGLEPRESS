@@ -1,4 +1,4 @@
-import type { SubscriptionPlanId } from './subscription';
+import { getTrialInfo, type SubscriptionPlanId, type SubscriptionState } from './subscription';
 
 /**
  * Garde-fous des formules Free / Pro / Business.
@@ -110,6 +110,23 @@ export const PLAN_CAPABILITIES: Record<SubscriptionPlanId, PlanCapabilities> = {
       multiShop: true,
     },
   },
+};
+
+/**
+ * Formule réellement appliquée.
+ *
+ * Un compte Free profite de l'**essai de 14 jours** : pendant cette période,
+ * il dispose des fonctions Pro (essai de l'offre supérieure). À l'échéance, il
+ * retombe automatiquement sur les plafonds Free — sans perte de données.
+ * Une formule suspendue retombe aussi sur Free.
+ */
+export const resolveEffectivePlanId = (
+  state: Pick<SubscriptionState, 'plan' | 'status' | 'trialStartedAt'>,
+  now: Date = new Date()
+): SubscriptionPlanId => {
+  if (state.status === 'suspendu') return 'free';
+  if (state.plan !== 'free') return state.plan;
+  return getTrialInfo(state, now).active ? 'pro' : 'free';
 };
 
 export const getPlanCapabilities = (planId: SubscriptionPlanId): PlanCapabilities =>

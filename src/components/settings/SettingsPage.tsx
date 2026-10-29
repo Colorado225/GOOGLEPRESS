@@ -135,11 +135,11 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
     openStorageLocationsConfig,
     settingsTabRequest,
     clearSettingsTabRequest,
-    subscription,
+    effectivePlanId,
   } = useApp();
 
-  const canUseDeliveryTracking = isFeatureIncluded(subscription.plan, 'deliveryTracking');
-  const canUseDeliveryProof = isFeatureIncluded(subscription.plan, 'deliveryProof');
+  const canUseDeliveryTracking = isFeatureIncluded(effectivePlanId, 'deliveryTracking');
+  const canUseDeliveryProof = isFeatureIncluded(effectivePlanId, 'deliveryProof');
 
   // Le formulaire démarre depuis les paramètres persistés (contexte).
   const [shopName, setShopName] = useState(shopSettings.name);

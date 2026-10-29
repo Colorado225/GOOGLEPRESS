@@ -32,6 +32,37 @@ base.
 dédié. Annoncés mais **pas encore livrés** (affichés « bientôt » dans l'écran) :
 tableau de bord consolidé multi-agences, API et webhooks.
 
+## 1 bis. L'essai de 14 jours
+
+Tout compte réel démarre avec un **essai de 14 jours**. Pendant cette période,
+les fonctions Pro sont ouvertes (espace client, tournées et carte, preuve de
+remise, rapports détaillés) et les plafonds Free ne s'appliquent pas encore.
+À l'échéance, le compte **retombe automatiquement sur la formule Free** :
+plafonds et verrous s'appliquent, mais aucune donnée n'est supprimée.
+
+Où le compteur se voit :
+
+- **carte d'abonnement de la barre latérale** : pastille « 12 j », ligne
+  « Essai Pro · 12 jours restants » ;
+- **Paramètres → Abonnement** : bandeau avec le temps restant et une barre de
+  progression, puis le rappel de ce qui se passe à l'échéance.
+
+Règles de calcul :
+
+- la date de départ est **figée au premier lancement** du compte et conservée
+  par espace (`pressingpro_subscription`) : recharger la page ne remet jamais
+  le compteur à zéro ;
+- le décompte se fait sur l'horloge de l'appareil ; une date système fausse
+  décale le compteur — acceptable à ce stade, à sécuriser côté serveur ;
+- choisir Pro ou Business met fin au décompte (la formule payante prend le
+  relais) ; une formule **suspendue** retombe sur les plafonds Free ;
+- la **démonstration locale** n'a pas de chronomètre : elle reste en Pro.
+
+**Limite assumée** : l'essai est stocké sur l'appareil. Effacer les données du
+navigateur le redémarre. Comme les autres garde-fous, il devra être déplacé en
+base (`trial_started_at` sur l'abonnement serveur) avant le premier
+encaissement.
+
 ## 2. Pourquoi ces prix
 
 Le raisonnement, à vérifier avec vos propres chiffres :

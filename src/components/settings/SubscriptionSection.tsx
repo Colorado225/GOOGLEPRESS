@@ -4,7 +4,10 @@ import { useApp } from '../../context/AppContext';
 import { SegmentedControl } from '../common/SegmentedControl';
 import {
   SUBSCRIPTION_PLANS,
+  TRIAL_DAYS,
   buildPlanRequestMessage,
+  formatTrialRemaining,
+  getTrialInfo,
   formatPlanLimit,
   formatXof,
   getSubscriptionStatusLabel,
@@ -29,6 +32,8 @@ export const SubscriptionSection: React.FC = () => {
   const [requested, setRequested] = useState<SubscriptionPlanDefinition | null>(null);
 
   const currentPlan = getSubscriptionPlan(subscription.plan);
+  const trial = getTrialInfo(subscription);
+  const showTrial = Boolean(subscription.trialStartedAt);
 
   const choose = (plan: SubscriptionPlanDefinition) => {
     chooseSubscriptionPlan(plan.id);
@@ -84,6 +89,51 @@ export const SubscriptionSection: React.FC = () => {
             </span>
           </p>
         </div>
+
+        {showTrial && (
+          <div
+            className={`mt-3 rounded-lg border px-3 py-2 ${
+              trial.active
+                ? 'border-blue-200 bg-blue-50/80 dark:border-blue-900 dark:bg-blue-950/40'
+                : 'border-amber-200 bg-amber-50/80 dark:border-amber-900 dark:bg-amber-950/40'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p
+                className={`text-[11.5px] font-bold ${
+                  trial.active
+                    ? 'text-blue-900 dark:text-blue-200'
+                    : 'text-amber-900 dark:text-amber-200'
+                }`}
+              >
+                {trial.active
+                  ? `Essai de ${TRIAL_DAYS} jours · ${formatTrialRemaining(trial)}`
+                  : 'Essai terminé'}
+              </p>
+              <span className="text-[11px] font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">
+                {trial.daysLeft} j / {TRIAL_DAYS}
+              </span>
+            </div>
+            <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={trial.elapsedPercent}
+              aria-label="Temps d’essai consommé"
+              className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/80 dark:bg-zinc-800"
+            >
+              <div
+                className={`h-full rounded-full ${trial.active ? 'bg-blue-500' : 'bg-amber-500'}`}
+                style={{ width: `${trial.elapsedPercent}%` }}
+              />
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-zinc-600 dark:text-zinc-300">
+              {trial.active
+                ? 'Pendant l’essai, les fonctions Pro sont ouvertes : espace client, tournées et carte, preuve de remise, rapports détaillés. À l’échéance, la formule Free reste utilisable avec ses plafonds.'
+                : 'L’essai est terminé : les plafonds Free s’appliquent. Choisissez une formule pour retrouver les fonctions Pro et lever les limites.'}
+            </p>
+          </div>
+        )}
 
         <p className="mt-3 flex items-start gap-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 px-3 py-2 text-[11.5px] leading-relaxed text-zinc-600 dark:text-zinc-300">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />

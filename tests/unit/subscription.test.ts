@@ -6,8 +6,10 @@ import {
   formatPlanLimit,
   formatXof,
   getSubscriptionPlan,
+  formatTrialRemaining,
   getSubscriptionStatusLabel,
   getSubscriptionStatusTone,
+  getTrialInfo,
   getYearlySavingXof,
   normalizeSubscription,
   resolveDefaultSubscription,
@@ -52,26 +54,49 @@ describe('subscription — les trois formules', () => {
 
 describe('subscription — état par défaut', () => {
   it('démarre en Free/essai sur un espace réel', () => {
-    const state = resolveDefaultSubscription({ mode: 'live' });
+    const start = new Date('2026-10-29T08:00:00.000Z');
+    const state = resolveDefaultSubscription({ mode: 'live' }, start);
     expect(state.plan).toBe('free');
     expect(state.status).toBe('essai');
     expect(state.renewsOn).toBeNull();
+    expect(state.trialStartedAt).toBe(start.toISOString());
   });
 
   it('ne prétend jamais à un abonnement payé en démonstration', () => {
     const state = resolveDefaultSubscription({ mode: 'demo' });
     expect(state.plan).toBe('pro');
     expect(state.status).not.toBe('actif');
+    // Pas de chronomètre en démonstration.
+    expect(state.trialStartedAt).toBeNull();
   });
 });
 
 describe('subscription — validation des sauvegardes', () => {
   const fallback = resolveDefaultSubscription({ mode: 'live' });
 
-  it('accepte un état valide', () => {
+  it('accepte un état valide et conserve la date d’essai enregistrée', () => {
     expect(
-      normalizeSubscription({ plan: 'business', status: 'actif', renewsOn: '2026-12-31' }, fallback)
-    ).toEqual({ plan: 'business', status: 'actif', renewsOn: '2026-12-31' });
+      normalizeSubscription(
+        {
+          plan: 'business',
+          status: 'actif',
+          renewsOn: '2026-12-31',
+          trialStartedAt: '2026-10-01T10:00:00.000Z',
+        },
+        fallback
+      )
+    ).toEqual({
+      plan: 'business',
+      status: 'actif',
+      renewsOn: '2026-12-31',
+      trialStartedAt: '2026-10-01T10:00:00.000Z',
+    });
+  });
+
+  it('garde le départ d’essai du fallback quand la sauvegarde n’en a pas', () => {
+    expect(
+      normalizeSubscription({ plan: 'free' }, fallback).trialStartedAt
+    ).toBe(fallback.trialStartedAt);
   });
 
   it('relit les anciens noms de formules sans perdre le choix', () => {
@@ -84,6 +109,7 @@ describe('subscription — validation des sauvegardes', () => {
       plan: fallback.plan,
       status: fallback.status,
       renewsOn: null,
+      trialStartedAt: fallback.trialStartedAt,
     });
   });
 
@@ -137,5 +163,48 @@ describe('subscription — demande envoyée à l’équipe', () => {
     });
     expect(message).toContain('formule gratuite');
     expect(message).not.toContain('FCFA');
+  });
+});
+
+describe('subscription — chronomètre de 14 jours', () => {
+  const startedAt = '2026-10-01T09:00:00.000Z';
+  const day = 24 * 60 * 60 * 1000;
+
+  it('affiche 14 jours au démarrage', () => {
+    const info = getTrialInfo({ trialStartedAt: startedAt }, new Date(startedAt));
+    expect(info.active).toBe(true);
+    expect(info.totalDays).toBe(14);
+    expect(info.daysLeft).toBe(14);
+    expect(info.elapsedPercent).toBe(0);
+    expect(formatTrialRemaining(info)).toBe('14 jours restants');
+  });
+
+  it('décompte les jours et les heures', () => {
+    const fiveDaysLater = new Date(new Date(startedAt).getTime() + 5 * day);
+    const info = getTrialInfo({ trialStartedAt: startedAt }, fiveDaysLater);
+    expect(info.daysLeft).toBe(9);
+    expect(formatTrialRemaining(info)).toBe('9 jours restants');
+
+    const lastHalfDay = new Date(new Date(startedAt).getTime() + 13.5 * day);
+    const nearly = getTrialInfo({ trialStartedAt: startedAt }, lastHalfDay);
+    expect(nearly.daysLeft).toBe(1);
+    expect(nearly.hoursLeft).toBe(12);
+    expect(formatTrialRemaining(nearly)).toBe('12 h restantes');
+  });
+
+  it('s’arrête pile à l’échéance', () => {
+    const expiry = new Date(new Date(startedAt).getTime() + 14 * day);
+    const info = getTrialInfo({ trialStartedAt: startedAt }, expiry);
+    expect(info.active).toBe(false);
+    expect(info.daysLeft).toBe(0);
+    expect(info.elapsedPercent).toBe(100);
+    expect(formatTrialRemaining(info)).toBe('Essai terminé');
+  });
+
+  it('ne démarre pas sans date valide', () => {
+    const info = getTrialInfo({ trialStartedAt: 'date invalide' });
+    expect(info.active).toBe(false);
+    expect(info.daysLeft).toBe(0);
+    expect(info.endsAt).toBeNull();
   });
 });

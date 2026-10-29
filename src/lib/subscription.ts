@@ -117,12 +117,81 @@ export const SUBSCRIPTION_PLANS: readonly SubscriptionPlanDefinition[] = [
   },
 ];
 
+/** Durée de l'essai offert sur un compte réel, en jours. */
+export const TRIAL_DAYS = 14;
+
 export interface SubscriptionState {
   plan: SubscriptionPlanId;
   status: SubscriptionStatus;
   /** Date de fin de période connue ; `null` = aucune échéance enregistrée. */
   renewsOn: string | null;
+  /**
+   * Début de l'essai de 14 jours. Fixé une seule fois par espace : recharger
+   * l'application ne remet jamais le compteur à zéro.
+   */
+  trialStartedAt: string | null;
 }
+
+export interface TrialInfo {
+  /** L'essai court-il encore ? */
+  active: boolean;
+  startedAt: string | null;
+  endsAt: string | null;
+  totalDays: number;
+  /** Jours entiers restants (arrondi au supérieur), 0 une fois terminé. */
+  daysLeft: number;
+  /** Heures restantes (arrondi au supérieur), 0 une fois terminé. */
+  hoursLeft: number;
+  /** Millisecondes restantes, 0 une fois terminé. */
+  remainingMs: number;
+  /** Pourcentage de temps consommé, de 0 à 100. */
+  elapsedPercent: number;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** État du compteur de 14 jours, calculé à partir de la date de départ. */
+export const getTrialInfo = (
+  state: Pick<SubscriptionState, 'trialStartedAt'>,
+  now: Date = new Date()
+): TrialInfo => {
+  const startedAt = state.trialStartedAt;
+  const started = startedAt ? new Date(startedAt) : null;
+  const valid = started !== null && !Number.isNaN(started.getTime());
+  if (!started || !valid) {
+    return {
+      active: false,
+      startedAt: null,
+      endsAt: null,
+      totalDays: TRIAL_DAYS,
+      daysLeft: 0,
+      hoursLeft: 0,
+      remainingMs: 0,
+      elapsedPercent: 100,
+    };
+  }
+  const endsAt = new Date(started.getTime() + TRIAL_DAYS * DAY_MS);
+  const remainingMs = Math.max(0, endsAt.getTime() - now.getTime());
+  return {
+    active: remainingMs > 0,
+    startedAt: started.toISOString(),
+    endsAt: endsAt.toISOString(),
+    totalDays: TRIAL_DAYS,
+    daysLeft: Math.ceil(remainingMs / DAY_MS),
+    hoursLeft: Math.ceil(remainingMs / (60 * 60 * 1000)),
+    remainingMs,
+    elapsedPercent: Math.min(100, Math.max(0, Math.round((1 - remainingMs / (TRIAL_DAYS * DAY_MS)) * 100))),
+  };
+};
+
+/** Texte court du compteur, prêt à afficher. */
+export const formatTrialRemaining = (info: TrialInfo): string => {
+  if (!info.active) return 'Essai terminé';
+  if (info.remainingMs <= DAY_MS) {
+    return `${info.hoursLeft} h restantes`;
+  }
+  return `${info.daysLeft} jour${info.daysLeft > 1 ? 's' : ''} restant${info.daysLeft > 1 ? 's' : ''}`;
+};
 
 export const SUBSCRIPTION_STORAGE_KEY = 'pressingpro_subscription';
 
@@ -131,11 +200,18 @@ export const getSubscriptionPlan = (planId: SubscriptionPlanId): SubscriptionPla
 
 /** Espace réel : Free, sans facturation. Démonstration : Pro, marqué « essai ». */
 export const resolveDefaultSubscription = (
-  scope: Pick<WorkspaceScope, 'mode'>
+  scope: Pick<WorkspaceScope, 'mode'>,
+  now: Date = new Date()
 ): SubscriptionState =>
   scope.mode === 'live'
-    ? { plan: 'free', status: 'essai', renewsOn: null }
-    : { plan: 'pro', status: 'essai', renewsOn: null };
+    ? {
+        plan: 'free',
+        status: 'essai',
+        renewsOn: null,
+        // L'essai démarre au premier lancement du compte réel.
+        trialStartedAt: now.toISOString(),
+      }
+    : { plan: 'pro', status: 'essai', renewsOn: null, trialStartedAt: null };
 
 /**
  * Anciens noms de formules (Découverte / Standard) : une sauvegarde locale
@@ -171,6 +247,10 @@ export const normalizeSubscription = (
       typeof candidate.renewsOn === 'string' && candidate.renewsOn.trim()
         ? candidate.renewsOn
         : null,
+    trialStartedAt:
+      typeof candidate.trialStartedAt === 'string' && candidate.trialStartedAt.trim()
+        ? candidate.trialStartedAt
+        : fallback.trialStartedAt,
   };
 };
 

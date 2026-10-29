@@ -71,6 +71,7 @@ import {
   guardEmployeeCount,
   guardMonthlyOrderCount,
   guardStorageLocationCount,
+  resolveEffectivePlanId,
 } from '../lib/planAccess';
 import {
   SUBSCRIPTION_STORAGE_KEY,
@@ -281,6 +282,8 @@ interface AppContextType {
   retryStorageSync: () => void;
   /** Formule choisie (Free / Pro / Business) — demande commerciale locale. */
   subscription: SubscriptionState;
+  /** Formule réellement appliquée (essai de 14 jours inclus). */
+  effectivePlanId: SubscriptionPlanId;
   chooseSubscriptionPlan: (planId: SubscriptionPlanId) => void;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
@@ -578,11 +581,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     try {
-      setSubscription(normalizeSubscription(JSON.parse(stored), fallback));
+      const normalized = normalizeSubscription(JSON.parse(stored), fallback);
+      setSubscription(normalized);
+      // La date de départ de l'essai est figée dès la première lecture : le
+      // compteur ne repart jamais de zéro au rechargement.
+      persistString(
+        scopeStorageKey(workspace, SUBSCRIPTION_STORAGE_KEY),
+        JSON.stringify(normalized)
+      );
     } catch {
       setSubscription(fallback);
     }
   }, [workspace]);
+
+  // Essai de 14 jours : un compte Free dispose des fonctions Pro jusqu'à
+  // l'échéance, puis retombe sur ses plafonds sans rien perdre.
+  const effectivePlanId = resolveEffectivePlanId(subscription);
 
   const chooseSubscriptionPlan = (planId: SubscriptionPlanId) => {
     const next: SubscriptionState = { ...subscription, plan: planId };
@@ -1075,7 +1089,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const submitNewOrder = (): LaundryOrder | null => {
     const monthlyGuard = guardMonthlyOrderCount(
       countOrdersInMonth(orders),
-      subscription.plan
+      effectivePlanId
     );
     if (!monthlyGuard.allowed) {
       showToast(monthlyGuard.message);
@@ -1382,7 +1396,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createStorageLocation = (
     data: StorageLocationFormData
   ): ActionResult & { location?: StorageLocation } => {
-    const guard = guardStorageLocationCount(storageLocations.length, 1, subscription.plan);
+    const guard = guardStorageLocationCount(storageLocations.length, 1, effectivePlanId);
     if (!guard.allowed) return { ok: false, error: guard.message };
     const { normalized, error } = validateStorageLocationData(data);
     if (!normalized || error) return { ok: false, error: error ?? 'Emplacement invalide.' };
@@ -1406,7 +1420,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { ok: false, error: error ?? 'Aucun emplacement à créer.' };
     }
 
-    const guard = guardStorageLocationCount(storageLocations.length, drafts.length, subscription.plan);
+    const guard = guardStorageLocationCount(storageLocations.length, drafts.length, effectivePlanId);
     if (!guard.allowed) return { ok: false, error: guard.message };
 
     const now = nowISODateTime();
@@ -2242,7 +2256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addEmployee = (
     data: EmployeeFormData
   ): ActionResult & { employee?: Employee } => {
-    const guard = guardEmployeeCount(employees.length, subscription.plan);
+    const guard = guardEmployeeCount(employees.length, effectivePlanId);
     if (!guard.allowed) return { ok: false, error: guard.message };
     const now = nowISODateTime();
     const employee: Employee = { ...data, id: genId('emp'), createdAt: now, updatedAt: now };
@@ -2739,6 +2753,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         storageSync,
         retryStorageSync,
         subscription,
+        effectivePlanId,
         chooseSubscriptionPlan,
         shortcutHelpOpen,
         setShortcutHelpOpen,

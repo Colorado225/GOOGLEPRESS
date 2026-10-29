@@ -8,6 +8,7 @@ import {
   guardMonthlyOrderCount,
   guardStorageLocationCount,
   isFeatureIncluded,
+  resolveEffectivePlanId,
 } from '../../src/lib/planAccess';
 
 describe('planAccess — capacités par formule', () => {
@@ -127,5 +128,34 @@ describe('planAccess — consommation des quotas', () => {
     expect(getQuotaUsage(20, 10)).toBe(100);
     expect(getQuotaUsage(5, null)).toBeNull();
     expect(getQuotaUsage(1, 0)).toBe(100);
+  });
+});
+
+describe('planAccess — formule effective et essai', () => {
+  const now = new Date('2026-10-10T12:00:00.000Z');
+
+  it('ouvre Pro pendant les 14 jours d’essai d’un compte Free', () => {
+    const state = { plan: 'free' as const, status: 'essai' as const, trialStartedAt: '2026-10-01T12:00:00.000Z' };
+    expect(resolveEffectivePlanId(state, now)).toBe('pro');
+  });
+
+  it('retombe sur Free une fois l’essai terminé', () => {
+    const state = { plan: 'free' as const, status: 'essai' as const, trialStartedAt: '2026-09-01T12:00:00.000Z' };
+    expect(resolveEffectivePlanId(state, now)).toBe('free');
+  });
+
+  it('respecte une formule payante même sans essai', () => {
+    const state = { plan: 'business' as const, status: 'actif' as const, trialStartedAt: null };
+    expect(resolveEffectivePlanId(state, now)).toBe('business');
+  });
+
+  it('ramène une formule suspendue aux plafonds Free', () => {
+    const state = { plan: 'pro' as const, status: 'suspendu' as const, trialStartedAt: null };
+    expect(resolveEffectivePlanId(state, now)).toBe('free');
+  });
+
+  it('n’accorde rien sans date d’essai', () => {
+    const state = { plan: 'free' as const, status: 'essai' as const, trialStartedAt: null };
+    expect(resolveEffectivePlanId(state, now)).toBe('free');
   });
 });
