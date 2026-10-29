@@ -39,14 +39,17 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
       : 'Essai terminé — formule Free'
     : getSubscriptionStatusLabel(subscription.status);
   const chipLabel = showTrial ? (trial.active ? `${trial.daysLeft} j` : 'terminé') : subscription.status;
+  // Pendant l'essai, c'est Pro qui est réellement appliqué : l'afficher ainsi
+  // évite le paradoxe « Free » + « fonctions Pro ouvertes ».
+  const displayLabel = showTrial && trial.active ? 'Essai Pro' : plan.label;
 
   if (collapsed) {
     return (
       <button
         type="button"
         onClick={onManage}
-        title={`${plan.label} — ${statusLabel}`}
-        aria-label={`Plan d’abonnement : ${plan.label}, ${statusLabel}`}
+        title={`${displayLabel} — ${statusLabel}`}
+        aria-label={`Plan d’abonnement : ${displayLabel}, ${statusLabel}`}
         className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl border border-amber-500/25 bg-amber-500/10 text-amber-300 transition-colors hover:bg-amber-500/20"
       >
         <Crown className="h-4 w-4" aria-hidden="true" />
@@ -69,7 +72,7 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
               Plan d’abonnement
             </p>
             <p className="truncate text-[12.5px] font-bold leading-tight text-amber-300">
-              {plan.label}
+              {displayLabel}
             </p>
           </div>
         </div>

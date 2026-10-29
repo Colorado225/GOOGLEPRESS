@@ -73,7 +73,9 @@ export const SubscriptionSection: React.FC = () => {
             </span>
             <div>
               <h2 className="text-[14.5px] font-bold text-zinc-900 dark:text-zinc-100">
-                Formule {currentPlan.label}
+                {trial.active && subscription.plan === 'free'
+                  ? 'Formule Free — essai Pro en cours'
+                  : `Formule ${currentPlan.label}`}
               </h2>
               <p className="mt-0.5 text-[12.5px] text-zinc-500 dark:text-zinc-400">
                 {getSubscriptionStatusLabel(subscription.status)} · {currentPlan.tagline}
