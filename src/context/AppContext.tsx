@@ -61,6 +61,11 @@ import {
   saveRemoteShopSettings,
   type ShopSettingsSyncState,
 } from '../lib/shopSettingsSync';
+import {
+  loadRemoteStorageLocations,
+  saveRemoteStorageLocations,
+  type StorageSyncState,
+} from '../lib/storageLocationsSync';
 import { isValidLogoDataUrl } from '../lib/shopIdentity';
 import { normalizeBlanchisserieSettings } from '../lib/blanchisserie';
 import { normalizePressingSettings } from '../lib/pressing';
@@ -257,6 +262,9 @@ interface AppContextType {
   /** État d'enregistrement des paramètres dans la base (compte réel). */
   settingsSync: ShopSettingsSyncState;
   retryShopSettingsSync: () => void;
+  /** État d'enregistrement des emplacements de rangement. */
+  storageSync: StorageSyncState;
+  retryStorageSync: () => void;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -452,6 +460,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       INITIAL_STORAGE_LOCATIONS
     )
   );
+  // --- Emplacements de rangement : synchronisation avec la base ---------
+  const [storageSync, setStorageSync] = useState<StorageSyncState>(() => ({
+    status: liveWorkspace ? 'loading' : 'idle',
+    error: null,
+    savedAt: null,
+  }));
+  // Dernier état connu du serveur : sert à ne pas renvoyer un plan identique.
+  const storageSnapshotRef = useRef(JSON.stringify(storageLocations));
+  const storageHydratedRef = useRef(!liveWorkspace);
+  const storagePushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushStorageLocations = async (next: readonly StorageLocation[]) => {
+    const shopId = workspace.shopId;
+    const organizationId = workspace.organizationId;
+    if (!liveWorkspace || !shopId || !organizationId) return;
+    setStorageSync((previous) => ({ ...previous, status: 'saving', error: null }));
+    const result = await saveRemoteStorageLocations({
+      shopId,
+      organizationId,
+      locations: next,
+    });
+    if (!result.ok) {
+      setStorageSync({ status: 'error', error: result.error, savedAt: null });
+      return;
+    }
+    storageSnapshotRef.current = JSON.stringify(next);
+    setStorageSync({ status: 'saved', error: null, savedAt: new Date().toISOString() });
+  };
+
+  const retryStorageSync = () => {
+    if (storagePushTimer.current) {
+      clearTimeout(storagePushTimer.current);
+      storagePushTimer.current = null;
+    }
+    void flushStorageLocations(storageLocations);
+  };
+
+  useEffect(() => {
+    const shopId = workspace.shopId;
+    if (!liveWorkspace || !shopId) return;
+    let cancelled = false;
+    setStorageSync({ status: 'loading', error: null, savedAt: null });
+    void (async () => {
+      const result = await loadRemoteStorageLocations(shopId, storageLocations);
+      if (cancelled) return;
+      if (!result.ok) {
+        setStorageSync({ status: 'error', error: result.error, savedAt: null });
+        storageHydratedRef.current = true;
+        return;
+      }
+      storageHydratedRef.current = true;
+      if (result.seeded) {
+        // Base encore vide : le plan local devient celui de l'agence.
+        await flushStorageLocations(result.locations);
+        return;
+      }
+      setStorageLocations(result.locations);
+      storageSnapshotRef.current = JSON.stringify(result.locations);
+      setStorageSync({ status: 'saved', error: null, savedAt: new Date().toISOString() });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveWorkspace, workspace.shopId]);
+
+  useEffect(() => {
+    if (!liveWorkspace || !workspace.shopId || !storageHydratedRef.current) return;
+    const serialized = JSON.stringify(storageLocations);
+    if (serialized === storageSnapshotRef.current) return;
+    if (storagePushTimer.current) clearTimeout(storagePushTimer.current);
+    setStorageSync((previous) => ({ ...previous, status: 'saving', error: null }));
+    storagePushTimer.current = setTimeout(() => {
+      storagePushTimer.current = null;
+      void flushStorageLocations(storageLocations);
+    }, 800);
+    return () => {
+      if (storagePushTimer.current) {
+        clearTimeout(storagePushTimer.current);
+        storagePushTimer.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageLocations, liveWorkspace, workspace.shopId]);
+
   const [focusedStorageOrderId, setFocusedStorageOrderId] = useState<string | null>(null);
   const [storagePanelViewRequest, setStoragePanelViewRequest] =
     useState<StoragePanelView | null>(null);
@@ -2578,6 +2671,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateShopSettings,
         settingsSync,
         retryShopSettingsSync,
+        storageSync,
+        retryStorageSync,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,

@@ -1262,6 +1262,88 @@ try {
     assert.equal(unchanged.rows[0].settings.name, 'Alpha Cocody');
   });
 
+  await check('le propriétaire crée un casier, toute l’agence le lit', async () => {
+    const inserted = await queryAs(
+      users.ownerA,
+      `insert into public.storage_locations
+         (organization_id, shop_id, legacy_id, code, label, zone, capacity_packages, is_active)
+       values
+         ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
+          'loc-c01', 'C-01', 'Portant C-01', 'hanging', 20, true)
+       returning id, code, label`
+    );
+    assert.equal(inserted.rows.length, 1);
+    assert.equal(inserted.rows[0].code, 'C-01');
+
+    const readByCashier = await queryAs(
+      users.cashierA1,
+      `select code from public.storage_locations
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    // A-01 vient des fixtures : le caissier voit tout le plan de l’agence.
+    assert.deepEqual(idsOf(readByCashier.rows, 'code'), ['A-01', 'C-01']);
+  });
+
+  await check('un caissier ne peut pas modifier un casier', async () => {
+    const attempted = await queryAs(
+      users.cashierA1,
+      `update public.storage_locations
+          set label = 'Caisse pirate'
+        where code = 'C-01'
+          and shop_id = '20000000-0000-4000-8000-000000000001'
+        returning id`
+    );
+    assert.equal(attempted.rows.length, 0);
+
+    const unchanged = await db.query(
+      `select label from public.storage_locations
+        where code = 'C-01'
+          and shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(unchanged.rows[0].label, 'Portant C-01');
+  });
+
+  await expectFailure('un caissier ne peut pas créer de casier', async () => {
+    await queryAs(
+      users.cashierA1,
+      `insert into public.storage_locations
+         (organization_id, shop_id, code, label, zone, capacity_packages)
+       values
+         ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
+          'B-99', 'Casier pirate', 'other', 5)`
+    );
+  }, /row-level security|politique/i);
+
+  await check('les casiers d’une autre agence restent invisibles', async () => {
+    const otherShop = await queryAs(
+      users.ownerB,
+      `select id from public.storage_locations
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(otherShop.rows.length, 0);
+  });
+
+  await expectFailure('un casier ne peut pas être supprimé, seulement désactivé', async () => {
+    await queryAs(
+      users.ownerA,
+      `delete from public.storage_locations
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+  }, /permission denied|row-level security|politique/i);
+
+  await check('le propriétaire désactive un casier sans perdre l’historique', async () => {
+    const deactivated = await queryAs(
+      users.ownerA,
+      `update public.storage_locations
+          set is_active = false
+        where code = 'C-01'
+          and shop_id = '20000000-0000-4000-8000-000000000001'
+        returning is_active`
+    );
+    assert.equal(deactivated.rows.length, 1);
+    assert.equal(deactivated.rows[0].is_active, false);
+  });
+
   console.log(`\nPhase 0 PGlite : ${passed} vérifications réussies.`);
 } catch (error) {
   console.error(`\nÉchec Phase 0 PGlite : ${error?.message ?? error}`);

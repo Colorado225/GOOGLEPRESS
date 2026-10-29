@@ -26,6 +26,7 @@ export default defineConfig({
         'src/lib/courierTour.ts',
         'src/lib/shopSettings.ts',
         'src/lib/shopSettingsSync.ts',
+        'src/lib/storageLocationsSync.ts',
       ],
       thresholds: {
         statements: 70,

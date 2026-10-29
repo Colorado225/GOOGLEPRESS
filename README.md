@@ -184,7 +184,10 @@ dépenses, emplacements, compteur de tickets et préférences de l’appareil.
 Les **paramètres de l’application** y sont aussi conservés, mais ils sont en
 plus enregistrés dans `public.shop_settings` dès qu’un compte réel est ouvert :
 ils suivent alors les appareils du pressing (voir
-[`docs/PARAMETRES-EN-BASE.md`](docs/PARAMETRES-EN-BASE.md)). La liste exacte reprise par la sauvegarde fait foi dans
+[`docs/PARAMETRES-EN-BASE.md`](docs/PARAMETRES-EN-BASE.md)). Les
+**emplacements de rangement** sont eux aussi enregistrés dans
+`public.storage_locations` sur un compte réel (voir
+[`docs/CASIERS-EN-BASE.md`](docs/CASIERS-EN-BASE.md)). La liste exacte reprise par la sauvegarde fait foi dans
 `src/lib/backup.ts` (`BACKUP_KEYS`). Les exceptions sont Atelier → Suivi
 distant et l’espace `/client`, qui ne lisent que des données déjà présentes
 dans Supabase et autorisées par la RLS ; l’espace client ne charge pas les

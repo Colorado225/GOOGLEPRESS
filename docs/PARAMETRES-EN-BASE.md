@@ -104,20 +104,21 @@ paramètres de cette agence. »
 - **Pas de temps réel** : un second appareil déjà ouvert ne voit pas les
   changements sans recharger la page. Le temps réel demande un abonnement
   Realtime et une gestion de conflits, hors de ce lot.
-- **Les emplacements de rangement (casiers) ne sont pas encore synchronisés.**
-  Ils vivent dans `pressingpro_storage_locations` et la table
-  `public.storage_locations` existe, mais leur écriture n'est pas branchée :
-  c'est la prochaine étape naturelle.
+- **Les emplacements de rangement suivent une synchro dédiée.** Ils sont
+  désormais enregistrés dans `public.storage_locations` (créations,
+  modifications et désactivations) : voir
+  [`docs/CASIERS-EN-BASE.md`](CASIERS-EN-BASE.md). Les préférences d'affichage
+  du rangement (filtres, vue) restent, elles, propres à l'appareil.
 - **Les préférences d'interface restent par appareil** (thème, ordre de la
   barre latérale) : ce sont des goûts d'utilisateur, pas la configuration du
   pressing.
 - **Le logo voyage en base64** dans le JSON : quelques dizaines de kilo-octets
   par enregistrement, acceptable à cette échelle.
-- **Aucune migration n'a été appliquée au projet hébergé depuis cet
-  environnement** : le SQL est vérifié en PGlite (voir § 8) mais reste à
-  pousser vers `Pressing_Pro` avec `supabase db push` (ou l'éditeur SQL) avant
-  que la production en profite. En attendant, le repli décrit au § 5 s'applique
-  et l'écran affiche l'avertissement correspondant.
+- **Migration appliquée le 29 octobre 2026 sur `Pressing_Pro`** (projet
+  `phjstsydxvggtduohfrl`) : les colonnes `settings` / `settings_updated_at`, le
+  `grant update` correspondant et le trigger d'horodatage sont en place. Le
+  repli du § 5 ne sert plus qu'aux bases créées avant cette date ; il est
+  conservé pour ne jamais bloquer un poste face à une base plus ancienne.
 
 ## 7. Sur un compte existant
 
@@ -134,7 +135,7 @@ l'instantané complet. Rien n'est perdu, rien n'est deviné.
   privilégie le JSON et retombe sur les colonnes, `mergeShopSettings` n'écrase
   rien avec une sauvegarde vide et nettoie les valeurs douteuses,
   `isMissingSettingsColumn` distingue une base non migrée d'un refus de rôle).
-- **PGlite (58 vérifications)** : la migration s'applique, le propriétaire
+- **PGlite (64 vérifications)** : la migration s'applique, le propriétaire
   enregistre l'instantané, l'horodatage serveur est posé, un caissier ne
   modifie aucune ligne.
 - **Rendu serveur** : l'écran Paramètres réaffiche la configuration sauvegardée
