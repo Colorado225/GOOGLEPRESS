@@ -65,6 +65,10 @@ export const useErpRouteSync = (): ErpRouteSync => {
     // réécrire l'adresse demandée (notamment une route inconnue).
     if (skipFirstPush.current) {
       skipFirstPush.current = false;
+      // L'écran initial correspond déjà à l'URL (accueil, lien profond) :
+      // `setActiveScreen` n'a donc rien changé et le marqueur resterait
+      // armé, bloquant toute réécriture d'adresse ensuite. On le libère.
+      if (pendingFromUrl.current === activeScreen) pendingFromUrl.current = null;
       return;
     }
     if (pendingFromUrl.current !== null) {

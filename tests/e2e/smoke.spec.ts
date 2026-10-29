@@ -241,6 +241,7 @@ test.describe('PressingPro — parcours critiques', () => {
     // laisserait croire à une session qui n’existe pas.
     await expect(page.getByRole('button', { name: 'Se déconnecter' })).toHaveCount(0);
     await page.getByRole('button', { name: /Paramètres/ }).click();
+    // Depuis l'accueil, la navigation interne doit aussi mettre l'URL à jour.
     await expect(page).toHaveURL(/\/parametres$/);
     await expect(page.getByRole('button', { name: 'Se déconnecter' })).toHaveCount(0);
   });

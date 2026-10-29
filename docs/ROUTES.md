@@ -83,6 +83,9 @@ avant. « Caisse & Clôture » reste une action (fenêtre de clôture Z), pas un
   (alias compris, pour ne pas polluer l'historique) ;
 - premier rendu et absorption d'une navigation navigateur protégés pour
   ne jamais réécrire l'adresse demandée (notamment une route inconnue) ;
+  le marqueur posé au chargement est libéré dès que l'écran initial
+  correspond déjà à l'URL — sans quoi, en arrivant sur `/`, la première
+  navigation interne aurait changé d'écran sans changer d'adresse ;
 - `document.title` suit l'écran (« Réception (POS) — PressingPro CI », …)
   et vaut « Page introuvable — PressingPro CI » sur la 404.
 
