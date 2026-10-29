@@ -362,6 +362,33 @@ try {
     assert.equal(events.rows[0].count, 1);
   });
 
+  await check('create_order facture l’express au double des prestations (×2)', async () => {
+    // Cliente ...003 (fidélité 0 %, agrégats lus par aucun autre contrôle) :
+    // la commande de contrôle ne fausse ni les soldes ni les compteurs.
+    const express = await queryAs(
+      users.cashierA1,
+      `
+        select
+          subtotal_xof::int,
+          service_fees_xof::int,
+          discount_xof::int,
+          total_xof::int
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000003'::uuid,
+          '[{"legacyKey":"chemise","quantity":2,"unitPrice":1,"subtotal":2}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-express-001',
+          p_pickup_option => 'express'
+        )
+      `
+    );
+    assert.equal(express.rows[0].subtotal_xof, 1000);
+    assert.equal(express.rows[0].service_fees_xof, 1000);
+    assert.equal(express.rows[0].discount_xof, 0);
+    assert.equal(express.rows[0].total_xof, 2000);
+  });
+
   await check('la RPC déplace une étape et journalise acteur, note et visibilité', async () => {
     const transitioned = await queryAs(
       users.workshopA2,
