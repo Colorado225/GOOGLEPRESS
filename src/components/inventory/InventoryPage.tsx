@@ -165,7 +165,7 @@ export const InventoryPage: React.FC = () => {
   );
 
   return (
-    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
       <PageHeader
         title="Stocks"
         subtitle="Inventaire, mouvements et alertes de réapprovisionnement"

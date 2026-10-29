@@ -82,7 +82,7 @@ export const OrdersPage: React.FC = () => {
   const { page, pageCount, setPage, pageItems: pagedOrders, rangeStart, rangeEnd } = usePagination(filteredOrders, 10, [searchTerm, tab]);
 
   return (
-    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <button

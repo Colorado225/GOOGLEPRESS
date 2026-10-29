@@ -107,7 +107,7 @@ export const ReportsPage: React.FC = () => {
 
   if (!canUseDetailedReports) {
     return (
-      <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+      <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
         <PageHeader
           title="Rapports"
           subtitle="Rapports détaillés et exports"
@@ -121,7 +121,7 @@ export const ReportsPage: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
       <div className="print:hidden">
         <PageHeader
           title={activeReport ? REPORT_TITLES[activeReport] : 'Rapports'}

@@ -113,7 +113,7 @@ export const WorkshopPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
       {/* Top bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
         <div>

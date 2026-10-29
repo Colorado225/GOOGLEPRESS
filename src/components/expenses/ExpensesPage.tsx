@@ -245,7 +245,7 @@ export const ExpensesPage: React.FC = () => {
   );
 
   return (
-    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
       <PageHeader
         title="Dépenses"
         subtitle="Registre des dépenses de l’établissement (en FCFA)"

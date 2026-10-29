@@ -175,7 +175,7 @@ const MainLayout: React.FC = () => {
       <MainLayoutHeader />
 
       {/* Main Container */}
-      <div className="max-w-[1366px] w-full mx-auto flex-1 flex flex-col md:flex-row relative items-stretch">
+      <div className="max-w-none w-full mx-auto flex-1 flex flex-col md:flex-row relative items-stretch">
         {/* Fond assombri du tiroir mobile : un appui dessus referme la navigation */}
         {isMobileMenuOpen && (
           <div

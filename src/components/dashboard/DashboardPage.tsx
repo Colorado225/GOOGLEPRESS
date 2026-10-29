@@ -20,7 +20,7 @@ export const DashboardPage: React.FC = () => {
   const isEmptyWorkspace = isLiveWorkspace(workspace) && orders.length === 0;
 
   return (
-    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
       <AppHeader
         title="Tableau de bord"
         subtitle={`${capitalize(formatLongDate(new Date()))} • ${workspaceLabel}`}

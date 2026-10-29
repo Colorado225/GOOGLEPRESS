@@ -44,6 +44,7 @@ export const BlanchisserieCounter: React.FC = () => {
   const [serviceId, setServiceId] = useState<BlanchisserieServiceId>('wash_iron');
   const [garmentInput, setGarmentInput] = useState('20');
   const [ironQuantities, setIronQuantities] = useState<Record<string, number>>({});
+  const [selectedGarmentTypes, setSelectedGarmentTypes] = useState<string[]>([]);
 
   const garments = Math.max(0, Math.min(500, Math.round(Number(garmentInput) || 0)));
 
@@ -89,6 +90,12 @@ export const BlanchisserieCounter: React.FC = () => {
   const setIronQuantity = (garmentId: string, next: number) => {
     const quantity = Math.max(0, Math.min(500, Math.round(next)));
     setIronQuantities((current) => ({ ...current, [garmentId]: quantity }));
+  };
+
+  const toggleGarmentType = (name: string) => {
+    setSelectedGarmentTypes((current) =>
+      current.includes(name) ? current.filter((n) => n !== name) : [...current, name]
+    );
   };
 
   const handleUnpricedIron = (name: string) => {
@@ -337,6 +344,42 @@ export const BlanchisserieCounter: React.FC = () => {
             </div>
           )}
         </div>
+
+      {/* Catalogue des vêtements déposés : sélection indicative des types de pièces */}
+      <div className="rounded-xl border border-zinc-200/90 bg-white p-3 shadow-2xs dark:border-zinc-700/90 dark:bg-zinc-900">
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          Catalogue des vêtements déposés
+        </p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {getGarmentCatalog(shopSettings).map((g) => {
+            const active = selectedGarmentTypes.includes(g.name);
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => toggleGarmentType(g.name)}
+                className={`flex flex-col items-center rounded-xl border-1.5 p-2 text-center transition-all ${
+                  active
+                    ? 'border-teal-600 bg-teal-50/60 dark:bg-teal-950/30'
+                    : 'border-zinc-200 dark:border-zinc-700'
+                }`}
+              >
+                {g.image ? (
+                  <img src={g.image} alt="" className="h-12 w-12 rounded-lg object-cover shadow-xs" />
+                ) : (
+                  <span className="text-2xl" aria-hidden="true">{g.emoji}</span>
+                )}
+                <span className="mt-1 text-[11px] font-bold leading-tight text-zinc-900 dark:text-zinc-100">{g.name}</span>
+              </button>
+            );
+          })}
+        </div>
+        {selectedGarmentTypes.length > 0 && (
+          <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+            Pièces sélectionnées : {selectedGarmentTypes.join(', ')}
+          </p>
+        )}
+      </div>
 
         {mode === 'per_garment' && (
           <p className="mt-2 flex items-start gap-1.5 text-[11.5px] text-zinc-500 dark:text-zinc-400">

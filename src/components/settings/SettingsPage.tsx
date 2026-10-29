@@ -371,7 +371,7 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
   };
 
   return (
-    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <button

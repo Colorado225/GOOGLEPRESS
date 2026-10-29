@@ -160,7 +160,7 @@ export const EmployeesPage: React.FC = () => {
   );
 
   return (
-    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+    <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
       <PageHeader
         title="Personnel"
         subtitle="Gérez les employés et leur activité"
