@@ -242,7 +242,7 @@ simple et le comportement lisible) :
 ## Thème clair / sombre
 
 L'interface existe en thème clair et en thème sombre : bouton soleil/lune
-dans l'en-tête, raccourci **Alt+T**, ou Paramètres → carte « Apparence ».
+dans l'en-tête ou raccourci **Alt+T**.
 Au premier lancement, la préférence du système (`prefers-color-scheme`) est
 suivie ; le choix est ensuite mémorisé dans ce navigateur
 (`pressingpro_theme`) et appliqué sans clignotement au chargement.

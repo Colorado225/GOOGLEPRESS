@@ -14,9 +14,7 @@ import {
   Database,
   Download,
   CheckCircle2,
-  Moon,
   PackageCheck,
-  Sun,
   Truck,
   ImagePlus,
   Trash2,
@@ -28,8 +26,7 @@ import {
   isStorageLocationSaturated,
 } from '../../lib/storage';
 import { Tabs } from '../common/Tabs';
-import { SegmentedControl, SegmentedOption } from '../common/SegmentedControl';
-import { AppTheme } from '../../lib/theme';
+import { SegmentedControl } from '../common/SegmentedControl';
 import { Badge } from '../common/DataTable';
 import { canPromptInstall, isRunningStandalone, promptInstall, PWA_INSTALLABLE_EVENT } from '../../lib/pwa';
 import { SupabaseBackendSection } from './SupabaseBackendSection';
@@ -42,52 +39,6 @@ import {
   resolveShopDisplayName,
 } from '../../lib/shopIdentity';
 import { SettingsSyncStatus } from './SettingsSyncStatus';
-
-/**
- * Carte « Apparence » : thème clair/sombre de l'interface. Le choix est appliqué
- * immédiatement et mémorisé dans ce navigateur (pressingpro_theme) ; il se bascule
- * aussi via le bouton soleil/lune de l'en-tête ou Alt+T. L'impression reste en clair.
- */
-const AppearanceCard: React.FC = () => {
-  const { theme, setTheme } = useApp();
-  const options: SegmentedOption<AppTheme>[] = [
-    { id: 'light', label: 'Clair', icon: <Sun className="h-3.5 w-3.5" aria-hidden="true" /> },
-    { id: 'dark', label: 'Sombre', icon: <Moon className="h-3.5 w-3.5" aria-hidden="true" /> },
-  ];
-  return (
-    <section aria-labelledby="appearance-card-title" className="card-3d mt-4 max-w-2xl rounded-2xl p-4">
-      <div className="flex items-start gap-3">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs"
-          aria-hidden="true"
-        >
-          {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 id="appearance-card-title" className="text-[14.5px] font-bold text-zinc-900 dark:text-zinc-100">
-            Apparence
-          </h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Thème de l'interface, appliqué immédiatement et{' '}
-            <strong className="text-zinc-700 dark:text-zinc-300">mémorisé sur cet appareil</strong>. Raccourci : bouton
-            soleil/lune dans l'en-tête ou{' '}
-            <kbd className="rounded border border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 px-1 font-mono text-[10.5px] text-zinc-600 dark:text-zinc-400">
-              Alt+T
-            </kbd>
-            . Le ticket et les rapports s'impriment toujours en clair, comme sur papier.
-          </p>
-          <SegmentedControl
-            ariaLabel="Choisir le thème de l'interface"
-            options={options}
-            value={theme}
-            onChange={setTheme}
-            className="mt-3"
-          />
-        </div>
-      </div>
-    </section>
-  );
-};
 
 /**
  * Carte « Application installable (PWA) » : reflète l'état réel détecté dans le
@@ -1136,7 +1087,6 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
       </form>
 
       <PwaInstallCard />
-      <AppearanceCard />
     </div>
   );
 };

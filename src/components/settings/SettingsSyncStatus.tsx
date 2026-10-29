@@ -1,7 +1,6 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle2, Cloud, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Cloud, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { formatLongDateTime } from '../../lib/dates';
 
 /**
  * Où vivent les réglages.
@@ -73,27 +72,14 @@ export const SettingsSyncStatus: React.FC = () => {
     );
   }
 
+  // Succès : aucune ligne permanente. L'écran l'annonce déjà par un toast au
+  // moment de l'enregistrement ; seul un avertissement mérite de rester.
+  if (!settingsSync.warning) return null;
+
   return (
-    <div className="space-y-1.5">
-      <p
-        aria-live="polite"
-        className="flex items-start gap-2 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-2.5 text-[11.5px] leading-relaxed text-emerald-900 dark:text-emerald-200"
-      >
-        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>
-          Réglages enregistrés dans la base de l’agence
-          {settingsSync.savedAt
-            ? ` · ${formatLongDateTime(new Date(settingsSync.savedAt))}`
-            : ''}
-          . Ils suivent vos appareils.
-        </span>
-      </p>
-      {settingsSync.warning && (
-        <p className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/60 px-3 py-2.5 text-[11.5px] leading-relaxed text-amber-900 dark:text-amber-200">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{settingsSync.warning}</span>
-        </p>
-      )}
-    </div>
+    <p className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/60 px-3 py-2.5 text-[11.5px] leading-relaxed text-amber-900 dark:text-amber-200">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>{settingsSync.warning}</span>
+    </p>
   );
 };

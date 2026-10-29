@@ -57,7 +57,8 @@ Enregistrer les réglages
         ├── copie locale immédiate (l'écran reste utilisable hors ligne)
         └── envoi vers Supabase après 600 ms (les clics rapprochés sont groupés)
                  │
-                 ├── succès  → « Réglages enregistrés dans la base · 28/10/2026 14:32 »
+                 ├── succès  → bref message « ✓ Paramètres enregistrés », aucun
+                 │              bandeau permanent à l'écran
                  └── échec   → bandeau rouge explicite + bouton « Réessayer »
 ```
 
@@ -156,7 +157,8 @@ l'instantané complet. Rien n'est perdu, rien n'est deviné.
   modifie aucune ligne.
 - **Rendu serveur** : l'écran Paramètres réaffiche la configuration sauvegardée
   (« Pressing Éclat », frais repris) et affiche le bandeau de démonstration au
-  lieu d'un faux « enregistré dans la base ».
+  lieu d'un faux « enregistré dans la base ». Après un enregistrement réussi,
+  aucun bandeau de confirmation ne subsiste (seul un avertissement éventuel).
 - `npm run build` : OK.
 
 ## 9. Fichiers
