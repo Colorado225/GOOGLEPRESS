@@ -28,11 +28,14 @@ import { MAX_LOGO_FILE_BYTES } from '../../lib/shopIdentity';
 import {
   MAX_PRESSING_SERVICES,
   MAX_PRESSING_PRICE_XOF,
+  MAX_PRESSING_WEIGHT_KG,
+  formatPressingWeight,
+  getPressingPricingMode,
   normalizePressingSettings,
   pressingPriceKey,
   validatePressingSettings,
 } from '../../lib/pressing';
-import type { CustomGarment, GarmentOverride, PressingSettings } from '../../types';
+import type { CustomGarment, GarmentOverride, PressingPricingMode, PressingSettings } from '../../types';
 
 /**
  * Réglage des prestations du pressing.
@@ -85,6 +88,7 @@ export const PressingSettingsSection: React.FC = () => {
 
   // Seuls les vêtements affichés au comptoir se tarifent.
   const items = catalogEntries.filter((entry) => !entry.hidden);
+  const unitServices = draft.services.filter((service) => getPressingPricingMode(service) === 'unit');
 
   // --- Création d'un vêtement (nom, catégorie, prix de base, photo) ---
   const [garmentName, setGarmentName] = useState('');
@@ -108,6 +112,32 @@ export const PressingSettingsSection: React.FC = () => {
       ...current,
       services: current.services.map((service) =>
         service.id === serviceId ? { ...service, label } : service
+      ),
+    }));
+  };
+
+  const changePricingMode = (serviceId: string, pricingMode: PressingPricingMode) => {
+    patch((current) => ({
+      ...current,
+      services: current.services.map((service) =>
+        service.id === serviceId
+          ? { ...service, pricingMode: pricingMode === 'unit' ? undefined : pricingMode }
+          : service
+      ),
+    }));
+  };
+
+  const setServiceNumber = (
+    serviceId: string,
+    field: 'kiloPrice' | 'packageWeightKg' | 'packagePrice' | 'extraKiloPrice',
+    rawValue: string
+  ) => {
+    const numeric = rawValue.trim() === '' ? undefined : Number(rawValue.replace(',', '.'));
+    if (numeric !== undefined && (!Number.isFinite(numeric) || numeric < 0)) return;
+    patch((current) => ({
+      ...current,
+      services: current.services.map((service) =>
+        service.id === serviceId ? { ...service, [field]: numeric } : service
       ),
     }));
   };
@@ -334,9 +364,9 @@ export const PressingSettingsSection: React.FC = () => {
       <p className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-[12px] leading-snug text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
         <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <span>
-          <strong>Express 24h</strong> n’est pas une prestation : c’est un type de service choisi
-          sur la commande, qui <strong>double le montant</strong> des prestations. Les traitements
-          se règlent ici, vêtement par vêtement.
+          <strong>Express 24h</strong> n’est pas une prestation : c’est un délai choisi sur chaque
+          ligne de la commande, qui <strong>double le montant</strong> des seuls articles Express.
+          Chaque prestation peut être vendue à la pièce, au kilo ou au forfait.
         </span>
       </p>
 
@@ -357,35 +387,133 @@ export const PressingSettingsSection: React.FC = () => {
           </button>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {draft.services.map((service) => (
-            <div key={service.id} className="flex items-center gap-2">
-              <label className="sr-only" htmlFor={`service-${service.id}`}>
-                Nom de la prestation
-              </label>
-              <input
-                id={`service-${service.id}`}
-                type="text"
-                value={service.label}
-                maxLength={40}
-                onChange={(event) => renameService(service.id, event.target.value)}
-                className={inputClass}
-              />
-              <button
-                type="button"
-                onClick={() => removeService(service.id)}
-                disabled={draft.services.length <= 1}
-                aria-label={`Supprimer la prestation ${service.label || 'sans nom'}`}
-                title={
-                  draft.services.length <= 1
-                    ? 'Au moins une prestation est nécessaire'
-                    : 'Supprimer cette prestation'
-                }
-                className="shrink-0 rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-red-950/40"
+          {draft.services.map((service) => {
+            const mode = getPressingPricingMode(service);
+            const serviceName = service.label || 'sans nom';
+            return (
+              <div
+                key={service.id}
+                className={`rounded-xl border border-zinc-200 p-3 dark:border-zinc-700 ${
+                  mode === 'forfait' ? 'sm:col-span-2' : ''
+                }`}
               >
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-          ))}
+                <div className="flex items-end gap-2">
+                  <div className="min-w-0 flex-1">
+                    <label className="mb-1 block text-[11px] font-bold text-zinc-500 dark:text-zinc-400" htmlFor={`service-${service.id}`}>
+                      Nom de la prestation
+                    </label>
+                    <input
+                      id={`service-${service.id}`}
+                      type="text"
+                      value={service.label}
+                      maxLength={40}
+                      onChange={(event) => renameService(service.id, event.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeService(service.id)}
+                    disabled={draft.services.length <= 1}
+                    aria-label={`Supprimer la prestation ${serviceName}`}
+                    title={draft.services.length <= 1 ? 'Au moins une prestation est nécessaire' : 'Supprimer cette prestation'}
+                    className="shrink-0 rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-red-950/40"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+
+                <label className="mt-2 block text-[11px] font-bold text-zinc-500 dark:text-zinc-400" htmlFor={`pricing-mode-${service.id}`}>
+                  Modèle de facturation — {serviceName}
+                </label>
+                <select
+                  id={`pricing-mode-${service.id}`}
+                  value={mode}
+                  onChange={(event) => changePricingMode(service.id, event.target.value as PressingPricingMode)}
+                  className={`${inputClass} mt-1`}
+                >
+                  <option value="unit">À la pièce</option>
+                  <option value="kilo">Au kilo</option>
+                  <option value="forfait">Forfait fixe</option>
+                </select>
+
+                {mode === 'kilo' && (
+                  <div className="mt-2">
+                    <label className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400" htmlFor={`kilo-price-${service.id}`}>
+                      Prix au kilo (FCFA/kg)
+                    </label>
+                    <input
+                      id={`kilo-price-${service.id}`}
+                      aria-label={`Prix au kilo pour ${serviceName}`}
+                      type="number"
+                      min={0}
+                      max={MAX_PRESSING_PRICE_XOF}
+                      step={50}
+                      value={service.kiloPrice ?? ''}
+                      placeholder="600"
+                      onChange={(event) => setServiceNumber(service.id, 'kiloPrice', event.target.value)}
+                      className={`${inputClass} mt-1`}
+                    />
+                  </div>
+                )}
+
+                {mode === 'forfait' && (
+                  <div className="mt-2 space-y-2">
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                      <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                        Poids couvert (kg)
+                        <input
+                          aria-label={`Poids du forfait pour ${serviceName}`}
+                          type="number"
+                          min={0.01}
+                          max={MAX_PRESSING_WEIGHT_KG}
+                          step={0.5}
+                          value={service.packageWeightKg ?? ''}
+                          placeholder="5"
+                          onChange={(event) => setServiceNumber(service.id, 'packageWeightKg', event.target.value)}
+                          className={`${inputClass} mt-1`}
+                        />
+                      </label>
+                      <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                        Prix du forfait (FCFA)
+                        <input
+                          aria-label={`Prix du forfait pour ${serviceName}`}
+                          type="number"
+                          min={0}
+                          max={MAX_PRESSING_PRICE_XOF}
+                          step={50}
+                          value={service.packagePrice ?? ''}
+                          placeholder="2500"
+                          onChange={(event) => setServiceNumber(service.id, 'packagePrice', event.target.value)}
+                          className={`${inputClass} mt-1`}
+                        />
+                      </label>
+                      <label className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+                        Kilo supplémentaire (FCFA)
+                        <input
+                          aria-label={`Prix du kilo supplémentaire pour ${serviceName}`}
+                          type="number"
+                          min={0}
+                          max={MAX_PRESSING_PRICE_XOF}
+                          step={50}
+                          value={service.extraKiloPrice ?? ''}
+                          placeholder="600"
+                          onChange={(event) => setServiceNumber(service.id, 'extraKiloPrice', event.target.value)}
+                          className={`${inputClass} mt-1`}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-[10.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                      {service.packageWeightKg
+                        ? `Le forfait couvre ${formatPressingWeight(service.packageWeightKg)} kg. `
+                        : ''}
+                      Kilo supplémentaire vide : dépassement impossible ; 0 : kilo supplémentaire offert.
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -632,7 +760,7 @@ export const PressingSettingsSection: React.FC = () => {
         </ul>
       </section>
 
-      {/* Prix par vêtement */}
+      {/* Prix par vêtement : uniquement pour les prestations à la pièce */}
       <section className="space-y-2">
         <h3 className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
           Prix par vêtement
@@ -640,59 +768,54 @@ export const PressingSettingsSection: React.FC = () => {
         <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
           Laissez une case vide pour utiliser le prix de base du catalogue (indiqué en gris).
         </p>
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
-          <table className="w-full min-w-[620px] text-[12.5px]">
-            <thead className="bg-zinc-50 dark:bg-zinc-800/60">
-              <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                <th className="sticky left-0 z-10 bg-zinc-50 px-3 py-2 font-bold dark:bg-zinc-800">
-                  Vêtement
-                </th>
-                <th className="px-3 py-2 font-bold">Base</th>
-                {draft.services.map((service) => (
-                  <th key={service.id} className="px-3 py-2 font-bold">
-                    {service.label || '—'}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-t border-zinc-100 dark:border-zinc-800">
-                  <th
-                    scope="row"
-                    className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-semibold text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
-                  >
-                    {item.name}
-                  </th>
-                  <td className="px-3 py-1.5 tabular-nums text-zinc-500 dark:text-zinc-400">
-                    {formatFCFA(item.unitPrice)}
-                  </td>
-                  {draft.services.map((service) => {
-                    const key = pressingPriceKey(item.id, service.id);
-                    return (
-                      <td key={service.id} className="px-2 py-1.5">
-                        <label className="sr-only" htmlFor={`price-${key}`}>
-                          Prix de {item.name} pour {service.label}
-                        </label>
-                        <input
-                          id={`price-${key}`}
-                          type="number"
-                          min={0}
-                          max={MAX_PRESSING_PRICE_XOF}
-                          step={50}
-                          value={draft.prices[key] ?? ''}
-                          placeholder={String(item.unitPrice)}
-                          onChange={(event) => setPrice(item.id, service.id, event.target.value)}
-                          className={`${inputClass} w-24 pl-2.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-600`}
-                        />
-                      </td>
-                    );
-                  })}
+        {unitServices.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-zinc-300 p-3 text-[12px] text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+            Aucune prestation à la pièce : les tarifs au kilo et les forfaits se règlent dans leurs cartes ci-dessus.
+          </p>
+        ) : (
+          <div className="relative overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
+            <table className="w-full min-w-[620px] text-[12.5px]">
+              <thead className="bg-zinc-50 dark:bg-zinc-800/60">
+                <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  <th className="sticky left-0 z-10 bg-zinc-50 px-3 py-2 font-bold dark:bg-zinc-800">Vêtement</th>
+                  <th className="px-3 py-2 font-bold">Base</th>
+                  {unitServices.map((service) => (
+                    <th key={service.id} className="px-3 py-2 font-bold">{service.label || '—'}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id} className="border-t border-zinc-100 dark:border-zinc-800">
+                    <th scope="row" className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-semibold text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
+                      {item.name}
+                    </th>
+                    <td className="px-3 py-1.5 tabular-nums text-zinc-500 dark:text-zinc-400">{formatFCFA(item.unitPrice)}</td>
+                    {unitServices.map((service) => {
+                      const key = pressingPriceKey(item.id, service.id);
+                      return (
+                        <td key={service.id} className="px-2 py-1.5">
+                          <label className="sr-only" htmlFor={`price-${key}`}>Prix de {item.name} pour {service.label}</label>
+                          <input
+                            id={`price-${key}`}
+                            type="number"
+                            min={0}
+                            max={MAX_PRESSING_PRICE_XOF}
+                            step={50}
+                            value={draft.prices[key] ?? ''}
+                            placeholder={String(item.unitPrice)}
+                            onChange={(event) => setPrice(item.id, service.id, event.target.value)}
+                            className={`${inputClass} w-24 pl-2.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-600`}
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {error && (

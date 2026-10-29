@@ -263,6 +263,12 @@ export interface OrderLine {
   unitLabel?: string;
   subtotal: number;
   serviceType: string;
+  /**
+   * Délai propre à cette ligne. `true` = Express 24h (majoration ×2),
+   * `false` = Normal. Absent sur les anciennes lignes : l'option globale de
+   * retrait fait alors foi, ce qui préserve leur tarification historique.
+   */
+  isExpress?: boolean;
   /** Couleur de la pièce (identification et tri) — voir GARMENT_COLORS. Absente = non précisée. */
   color?: string;
   notes?: string;
@@ -270,6 +276,10 @@ export interface OrderLine {
 
 /** Précisions portées par une ligne ajoutée au panier depuis le comptoir. */
 export interface CartLineDetails {
+  /** Délai du lot ajouté ; permet deux lots Normal/Express du même vêtement. */
+  isExpress?: boolean;
+  /** Poids rattaché à un forfait Pressing (les lignes au kilo utilisent quantity). */
+  weightKg?: number;
   /** Nombre de vêtements couverts par la ligne (forfait ou complément). */
   garments?: number;
   /** Bloc de forfait ou vêtements facturés à l'unité. */
@@ -437,10 +447,21 @@ export interface BlanchisserieSettings {
   ironPrices: Record<string, number>;
 }
 
-/** Type de prestation pressing (« Nettoyage à sec », « Teinture »…). */
+/** Modèle de facturation d'une prestation Pressing. Absent = à la pièce (legacy). */
+export type PressingPricingMode = 'unit' | 'kilo' | 'forfait';
+
+/** Type de prestation pressing (« Nettoyage à sec », « Lavage au kilo »…). */
 export interface PressingServiceType {
   id: string;
   label: string;
+  pricingMode?: PressingPricingMode;
+  /** Prix d'un kilo pour le modèle `kilo`. */
+  kiloPrice?: number;
+  /** Poids couvert par un forfait et prix de ce bloc. */
+  packageWeightKg?: number;
+  packagePrice?: number;
+  /** Tarif facultatif de chaque kilo au-delà du forfait. */
+  extraKiloPrice?: number;
 }
 
 /**

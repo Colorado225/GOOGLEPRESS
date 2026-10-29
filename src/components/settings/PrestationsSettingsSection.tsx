@@ -11,7 +11,7 @@ type PrestationsPan = 'pressing' | 'blanchisserie';
  * Deux familles de tarifs, chacune avec son modèle :
  *
  * - **Pressing** : les traitements (nettoyage à sec, lavage + repassage…), avec
- *   le prix de chaque vêtement pour chaque traitement ;
+ *   un modèle à la pièce, au kilo ou au forfait par prestation ;
  * - **Blanchisserie** : les forfaits au nombre de vêtements.
  */
 export const PrestationsSettingsSection: React.FC = () => {

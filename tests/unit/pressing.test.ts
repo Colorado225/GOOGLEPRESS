@@ -7,6 +7,7 @@ import {
   hasPressingPrice,
   normalizePressingSettings,
   pressingPriceKey,
+  quotePressingWeightService,
   resolvePressingPrice,
   validatePressingSettings,
 } from '../../src/lib/pressing';
@@ -74,6 +75,36 @@ describe('normalizePressingSettings', () => {
     expect(normalizePressingSettings('n’importe quoi').services).toHaveLength(4);
     expect(normalizePressingSettings({ services: 42, prices: 'non' }).prices).toEqual({});
   });
+
+  it('conserve les modèles au kilo et au forfait, sans polluer les prestations à la pièce', () => {
+    const normalized = normalizePressingSettings({
+      services: [
+        { id: 'piece', label: 'Chemise', kiloPrice: 900 },
+        { id: 'kilo', label: 'Lavage au kilo', pricingMode: 'kilo', kiloPrice: 600 },
+        {
+          id: 'forfait',
+          label: 'Forfait famille',
+          pricingMode: 'forfait',
+          packageWeightKg: 5,
+          packagePrice: 2500,
+          extraKiloPrice: 600,
+        },
+      ],
+    });
+
+    expect(normalized.services).toEqual([
+      { id: 'piece', label: 'Chemise' },
+      { id: 'kilo', label: 'Lavage au kilo', pricingMode: 'kilo', kiloPrice: 600 },
+      {
+        id: 'forfait',
+        label: 'Forfait famille',
+        pricingMode: 'forfait',
+        packageWeightKg: 5,
+        packagePrice: 2500,
+        extraKiloPrice: 600,
+      },
+    ]);
+  });
 });
 
 describe('validatePressingSettings', () => {
@@ -100,6 +131,37 @@ describe('validatePressingSettings', () => {
 
   it('refuse un prix négatif', () => {
     expect(validatePressingSettings(settings({ prices: { 'c1:dye': -5 } }))).toMatch(/invalide/);
+  });
+
+  it('exige les tarifs et le poids propres au modèle choisi', () => {
+    expect(
+      validatePressingSettings(
+        settings({ services: [{ id: 'k', label: 'Linge au kilo', pricingMode: 'kilo' }] })
+      )
+    ).toMatch(/prix au kilo/);
+    expect(
+      validatePressingSettings(
+        settings({
+          services: [{ id: 'f', label: 'Forfait', pricingMode: 'forfait', packagePrice: 2500 }],
+        })
+      )
+    ).toMatch(/poids couvert/);
+    expect(
+      validatePressingSettings(
+        settings({
+          services: [
+            {
+              id: 'f',
+              label: 'Forfait',
+              pricingMode: 'forfait',
+              packageWeightKg: 5,
+              packagePrice: 2500,
+              extraKiloPrice: -1,
+            },
+          ],
+        })
+      )
+    ).toMatch(/kilo supplémentaire/);
   });
 });
 
@@ -146,8 +208,104 @@ describe('buildPressingCatalogEntries', () => {
     expect(dryClean.unitPrice).toBe(3000);
   });
 
+  it('génère les articles serveur au kilo, au forfait et pour les kilos supplémentaires', () => {
+    const entries = buildPressingCatalogEntries(
+      [item()],
+      settings({
+        services: [
+          { id: 'piece', label: 'Chemise' },
+          { id: 'kilo', label: 'Lavage au kilo', pricingMode: 'kilo', kiloPrice: 600 },
+          {
+            id: 'forfait',
+            label: 'Forfait famille',
+            pricingMode: 'forfait',
+            packageWeightKg: 5,
+            packagePrice: 2500,
+            extraKiloPrice: 600,
+          },
+        ],
+      })
+    );
+
+    expect(entries).toHaveLength(4);
+    expect(entries.map((entry) => [entry.legacyKey, entry.pricingType, entry.unitPrice])).toEqual([
+      ['pressing:piece:c1', 'unit', 1500],
+      ['pressing:kilo:kilo', 'kilo', 600],
+      ['pressing:forfait:forfait', 'unit', 2500],
+      ['pressing:forfait:forfait-extra', 'kilo', 600],
+    ]);
+  });
+
   it('ne produit rien sans prestation', () => {
     expect(buildPressingCatalogEntries([item()], settings({ services: [] }))).toEqual([]);
+  });
+});
+
+describe('quotePressingWeightService', () => {
+  it('facture le poids exact au kilo, avec arrondi au FCFA', () => {
+    const { quote, error } = quotePressingWeightService(
+      { id: 'k', label: 'Lavage au kilo', pricingMode: 'kilo', kiloPrice: 600 },
+      2.5
+    );
+
+    expect(error).toBeNull();
+    expect(quote?.total).toBe(1500);
+    expect(quote?.blocks).toHaveLength(1);
+    expect(quote?.blocks[0]).toMatchObject({ kind: 'kilo', weightKg: 2.5, subtotal: 1500 });
+    expect(quote?.blocks[0].item.pricingType).toBe('kilo');
+  });
+
+  it('facture un forfait fixe sans inventer de kilos supplémentaires sous le seuil', () => {
+    const { quote, error } = quotePressingWeightService(
+      {
+        id: 'f',
+        label: 'Forfait famille',
+        pricingMode: 'forfait',
+        packageWeightKg: 5,
+        packagePrice: 2500,
+        extraKiloPrice: 600,
+      },
+      4
+    );
+
+    expect(error).toBeNull();
+    expect(quote?.total).toBe(2500);
+    expect(quote?.blocks).toHaveLength(1);
+    expect(quote?.blocks[0]).toMatchObject({ kind: 'forfait', weightKg: 4, subtotal: 2500 });
+  });
+
+  it('sépare le forfait et les kilos supplémentaires au-delà du seuil', () => {
+    const { quote, error } = quotePressingWeightService(
+      {
+        id: 'f',
+        label: 'Forfait famille',
+        pricingMode: 'forfait',
+        packageWeightKg: 5,
+        packagePrice: 2500,
+        extraKiloPrice: 600,
+      },
+      6.5
+    );
+
+    expect(error).toBeNull();
+    expect(quote?.total).toBe(3400);
+    expect(quote?.blocks.map((block) => [block.kind, block.weightKg, block.subtotal])).toEqual([
+      ['forfait', 5, 2500],
+      ['extra', 1.5, 900],
+    ]);
+  });
+
+  it('bloque un dépassement sans tarif supplémentaire et un poids invalide', () => {
+    const service = {
+      id: 'f',
+      label: 'Forfait famille',
+      pricingMode: 'forfait' as const,
+      packageWeightKg: 5,
+      packagePrice: 2500,
+    };
+    expect(quotePressingWeightService(service, 6).quote).toBeNull();
+    expect(quotePressingWeightService(service, 6).error).toMatch(/limité à 5 kg/);
+    expect(quotePressingWeightService(service, 0).error).toMatch(/poids/);
   });
 });
 

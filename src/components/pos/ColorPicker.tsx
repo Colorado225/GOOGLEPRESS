@@ -171,7 +171,7 @@ export const CurrentColorSelector: React.FC<{ className?: string }> = ({ classNa
             if (e.key === 'Escape') setCustomText('');
           }}
           placeholder="ex. bleu roi, wax rouge…"
-          className="w-[170px] text-[12px] font-medium text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg px-2.5 py-1.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+          className="pos-field pos-field-compact w-[180px]"
         />
         <datalist id="current-custom-color-options">
           {colorSuggestions().map((name) => (
@@ -230,7 +230,7 @@ export const LineColorSelect: React.FC<{ line: OrderLine }> = ({ line }) => {
         }}
         placeholder="Couleur non précisée"
         title="Écrire la couleur ou la choisir dans les suggestions, puis Entrée"
-        className="w-[142px] text-[11px] font-medium text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-1.5 py-0.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+        className="pos-field pos-field-compact min-h-[30px] w-[142px] px-2 py-1 text-[11px]"
       />
       <datalist id={`color-options-${line.id}`}>
         {colorSuggestions().map((name) => (

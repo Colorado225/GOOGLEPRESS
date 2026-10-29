@@ -13,10 +13,34 @@ import type { OrderLine, PickupOption } from '../types';
 
 /**
  * Le type de service « Express 24h » vaut le DOUBLE du service normal : la
- * majoration est donc égale à 100 % des prestations (total = 2 × sous-total).
- * « Express » n'est pas un traitement : il s'applique à toute la commande.
+ * majoration est donc égale à 100 % des prestations concernées. « Express »
+ * n'est pas un traitement : chaque ligne peut être normale ou express dans
+ * une même commande. Sans indication de ligne (données historiques), le
+ * choix global de retrait conserve son comportement précédent.
  */
 export const EXPRESS_SURCHARGE_RATE = 1;
+
+/** Délai tarifaire effectif d'une ligne, avec repli historique sur la commande. */
+export function isOrderLineExpress(
+  line: Pick<OrderLine, 'isExpress'>,
+  pickupOption: PickupOption
+): boolean {
+  return line.isExpress ?? pickupOption === 'express';
+}
+
+/**
+ * Priorité atelier dérivée des lignes, jamais l'inverse : une seule ligne
+ * Express rend la commande prioritaire, sans convertir ni surtaxer les autres.
+ * Le repli standard corrige les anciens brouillons Express devenus 100 % Normal.
+ */
+export function resolveOrderPickupOption(
+  lines: readonly Pick<OrderLine, 'isExpress'>[],
+  pickupOption: PickupOption
+): PickupOption {
+  const hasExpressLine = lines.some((line) => isOrderLineExpress(line, pickupOption));
+  if (hasExpressLine) return 'express';
+  return pickupOption === 'express' ? 'standard' : pickupOption;
+}
 
 const sanitizeFiniteNumber = (value: number | undefined): number =>
   Number.isFinite(value) ? (value as number) : 0;
@@ -77,7 +101,7 @@ export interface OrderTotals {
 const sanitizeFee = sanitizeNonNegativeAmount;
 
 export function calculateOrderTotals(
-  lines: Pick<OrderLine, 'subtotal'>[],
+  lines: Pick<OrderLine, 'subtotal' | 'isExpress'>[],
   {
     pickupOption,
     loyaltyDiscountPercent = 0,
@@ -87,8 +111,17 @@ export function calculateOrderTotals(
   }: OrderTotalsInput
 ): OrderTotals {
   const subtotal = calculateSubtotal(lines);
-  const expressFee =
-    pickupOption === 'express' ? Math.round(subtotal * EXPRESS_SURCHARGE_RATE) : 0;
+  // Seules les lignes Express sont majorées : une commande mixte additionne
+  // donc les prestations normales et le double des seules lignes urgentes.
+  const expressSubtotal = lines.reduce(
+    (total, line) =>
+      total +
+      (isOrderLineExpress(line, pickupOption)
+        ? sanitizeNonNegativeAmount(line.subtotal)
+        : 0),
+    0
+  );
+  const expressFee = Math.round(expressSubtotal * EXPRESS_SURCHARGE_RATE);
   const safeCollectionFee = sanitizeFee(collectionFee);
   const safeDeliveryFee = sanitizeFee(deliveryFee);
   const discountPercent = normalizeDiscountPercent(loyaltyDiscountPercent);

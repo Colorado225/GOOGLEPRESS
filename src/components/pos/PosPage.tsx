@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { resolveShopDisplayName } from '../../lib/shopIdentity';
-import { ServiceTypeSelectionScreen } from './ServiceTypeSelectionScreen';
 import { OrderStepperHeader } from './OrderStepperHeader';
 import { Step1ClientAndDates } from './Step1ClientAndDates';
 import { Step2ArticlesAndServices } from './Step2ArticlesAndServices';
+import { Step3LogisticsAndNotes } from './Step3LogisticsAndNotes';
 import { Step3SummaryAndConfirm } from './Step3SummaryAndConfirm';
 import { CustomerSection } from './CustomerSection';
 import { ClothingCatalogSection } from './ClothingCatalogSection';
@@ -17,10 +17,8 @@ import { RotateCcw, Eye, ArrowLeft, LayoutGrid, Layers, Shirt, Waves, User, Cloc
 
 export const PosPage: React.FC = () => {
   const {
-    selectedServiceCategory,
-    setSelectedServiceCategory,
     orderStep,
-    setOrderStep,
+    nextTicketNumber,
     clearCart,
     setPreviewTicket,
     orders,
@@ -54,22 +52,24 @@ export const PosPage: React.FC = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {viewMode === 'stepper'
-                ? selectedServiceCategory
-                  ? `Nouvelle commande • ${selectedServiceCategory === 'pressing' ? 'Pressing' : 'Blanchisserie'}`
-                  : 'Nouvelle commande • Sélection du service'
-                : 'Réception comptoir classique'}
-            </h1>
+            <div>
+              <p className="mb-0.5 text-[9.5px] font-black uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">Réception comptoir</p>
+              <h1 className="text-[22px] font-black tracking-[-0.025em] text-zinc-950 dark:text-zinc-50">
+                {viewMode === 'stepper' ? 'Nouvelle commande' : 'Réception comptoir classique'}
+              </h1>
+            </div>
           </div>
-          <p className="text-[13px] text-zinc-500 dark:text-zinc-400 ml-7">
+          <p className="ml-7 text-[12.5px] text-zinc-500 dark:text-zinc-400">
             {viewMode === 'stepper'
-              ? 'Parcours de commande guidé • Choix du service → Client & Délais → Articles → Validation'
+              ? 'Client & service → Articles → Retrait & consignes → Paiement'
               : 'Dépôt client au comptoir • ticket imprimé après validation'}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="hidden rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-bold text-zinc-500 shadow-2xs md:inline-flex dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
+            Prochain ticket <strong className="ml-1.5 text-zinc-900 dark:text-zinc-100">#{String(nextTicketNumber).padStart(4, '0')}</strong>
+          </span>
           {/* Mode toggle */}
           <div className="bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center text-[11.5px] font-semibold">
             <button
@@ -80,7 +80,7 @@ export const PosPage: React.FC = () => {
                   ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-bold shadow-2xs'
                   : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
               }`}
-              title="Nouveau parcours en 3 étapes"
+              title="Parcours guidé en 4 étapes"
             >
               <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>Parcours guidé</span>
@@ -126,25 +126,20 @@ export const PosPage: React.FC = () => {
 
       {/* Main Content Area */}
       {viewMode === 'stepper' ? (
-        <div>
-          {/* Step 0: Service Selection (Pressing vs Blanchisserie) */}
-          {!selectedServiceCategory ? (
-            <ServiceTypeSelectionScreen />
-          ) : (
-            <div>
-              {/* Stepper Header Bar with service toggle & step indicators */}
-              <OrderStepperHeader />
+        <div className="mx-auto max-w-[1600px] space-y-4">
+          <OrderStepperHeader />
 
-              {/* Step 1: Customer identification & pickup dates */}
-              {orderStep === 1 && <Step1ClientAndDates />}
+          {/* 1. Client et grille tarifaire */}
+          {orderStep === 1 && <Step1ClientAndDates />}
 
-              {/* Step 2: Articles catalog & live cart */}
-              {orderStep === 2 && <Step2ArticlesAndServices />}
+          {/* 2. Articles, prestations et panier persistant */}
+          {orderStep === 2 && <Step2ArticlesAndServices />}
 
-              {/* Step 3: Recap & Final submission */}
-              {orderStep === 3 && <Step3SummaryAndConfirm />}
-            </div>
-          )}
+          {/* 3. Date promise, restitution et consignes atelier */}
+          {orderStep === 3 && <Step3LogisticsAndNotes />}
+
+          {/* 4. Contrôle, encaissement et édition du ticket */}
+          {orderStep === 4 && <Step3SummaryAndConfirm />}
         </div>
       ) : (
         /* Classic Single-View POS */

@@ -9,6 +9,8 @@ import {
   validateStaffLogin,
 } from '../../lib/staffAuth';
 import { listCurrentMemberships } from '../../lib/supabaseOrders';
+import { isPlatformAdminUser } from '../../lib/platformAdmin';
+import { PLATFORM_ADMIN_PATH } from '../../lib/platformAdminAuth';
 import { resolveStaffReturnPath } from '../../lib/routes';
 import { isValidEmail } from '../../lib/customerAuth';
 import {
@@ -44,11 +46,21 @@ const inlineActionClassName =
  * n'est utilisé que lorsque la destination par défaut est l'ERP.
  */
 const resolveLoginDestination = (
-  memberships: Parameters<typeof resolveStaffPostAuthPath>[0]
+  memberships: Parameters<typeof resolveStaffPostAuthPath>[0],
+  platformAdmin = false
 ): string => {
+  if (platformAdmin) return PLATFORM_ADMIN_PATH;
   const fallback = resolveStaffPostAuthPath(memberships);
   if (fallback !== '/') return fallback;
   return resolveStaffReturnPath(window.location.search) ?? '/';
+};
+
+/** Ne jamais transformer une erreur de lecture en « compte sans pressing ». */
+const resolveAuthenticatedDestination = async (userId: string): Promise<string> => {
+  const platformAdmin = await isPlatformAdminUser(userId);
+  if (platformAdmin) return PLATFORM_ADMIN_PATH;
+  const memberships = await listCurrentMemberships(userId);
+  return resolveLoginDestination(memberships, false);
 };
 
 /** Détecte l'ouverture de la page par un lien de récupération Supabase. */
@@ -106,11 +118,10 @@ export const StaffLoginPage: React.FC<StaffLoginPageProps> = ({ onNavigate }) =>
       .getSession()
       .then(async ({ data: sessionData }) => {
         if (cancelled || !sessionData.session || recoveryFlowRef.current) return;
-        const memberships = await listCurrentMemberships(sessionData.session.user.id).catch(
-          () => []
-        );
+        const userId = sessionData.session.user.id;
+        const destination = await resolveAuthenticatedDestination(userId);
         if (!cancelled) {
-          onNavigate(resolveLoginDestination(memberships), { replace: true });
+          onNavigate(destination, { replace: true });
         }
       })
       .catch(() => {
@@ -168,8 +179,8 @@ export const StaffLoginPage: React.FC<StaffLoginPageProps> = ({ onNavigate }) =>
         return;
       }
       setMessage('Connexion réussie. Ouverture de votre espace…');
-      const memberships = await listCurrentMemberships(data.session.user.id).catch(() => []);
-      onNavigate(resolveLoginDestination(memberships), { replace: true });
+      const destination = await resolveAuthenticatedDestination(data.session.user.id);
+      onNavigate(destination, { replace: true });
     } catch (unexpectedError) {
       setError(mapStaffAuthError(unexpectedError));
     } finally {

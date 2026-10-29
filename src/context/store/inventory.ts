@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type {
   ActionResult,
   InventoryProduct,
@@ -23,7 +23,9 @@ export interface InventoryDeps {
 
 export interface InventoryStore {
   products: InventoryProduct[];
+  setProducts: Dispatch<SetStateAction<InventoryProduct[]>>;
   stockMovements: StockMovement[];
+  setStockMovements: Dispatch<SetStateAction<StockMovement[]>>;
   createProduct: (data: ProductFormData, initialQuantity: number, initialDateISO: string) => ActionResult & { product?: InventoryProduct };
   updateProduct: (id: string, data: ProductFormData) => ActionResult;
   setProductActive: (id: string, isActive: boolean) => void;
@@ -171,7 +173,9 @@ export const useInventoryStore = ({
 
   return {
     products,
+    setProducts,
     stockMovements,
+    setStockMovements,
     createProduct,
     updateProduct,
     setProductActive,

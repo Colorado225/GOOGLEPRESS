@@ -3,6 +3,7 @@ import { Calendar, Clock, MapPin, PackageCheck, Store, Truck, X } from 'lucide-r
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { resolvePromisedDate, toISODate, todayISO } from '../../lib/dates';
+import { resolveOrderPickupOption } from '../../lib/pricing';
 import {
   LOGISTICS_TIME_SLOTS,
   formatLogisticsSchedule,
@@ -68,6 +69,7 @@ export const LogisticsOptionsSection: React.FC = () => {
   const {
     pendingPickupTask,
     shopSettings,
+    cartLines,
     pickupOption,
     promisedDateISO,
     orderFulfillmentMethod,
@@ -83,15 +85,23 @@ export const LogisticsOptionsSection: React.FC = () => {
   } = useApp();
 
   const wantsHomeDelivery = orderFulfillmentMethod === 'home_delivery';
-  const promisedISO = toISODate(resolvePromisedDate(pickupOption, promisedDateISO));
+  const effectivePickupOption = resolveOrderPickupOption(cartLines, pickupOption);
+  const promisedISO = toISODate(resolvePromisedDate(effectivePickupOption, promisedDateISO));
   const isBeforeProductionPromise = wantsHomeDelivery && deliveryDateISO < promisedISO;
 
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-4 shadow-2xs">
-      <h2 className="font-bold text-[14.5px] text-zinc-900 dark:text-zinc-100 mb-2.5 flex items-center gap-2">
-        <Truck className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" aria-hidden="true" />
-        <span>4 • Ramassage & mode de remise</span>
-      </h2>
+    <section className="rounded-[22px] border border-zinc-200/90 bg-white p-4 shadow-2xs sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-4 flex items-start gap-2.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+          <Truck className="h-4.5 w-4.5" aria-hidden="true" />
+        </span>
+        <div>
+          <h2 className="text-[14.5px] font-black text-zinc-900 dark:text-zinc-100">Mode de remise du linge</h2>
+          <p className="mt-1 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Retrait en boutique ou livraison planifiée avec adresse et créneau de tournée.
+          </p>
+        </div>
+      </div>
 
       {pendingPickupTask ? (
         <p className="mb-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950 px-3 py-2 text-[12px] leading-relaxed text-emerald-900 dark:text-emerald-100">
@@ -164,11 +174,11 @@ export const LogisticsOptionsSection: React.FC = () => {
       {wantsHomeDelivery && (
         <div className="mt-3 space-y-3 border-t border-zinc-100 dark:border-zinc-800 pt-3">
           <div>
-            <label htmlFor="pos-delivery-address" className="mb-1 block text-[11.5px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label htmlFor="pos-delivery-address" className="pos-field-label">
               Adresse de livraison <span aria-hidden="true">*</span>
             </label>
-            <div className="relative">
-              <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+            <div className="group relative">
+              <MapPin className="pos-field-icon" aria-hidden="true" />
               <input
                 id="pos-delivery-address"
                 type="text"
@@ -176,13 +186,13 @@ export const LogisticsOptionsSection: React.FC = () => {
                 onChange={(e) => setDeliveryAddress(e.target.value)}
                 required
                 placeholder="Quartier, rue, repère principal…"
-                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 py-2 pl-9 pr-3 text-[13px] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                className="pos-field pl-10"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="pos-delivery-details" className="mb-1 block text-[11.5px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            <label htmlFor="pos-delivery-details" className="pos-field-label">
               Précisions pour le coursier <span className="font-normal normal-case">(optionnel)</span>
             </label>
             <input
@@ -191,17 +201,17 @@ export const LogisticsOptionsSection: React.FC = () => {
               value={deliveryAddressDetails}
               onChange={(e) => setDeliveryAddressDetails(e.target.value)}
               placeholder="Étage, portail, gardien, point de repère…"
-              className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-3 py-2 text-[13px] text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              className="pos-field"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label htmlFor="pos-delivery-date" className="mb-1 block text-[11.5px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <label htmlFor="pos-delivery-date" className="pos-field-label">
                 Date souhaitée <span aria-hidden="true">*</span>
               </label>
-              <div className="relative">
-                <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+              <div className="group relative">
+                <Calendar className="pos-field-icon" aria-hidden="true" />
                 <input
                   id="pos-delivery-date"
                   type="date"
@@ -209,22 +219,22 @@ export const LogisticsOptionsSection: React.FC = () => {
                   min={todayISO()}
                   onChange={(e) => setDeliveryDateISO(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 py-2 pl-9 pr-3 text-[13px] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                  className="pos-field pl-10"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="pos-delivery-slot" className="mb-1 block text-[11.5px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              <label htmlFor="pos-delivery-slot" className="pos-field-label">
                 Créneau de tournée <span aria-hidden="true">*</span>
               </label>
-              <div className="relative">
-                <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+              <div className="group relative">
+                <Clock className="pos-field-icon" aria-hidden="true" />
                 <select
                   id="pos-delivery-slot"
                   value={deliveryTimeSlot}
                   onChange={(e) => setDeliveryTimeSlot(e.target.value as LogisticsTimeSlot)}
-                  className="w-full appearance-none rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 py-2 pl-9 pr-3 text-[13px] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                  className="pos-field pl-10"
                 >
                   {LOGISTICS_TIME_SLOTS.map((slot) => (
                     <option key={slot.id} value={slot.id}>
@@ -250,6 +260,6 @@ export const LogisticsOptionsSection: React.FC = () => {
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 };

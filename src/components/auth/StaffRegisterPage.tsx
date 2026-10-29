@@ -10,6 +10,8 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { isPlatformAdminUser } from '../../lib/platformAdmin';
+import { PLATFORM_ADMIN_PATH } from '../../lib/platformAdminAuth';
 import {
   PRIVACY_POLICY_PATH,
   STAFF_LOGIN_PATH,
@@ -73,7 +75,14 @@ export const StaffRegisterPage: React.FC<StaffRegisterPageProps> = ({ onNavigate
       .getSession()
       .then(async ({ data }) => {
         if (cancelled || !data.session) return;
-        const memberships = await listCurrentMemberships(data.session.user.id).catch(() => []);
+        const userId = data.session.user.id;
+        const platformAdmin = await isPlatformAdminUser(userId).catch(() => false);
+        if (cancelled) return;
+        if (platformAdmin) {
+          onNavigate(PLATFORM_ADMIN_PATH, { replace: true });
+          return;
+        }
+        const memberships = await listCurrentMemberships(userId);
         if (!cancelled) {
           onNavigate(resolveStaffPostAuthPath(memberships), { replace: true });
         }

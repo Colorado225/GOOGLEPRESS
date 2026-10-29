@@ -3,6 +3,7 @@ import {
   formatStaffRole,
   getActiveStaffMemberships,
   hasActiveStaffMembership,
+  resolvePlatformAdminAccessMode,
   resolveStaffAccessMode,
 } from '../../src/lib/staffAccess';
 import type { RemoteMembership } from '../../src/lib/supabaseOrders';
@@ -39,18 +40,42 @@ describe('staffAccess', () => {
     ).toBe('configuration-required');
   });
 
-  it('autorise uniquement les démonstrations locales explicites ou le développement', () => {
+  it('autorise la démonstration uniquement en développement et sur activation explicite', () => {
+    expect(
+      resolveStaffAccessMode({
+        supabaseConfigured: false,
+        isDevelopment: true,
+        allowLocalDemo: true,
+      })
+    ).toBe('explicit-local-demo');
     expect(
       resolveStaffAccessMode({
         supabaseConfigured: false,
         isDevelopment: true,
         allowLocalDemo: false,
       })
-    ).toBe('explicit-local-demo');
+    ).toBe('configuration-required');
     expect(
       resolveStaffAccessMode({
         supabaseConfigured: true,
         isDevelopment: false,
+        allowLocalDemo: true,
+      })
+    ).toBe('supabase-required');
+  });
+
+  it('maintient le super-admin sur Supabase même si l’ERP local est autorisé', () => {
+    expect(
+      resolvePlatformAdminAccessMode({
+        supabaseConfigured: true,
+        isDevelopment: true,
+        allowLocalDemo: true,
+      })
+    ).toBe('supabase-required');
+    expect(
+      resolvePlatformAdminAccessMode({
+        supabaseConfigured: false,
+        isDevelopment: true,
         allowLocalDemo: true,
       })
     ).toBe('explicit-local-demo');

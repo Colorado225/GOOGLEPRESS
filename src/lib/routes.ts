@@ -12,6 +12,7 @@ import {
 } from './staffAuth';
 import type { ScreenId } from '../context/AppContext';
 import { buildBrandedTitle } from './shopIdentity';
+import { isPlatformAdminPath } from './platformAdminAuth';
 
 /**
  * Table des routes de l'application, organisée par contexte d'implémentation :
@@ -125,6 +126,7 @@ export type AppRoute =
   | { context: 'customer'; route: CustomerRoute }
   | { context: 'legal'; route: LegalRoute }
   | { context: 'staff'; route: StaffRoute }
+  | { context: 'platform-admin' }
   | { context: 'erp' };
 
 /**
@@ -133,6 +135,7 @@ export type AppRoute =
  * ERP (protégé par la garde) pour tout le reste.
  */
 export const resolveAppRoute = (pathname: string): AppRoute => {
+  if (isPlatformAdminPath(pathname)) return { context: 'platform-admin' };
   if (isCustomerPath(pathname)) {
     return { context: 'customer', route: parseCustomerRoute(pathname) };
   }

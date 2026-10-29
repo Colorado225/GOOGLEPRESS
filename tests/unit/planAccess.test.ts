@@ -52,6 +52,14 @@ describe('planAccess — capacités par formule', () => {
     expect(PLAN_FEATURES.multiShop.requiredPlan).toBe('business');
     expect(PLAN_FEATURES.deliveryProof.requiredPlan).toBe('pro');
   });
+
+  it('fait primer les modules serveur et ferme explicitement une liste vide', () => {
+    expect(isFeatureIncluded('business', 'deliveryProof', ['pos'])).toBe(false);
+    expect(isFeatureIncluded('free', 'deliveryTracking', ['delivery_tracking'])).toBe(true);
+    expect(isFeatureIncluded('business', 'multiShop', ['multi_shop'])).toBe(true);
+    expect(isFeatureIncluded('business', 'customerPortal', [])).toBe(false);
+    expect(isFeatureIncluded('pro', 'customerPortal', null)).toBe(true);
+  });
 });
 
 describe('planAccess — casiers', () => {

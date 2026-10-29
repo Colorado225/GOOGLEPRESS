@@ -4,6 +4,7 @@ import {
   calculateOrderTotals,
   calculateSubtotal,
   normalizeDiscountPercent,
+  resolveOrderPickupOption,
 } from '../../src/lib/pricing';
 
 describe('pricing', () => {
@@ -34,6 +35,58 @@ describe('pricing', () => {
       deposit: 7150,
       remaining: 0,
     });
+  });
+
+  it('ne majore que les lignes Express dans une commande mixte', () => {
+    const totals = calculateOrderTotals(
+      [
+        { subtotal: 1000, isExpress: false },
+        { subtotal: 2500, isExpress: true },
+      ],
+      { pickupOption: 'standard', loyaltyDiscountPercent: 10 }
+    );
+
+    expect(totals).toMatchObject({
+      subtotal: 3500,
+      expressFee: 2500,
+      discountAmount: 350,
+      total: 5650,
+    });
+  });
+
+  it('respecte une ligne explicitement normale même si le retrait global est Express', () => {
+    const totals = calculateOrderTotals(
+      [
+        { subtotal: 1000, isExpress: false },
+        { subtotal: 2500 },
+      ],
+      { pickupOption: 'express' }
+    );
+
+    expect(totals.expressFee).toBe(2500);
+    expect(totals.total).toBe(6000);
+  });
+
+  it('dérive la priorité Express des lignes sans convertir les lignes Normal', () => {
+    const lines = [
+      { subtotal: 1000, isExpress: false },
+      { subtotal: 2500, isExpress: true },
+    ];
+
+    expect(resolveOrderPickupOption(lines, 'standard')).toBe('express');
+    expect(resolveOrderPickupOption(lines, 'delayed')).toBe('express');
+    expect(lines).toEqual([
+      { subtotal: 1000, isExpress: false },
+      { subtotal: 2500, isExpress: true },
+    ]);
+    expect(calculateOrderTotals(lines, { pickupOption: 'delayed' }).expressFee).toBe(2500);
+  });
+
+  it('retombe en Standard quand un ancien brouillon Express ne contient plus que du Normal', () => {
+    expect(resolveOrderPickupOption([{ isExpress: false }], 'express')).toBe('standard');
+    expect(resolveOrderPickupOption([], 'express')).toBe('standard');
+    expect(resolveOrderPickupOption([{ isExpress: true }], 'standard')).toBe('express');
+    expect(resolveOrderPickupOption([{}], 'express')).toBe('express');
   });
 
   it('ne majore pas une commande standard et plafonne l’acompte négatif', () => {

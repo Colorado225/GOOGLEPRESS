@@ -1868,6 +1868,808 @@ export type Database = {
           }
         ];
       };
+      "platform_automation_runs": {
+        Row: {
+          "id": string;
+          "actor_user_id": string | null;
+          "summary": Json;
+          "created_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "actor_user_id"?: string | null;
+          "summary"?: Json;
+          "created_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "actor_user_id"?: string | null;
+          "summary"?: Json;
+          "created_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_automation_runs_actor_user_id_fkey";
+            columns: ["actor_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
+      "platform_campaigns": {
+        Row: {
+          "id": string;
+          "title": string;
+          "body": string;
+          "tone": string;
+          "audience_type": string;
+          "audience_value": string | null;
+          "channels": string[];
+          "status": string;
+          "starts_at": string | null;
+          "ends_at": string | null;
+          "maintenance": boolean;
+          "created_by": string | null;
+          "created_at": string;
+          "updated_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "title": string;
+          "body": string;
+          "tone"?: string;
+          "audience_type"?: string;
+          "audience_value"?: string | null;
+          "channels"?: string[];
+          "status"?: string;
+          "starts_at"?: string | null;
+          "ends_at"?: string | null;
+          "maintenance"?: boolean;
+          "created_by"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "title"?: string;
+          "body"?: string;
+          "tone"?: string;
+          "audience_type"?: string;
+          "audience_value"?: string | null;
+          "channels"?: string[];
+          "status"?: string;
+          "starts_at"?: string | null;
+          "ends_at"?: string | null;
+          "maintenance"?: boolean;
+          "created_by"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_campaigns_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
+      "platform_config": {
+        Row: {
+          "id": number;
+          "registrations_open": boolean;
+          "support_message": string;
+          "support_message_tone": string;
+          "updated_by": string | null;
+          "updated_at": string;
+        };
+        Insert: {
+          "id"?: number;
+          "registrations_open"?: boolean;
+          "support_message"?: string;
+          "support_message_tone"?: string;
+          "updated_by"?: string | null;
+          "updated_at"?: string;
+        };
+        Update: {
+          "id"?: number;
+          "registrations_open"?: boolean;
+          "support_message"?: string;
+          "support_message_tone"?: string;
+          "updated_by"?: string | null;
+          "updated_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_config_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
+      "platform_credit_notes": {
+        Row: {
+          "id": string;
+          "organization_id": string;
+          "invoice_id": string;
+          "credit_number": string;
+          "amount_xof": number;
+          "reason": string;
+          "created_by": string | null;
+          "created_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "organization_id": string;
+          "invoice_id": string;
+          "credit_number"?: string;
+          "amount_xof": number;
+          "reason": string;
+          "created_by"?: string | null;
+          "created_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "organization_id"?: string;
+          "invoice_id"?: string;
+          "credit_number"?: string;
+          "amount_xof"?: number;
+          "reason"?: string;
+          "created_by"?: string | null;
+          "created_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_credit_notes_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "platform_credit_notes_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_credit_notes_organization_id_invoice_id_fkey";
+            columns: ["organization_id","invoice_id"];
+            isOneToOne: false;
+            referencedRelation: "platform_invoices";
+            referencedColumns: ["organization_id","id"];
+          }
+        ];
+      };
+      "platform_health_checks": {
+        Row: {
+          "id": string;
+          "component": string;
+          "status": string;
+          "details": Json;
+          "checked_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "component": string;
+          "status": string;
+          "details"?: Json;
+          "checked_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "component"?: string;
+          "status"?: string;
+          "details"?: Json;
+          "checked_at"?: string;
+        };
+        Relationships: [];
+      };
+      "platform_invoices": {
+        Row: {
+          "id": string;
+          "organization_id": string;
+          "shop_id": string;
+          "invoice_number": string;
+          "status": string;
+          "currency": string;
+          "period_start": string;
+          "period_end": string;
+          "due_on": string;
+          "subtotal_xof": number;
+          "discount_xof": number;
+          "total_xof": number | null;
+          "promo_code": string | null;
+          "note": string;
+          "created_by": string | null;
+          "created_at": string;
+          "updated_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "organization_id": string;
+          "shop_id": string;
+          "invoice_number"?: string;
+          "status"?: string;
+          "currency"?: string;
+          "period_start": string;
+          "period_end": string;
+          "due_on": string;
+          "subtotal_xof": number;
+          "discount_xof"?: number;
+          "total_xof"?: number | null;
+          "promo_code"?: string | null;
+          "note"?: string;
+          "created_by"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "organization_id"?: string;
+          "shop_id"?: string;
+          "invoice_number"?: string;
+          "status"?: string;
+          "currency"?: string;
+          "period_start"?: string;
+          "period_end"?: string;
+          "due_on"?: string;
+          "subtotal_xof"?: number;
+          "discount_xof"?: number;
+          "total_xof"?: number | null;
+          "promo_code"?: string | null;
+          "note"?: string;
+          "created_by"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_invoices_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "platform_invoices_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_invoices_organization_id_shop_id_fkey";
+            columns: ["organization_id","shop_id"];
+            isOneToOne: false;
+            referencedRelation: "shops";
+            referencedColumns: ["organization_id","id"];
+          },
+          {
+            foreignKeyName: "platform_invoices_promo_code_fkey";
+            columns: ["promo_code"];
+            isOneToOne: false;
+            referencedRelation: "platform_promo_codes";
+            referencedColumns: ["code"];
+          }
+        ];
+      };
+      "platform_notifications": {
+        Row: {
+          "id": string;
+          "kind": string;
+          "severity": string;
+          "title": string;
+          "body": string;
+          "organization_id": string | null;
+          "resource_type": string | null;
+          "resource_id": string | null;
+          "dedupe_key": string | null;
+          "read_at": string | null;
+          "created_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "kind": string;
+          "severity"?: string;
+          "title": string;
+          "body"?: string;
+          "organization_id"?: string | null;
+          "resource_type"?: string | null;
+          "resource_id"?: string | null;
+          "dedupe_key"?: string | null;
+          "read_at"?: string | null;
+          "created_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "kind"?: string;
+          "severity"?: string;
+          "title"?: string;
+          "body"?: string;
+          "organization_id"?: string | null;
+          "resource_type"?: string | null;
+          "resource_id"?: string | null;
+          "dedupe_key"?: string | null;
+          "read_at"?: string | null;
+          "created_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_notifications_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      "platform_outbound_messages": {
+        Row: {
+          "id": string;
+          "campaign_id": string | null;
+          "organization_id": string | null;
+          "recipient": string;
+          "channel": string;
+          "subject": string;
+          "body": string;
+          "status": string;
+          "provider": string | null;
+          "provider_reference": string | null;
+          "error": string | null;
+          "scheduled_for": string;
+          "created_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "campaign_id"?: string | null;
+          "organization_id"?: string | null;
+          "recipient": string;
+          "channel": string;
+          "subject"?: string;
+          "body": string;
+          "status"?: string;
+          "provider"?: string | null;
+          "provider_reference"?: string | null;
+          "error"?: string | null;
+          "scheduled_for"?: string;
+          "created_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "campaign_id"?: string | null;
+          "organization_id"?: string | null;
+          "recipient"?: string;
+          "channel"?: string;
+          "subject"?: string;
+          "body"?: string;
+          "status"?: string;
+          "provider"?: string | null;
+          "provider_reference"?: string | null;
+          "error"?: string | null;
+          "scheduled_for"?: string;
+          "created_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_outbound_messages_campaign_id_fkey";
+            columns: ["campaign_id"];
+            isOneToOne: false;
+            referencedRelation: "platform_campaigns";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_outbound_messages_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      "platform_payments": {
+        Row: {
+          "id": string;
+          "organization_id": string;
+          "invoice_id": string;
+          "amount_xof": number;
+          "method": string;
+          "status": string;
+          "reference": string;
+          "paid_at": string;
+          "note": string;
+          "created_by": string | null;
+          "created_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "organization_id": string;
+          "invoice_id": string;
+          "amount_xof": number;
+          "method": string;
+          "status": string;
+          "reference"?: string;
+          "paid_at"?: string;
+          "note"?: string;
+          "created_by"?: string | null;
+          "created_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "organization_id"?: string;
+          "invoice_id"?: string;
+          "amount_xof"?: number;
+          "method"?: string;
+          "status"?: string;
+          "reference"?: string;
+          "paid_at"?: string;
+          "note"?: string;
+          "created_by"?: string | null;
+          "created_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_payments_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "platform_payments_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_payments_organization_id_invoice_id_fkey";
+            columns: ["organization_id","invoice_id"];
+            isOneToOne: false;
+            referencedRelation: "platform_invoices";
+            referencedColumns: ["organization_id","id"];
+          }
+        ];
+      };
+      "platform_plan_offers": {
+        Row: {
+          "plan": string;
+          "monthly_price_xof": number;
+          "max_shops": number | null;
+          "max_users": number | null;
+          "max_orders_month": number | null;
+          "max_storage": number | null;
+          "modules": string[];
+          "trial_days": number;
+          "active": boolean;
+          "updated_at": string;
+        };
+        Insert: {
+          "plan": string;
+          "monthly_price_xof": number;
+          "max_shops"?: number | null;
+          "max_users"?: number | null;
+          "max_orders_month"?: number | null;
+          "max_storage"?: number | null;
+          "modules"?: string[];
+          "trial_days"?: number;
+          "active"?: boolean;
+          "updated_at"?: string;
+        };
+        Update: {
+          "plan"?: string;
+          "monthly_price_xof"?: number;
+          "max_shops"?: number | null;
+          "max_users"?: number | null;
+          "max_orders_month"?: number | null;
+          "max_storage"?: number | null;
+          "modules"?: string[];
+          "trial_days"?: number;
+          "active"?: boolean;
+          "updated_at"?: string;
+        };
+        Relationships: [];
+      };
+      "platform_promo_codes": {
+        Row: {
+          "code": string;
+          "discount_type": string;
+          "value": number;
+          "active": boolean;
+          "starts_on": string | null;
+          "ends_on": string | null;
+          "max_uses": number | null;
+          "created_at": string;
+        };
+        Insert: {
+          "code": string;
+          "discount_type": string;
+          "value": number;
+          "active"?: boolean;
+          "starts_on"?: string | null;
+          "ends_on"?: string | null;
+          "max_uses"?: number | null;
+          "created_at"?: string;
+        };
+        Update: {
+          "code"?: string;
+          "discount_type"?: string;
+          "value"?: number;
+          "active"?: boolean;
+          "starts_on"?: string | null;
+          "ends_on"?: string | null;
+          "max_uses"?: number | null;
+          "created_at"?: string;
+        };
+        Relationships: [];
+      };
+      "platform_security_events": {
+        Row: {
+          "id": string;
+          "user_id": string;
+          "session_id": string | null;
+          "event_type": string;
+          "ip": string | null;
+          "user_agent": string | null;
+          "created_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "user_id": string;
+          "session_id"?: string | null;
+          "event_type": string;
+          "ip"?: string | null;
+          "user_agent"?: string | null;
+          "created_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "user_id"?: string;
+          "session_id"?: string | null;
+          "event_type"?: string;
+          "ip"?: string | null;
+          "user_agent"?: string | null;
+          "created_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_security_events_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
+      "platform_subscription_terms": {
+        Row: {
+          "shop_id": string;
+          "custom_monthly_price_xof": number | null;
+          "auto_renew": boolean;
+          "auto_lock": boolean;
+          "grace_days": number;
+          "trial_ends_on": string | null;
+          "scheduled_plan": string | null;
+          "scheduled_change_on": string | null;
+          "cancelled_at": string | null;
+          "created_at": string;
+          "updated_at": string;
+        };
+        Insert: {
+          "shop_id": string;
+          "custom_monthly_price_xof"?: number | null;
+          "auto_renew"?: boolean;
+          "auto_lock"?: boolean;
+          "grace_days"?: number;
+          "trial_ends_on"?: string | null;
+          "scheduled_plan"?: string | null;
+          "scheduled_change_on"?: string | null;
+          "cancelled_at"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Update: {
+          "shop_id"?: string;
+          "custom_monthly_price_xof"?: number | null;
+          "auto_renew"?: boolean;
+          "auto_lock"?: boolean;
+          "grace_days"?: number;
+          "trial_ends_on"?: string | null;
+          "scheduled_plan"?: string | null;
+          "scheduled_change_on"?: string | null;
+          "cancelled_at"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_subscription_terms_shop_id_fkey";
+            columns: ["shop_id"];
+            isOneToOne: true;
+            referencedRelation: "shop_subscriptions";
+            referencedColumns: ["shop_id"];
+          }
+        ];
+      };
+      "platform_support_notes": {
+        Row: {
+          "id": string;
+          "organization_id": string;
+          "shop_id": string | null;
+          "author_user_id": string | null;
+          "category": string;
+          "note": string;
+          "created_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "organization_id": string;
+          "shop_id"?: string | null;
+          "author_user_id"?: string | null;
+          "category": string;
+          "note": string;
+          "created_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "organization_id"?: string;
+          "shop_id"?: string | null;
+          "author_user_id"?: string | null;
+          "category"?: string;
+          "note"?: string;
+          "created_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_support_notes_author_user_id_fkey";
+            columns: ["author_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "platform_support_notes_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_support_notes_organization_id_shop_id_fkey";
+            columns: ["organization_id","shop_id"];
+            isOneToOne: false;
+            referencedRelation: "shops";
+            referencedColumns: ["organization_id","id"];
+          }
+        ];
+      };
+      "platform_support_ticket_messages": {
+        Row: {
+          "id": string;
+          "organization_id": string;
+          "ticket_id": string;
+          "author_user_id": string | null;
+          "author_type": string;
+          "body": string;
+          "internal": boolean;
+          "attachments": Json;
+          "created_at": string;
+        };
+        Insert: {
+          "id"?: string;
+          "organization_id": string;
+          "ticket_id": string;
+          "author_user_id"?: string | null;
+          "author_type": string;
+          "body": string;
+          "internal"?: boolean;
+          "attachments"?: Json;
+          "created_at"?: string;
+        };
+        Update: {
+          "id"?: string;
+          "organization_id"?: string;
+          "ticket_id"?: string;
+          "author_user_id"?: string | null;
+          "author_type"?: string;
+          "body"?: string;
+          "internal"?: boolean;
+          "attachments"?: Json;
+          "created_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_support_ticket_messages_author_user_id_fkey";
+            columns: ["author_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "platform_support_ticket_messages_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_support_ticket_messages_organization_id_ticket_id_fkey";
+            columns: ["organization_id","ticket_id"];
+            isOneToOne: false;
+            referencedRelation: "platform_support_tickets";
+            referencedColumns: ["organization_id","id"];
+          }
+        ];
+      };
+      "platform_support_tickets": {
+        Row: {
+          "id": string;
+          "organization_id": string;
+          "shop_id": string | null;
+          "ticket_number": string;
+          "requester_user_id": string | null;
+          "subject": string;
+          "status": string;
+          "priority": string;
+          "created_at": string;
+          "updated_at": string;
+          "resolved_at": string | null;
+        };
+        Insert: {
+          "id"?: string;
+          "organization_id": string;
+          "shop_id"?: string | null;
+          "ticket_number"?: string;
+          "requester_user_id"?: string | null;
+          "subject": string;
+          "status"?: string;
+          "priority"?: string;
+          "created_at"?: string;
+          "updated_at"?: string;
+          "resolved_at"?: string | null;
+        };
+        Update: {
+          "id"?: string;
+          "organization_id"?: string;
+          "shop_id"?: string | null;
+          "ticket_number"?: string;
+          "requester_user_id"?: string | null;
+          "subject"?: string;
+          "status"?: string;
+          "priority"?: string;
+          "created_at"?: string;
+          "updated_at"?: string;
+          "resolved_at"?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "platform_support_tickets_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "platform_support_tickets_organization_id_shop_id_fkey";
+            columns: ["organization_id","shop_id"];
+            isOneToOne: false;
+            referencedRelation: "shops";
+            referencedColumns: ["organization_id","id"];
+          },
+          {
+            foreignKeyName: "platform_support_tickets_requester_user_id_fkey";
+            columns: ["requester_user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
       "products": {
         Row: {
           "id": string;
@@ -2557,11 +3359,108 @@ export type Database = {
           }
         ];
       };
+      "workspace_snapshots": {
+        Row: {
+          "shop_id": string;
+          "organization_id": string;
+          "data": Json;
+          "version": number;
+          "created_by": string | null;
+          "updated_by": string | null;
+          "created_at": string;
+          "updated_at": string;
+        };
+        Insert: {
+          "shop_id": string;
+          "organization_id": string;
+          "data"?: Json;
+          "version"?: number;
+          "created_by"?: string | null;
+          "updated_by"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Update: {
+          "shop_id"?: string;
+          "organization_id"?: string;
+          "data"?: Json;
+          "version"?: number;
+          "created_by"?: string | null;
+          "updated_by"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workspace_snapshots_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "workspace_snapshots_organization_id_shop_id_fkey";
+            columns: ["organization_id","shop_id"];
+            isOneToOne: false;
+            referencedRelation: "shops";
+            referencedColumns: ["organization_id","id"];
+          },
+          {
+            foreignKeyName: "workspace_snapshots_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      "admin_add_support_note": {
+        Args: {
+          "p_organization_id": string;
+          "p_category": string;
+          "p_note": string;
+          "p_shop_id"?: string | null;
+        };
+        Returns: Json;
+      };
+      "admin_platform_command": {
+        Args: {
+          "p_action": string;
+          "p_payload"?: Json | null;
+        };
+        Returns: Json;
+      };
+      "admin_set_organization_status": {
+        Args: {
+          "p_organization_id": string;
+          "p_status": string;
+          "p_note"?: string | null;
+        };
+        Returns: Json;
+      };
+      "admin_set_shop_subscription": {
+        Args: {
+          "p_shop_id": string;
+          "p_plan": string;
+          "p_status": string;
+          "p_renews_on"?: string | null;
+          "p_note"?: string | null;
+        };
+        Returns: Json;
+      };
+      "admin_update_platform_config": {
+        Args: {
+          "p_registrations_open": boolean;
+          "p_support_message": string;
+          "p_support_message_tone": string;
+        };
+        Returns: Json;
+      };
       "create_my_organization": {
         Args: {
           "p_organization_name": string;
@@ -2603,6 +3502,12 @@ export type Database = {
         };
         Returns: Database["public"]["Tables"]["orders"]["Row"];
       };
+      "get_my_support_snapshot": {
+        Args: {
+          [_ in never]: never;
+        };
+        Returns: Json;
+      };
       "get_payment_totals": {
         Args: {
           "p_shop_id": string;
@@ -2610,9 +3515,33 @@ export type Database = {
         };
         Returns: Json;
       };
+      "get_platform_admin_snapshot": {
+        Args: {
+          [_ in never]: never;
+        };
+        Returns: Json;
+      };
+      "get_platform_operations_snapshot": {
+        Args: {
+          [_ in never]: never;
+        };
+        Returns: Json;
+      };
+      "get_platform_public_config": {
+        Args: {
+          [_ in never]: never;
+        };
+        Returns: Json;
+      };
       "get_shop_subscription_state": {
         Args: {
           "p_shop_id": string;
+        };
+        Returns: Json;
+      };
+      "get_workspace_snapshot": {
+        Args: {
+          "target_shop_id": string;
         };
         Returns: Json;
       };
@@ -2642,6 +3571,27 @@ export type Database = {
         Args: {
           "p_shop_id": string;
           "p_plan": string;
+        };
+        Returns: Json;
+      };
+      "run_platform_automations": {
+        Args: {
+          [_ in never]: never;
+        };
+        Returns: Json;
+      };
+      "save_workspace_snapshot": {
+        Args: {
+          "target_shop_id": string;
+          "patch": Json;
+          "expected_version": number;
+        };
+        Returns: Json;
+      };
+      "tenant_support_command": {
+        Args: {
+          "p_action": string;
+          "p_payload"?: Json | null;
         };
         Returns: Json;
       };

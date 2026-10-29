@@ -6,9 +6,8 @@ import {
   PanelLeftOpen,
   Keyboard,
   Calendar,
-  Sparkles,
   Plus,
-  Lock,
+  RefreshCw,
   ChevronRight,
   Search,
   X,
@@ -17,6 +16,9 @@ import {
   Clock,
   Moon,
   Sun,
+  Database,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { formatFCFA } from '../../data/demoData';
 import { formatShortDate } from '../../lib/dates';
@@ -43,9 +45,19 @@ export const MainLayoutHeader: React.FC = () => {
     showToast,
     workspace,
     shopSettings,
+    workspaceSync,
+    retryWorkspaceSync,
   } = useApp();
 
   const brandName = resolveShopDisplayName(shopSettings, workspace);
+  const workspaceSyncLabel =
+    workspaceSync.status === 'loading'
+      ? 'Restauration…'
+      : workspaceSync.status === 'saving'
+        ? 'Sauvegarde…'
+        : workspaceSync.status === 'error'
+          ? 'À synchroniser'
+          : 'Synchronisé';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
@@ -142,9 +154,9 @@ export const MainLayoutHeader: React.FC = () => {
 
   return (
     <header className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-700 shadow-xs sticky top-0 z-30 px-3 sm:px-5 py-2 transition-all">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
         {/* Left Section: Toggle Trigger, Brand & Breadcrumbs */}
-        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3 md:shrink-0">
           {/* Bouton Menu mobile : ouvre le tiroir de navigation (visible sous 768 px) */}
           <button
             type="button"
@@ -211,7 +223,7 @@ export const MainLayoutHeader: React.FC = () => {
           )}
 
           {/* Breadcrumb Trail */}
-          <div className="flex items-center gap-1.5 text-[12.5px] text-zinc-500 dark:text-zinc-400">
+          <div className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-zinc-500 dark:text-zinc-400">
             <span
               className="hidden sm:inline hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer transition-colors"
               onClick={() => setActiveScreen('dashboard')}
@@ -220,14 +232,14 @@ export const MainLayoutHeader: React.FC = () => {
               {brandName}
             </span>
             <ChevronRight className="hidden sm:inline w-3 h-3 text-zinc-400 dark:text-zinc-500" />
-            <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[140px] sm:max-w-none">
+            <span className="max-w-[110px] truncate font-bold text-zinc-900 sm:max-w-none dark:text-zinc-100">
               {getScreenTitle()}
             </span>
           </div>
         </div>
 
         {/* Center Section: Rapid Search Input with Cmd/Ctrl + K */}
-        <div ref={searchContainerRef} className="relative flex-1 max-w-[420px] mx-2">
+        <div ref={searchContainerRef} className="relative mx-2 hidden max-w-[420px] flex-1 md:block">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
             <input
@@ -370,7 +382,7 @@ export const MainLayoutHeader: React.FC = () => {
         </div>
 
         {/* Right Section: Shortcuts, Actions, Status & User */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {/* Quick Screen Actions */}
           {activeScreen !== 'pos' && (
             <button
@@ -383,6 +395,49 @@ export const MainLayoutHeader: React.FC = () => {
             </button>
           )}
 
+          {workspace.mode === 'live' && workspaceSync.writable && (
+            <button
+              type="button"
+              onClick={retryWorkspaceSync}
+              disabled={workspaceSync.status === 'loading' || workspaceSync.status === 'saving'}
+              aria-label={`Sauvegarde des données : ${workspaceSyncLabel}`}
+              aria-live="polite"
+              title={
+                workspaceSync.error ??
+                (workspaceSync.savedAt
+                  ? `Dernière sauvegarde Supabase : ${new Date(workspaceSync.savedAt).toLocaleString('fr-FR')}. Cliquer pour revérifier.`
+                  : 'Sauvegarde Supabase active. Cliquer pour revérifier.')
+              }
+              className={`flex items-center gap-1.5 rounded-lg border p-1.5 text-[12px] font-semibold shadow-2xs transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600 2xl:px-2.5 ${
+                workspaceSync.status === 'error'
+                  ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950 dark:text-red-200'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+              } disabled:cursor-wait disabled:opacity-70`}
+            >
+              {workspaceSync.status === 'loading' || workspaceSync.status === 'saving' ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : workspaceSync.status === 'error' ? (
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Database className="h-4 w-4" aria-hidden="true" />
+              )}
+              <span className="hidden 2xl:inline">{workspaceSyncLabel}</span>
+            </button>
+          )}
+
+          {/* Seule action qui recharge volontairement l'application. Le
+              brouillon et la session Auth sont restaurés au retour. */}
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            aria-label="Actualiser l’application"
+            title="Actualiser l’application — la session et le brouillon sont conservés"
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white p-1.5 text-[12px] font-semibold text-zinc-600 shadow-2xs transition-colors hover:bg-zinc-50 hover:text-zinc-950 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden 2xl:inline">Actualiser</span>
+          </button>
+
           {/* Bascule du thème clair / sombre (Alt+T) */}
           <button
             type="button"
@@ -390,7 +445,7 @@ export const MainLayoutHeader: React.FC = () => {
             aria-pressed={theme === 'dark'}
             aria-label={theme === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'}
             title={theme === 'dark' ? 'Passer au thème clair (Alt+T)' : 'Passer au thème sombre (Alt+T)'}
-            className="p-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-2xs"
+            className="flex shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white p-1.5 text-zinc-600 shadow-2xs transition-colors hover:bg-zinc-50 hover:text-black focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
           >
             {theme === 'dark' ? (
               <Sun className="w-4 h-4" aria-hidden="true" />
@@ -404,7 +459,7 @@ export const MainLayoutHeader: React.FC = () => {
             type="button"
             onClick={() => setShortcutHelpOpen(true)}
             title="Raccourcis clavier (F9 / ?)"
-            className="flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-[12px] font-medium transition-colors shadow-2xs"
+            className="hidden items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-[12px] font-medium text-zinc-700 shadow-2xs transition-colors hover:bg-zinc-50 md:flex dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             <Keyboard className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
             <span className="hidden xl:inline text-[11.5px]">Raccourcis</span>

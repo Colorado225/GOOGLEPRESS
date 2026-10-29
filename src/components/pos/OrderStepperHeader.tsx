@@ -1,132 +1,152 @@
 import React from 'react';
+import {
+  CalendarClock,
+  Check,
+  CreditCard,
+  LockKeyhole,
+  Save,
+  ShoppingBasket,
+  UserRound,
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { Shirt, Waves, Check, ChevronRight, ArrowLeft } from 'lucide-react';
+import type { OrderStep } from '../../context/store/types';
+import { isValidISODate, todayISO } from '../../lib/dates';
 
+const STEPS: Array<{
+  id: OrderStep;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}> = [
+  { id: 1, label: 'Client & service', description: 'Identité et tarification', icon: <UserRound className="h-4 w-4" /> },
+  { id: 2, label: 'Articles', description: 'Panier et prestations', icon: <ShoppingBasket className="h-4 w-4" /> },
+  { id: 3, label: 'Retrait & consignes', description: 'Délai et logistique', icon: <CalendarClock className="h-4 w-4" /> },
+  { id: 4, label: 'Paiement', description: 'Contrôle et ticket', icon: <CreditCard className="h-4 w-4" /> },
+];
+
+/** Progression linéaire, avec retour libre et accès avant uniquement si les prérequis sont remplis. */
 export const OrderStepperHeader: React.FC = () => {
   const {
-    selectedServiceCategory,
-    setSelectedServiceCategory,
     orderStep,
     setOrderStep,
-    cartLines,
+    selectedServiceCategory,
     selectedCustomer,
+    cartLines,
+    promisedDateISO,
+    orderFulfillmentMethod,
+    deliveryAddress,
+    deliveryDateISO,
   } = useApp();
 
-  const isPressing = selectedServiceCategory === 'pressing';
-  const isBlanchisserie = selectedServiceCategory === 'blanchisserie';
+  const clientStepValid = Boolean(selectedServiceCategory && selectedCustomer);
+  const cartStepValid = clientStepValid && cartLines.length > 0;
+  const scheduleValid =
+    promisedDateISO === null ||
+    (isValidISODate(promisedDateISO) && promisedDateISO >= todayISO());
+  const deliveryValid =
+    orderFulfillmentMethod !== 'home_delivery' ||
+    (Boolean(deliveryAddress.trim()) &&
+      isValidISODate(deliveryDateISO) &&
+      deliveryDateISO >= todayISO());
+  const reviewStepValid = cartStepValid && scheduleValid && deliveryValid;
 
-  const steps = [
-    { number: 1, label: 'Informations client & dates' },
-    { number: 2, label: 'Articles & prestations' },
-    { number: 3, label: 'Récapitulatif & validation' },
-  ];
+  const furthestStep: OrderStep = reviewStepValid
+    ? 4
+    : cartStepValid
+      ? 3
+      : clientStepValid
+        ? 2
+        : 1;
 
-  const handleStepClick = (targetStep: 1 | 2 | 3) => {
-    // Only allow navigation to Step 2 if customer selected
-    if (targetStep >= 2 && !selectedCustomer) return;
-    // Only allow navigation to Step 3 if cart has items
-    if (targetStep === 3 && cartLines.length === 0) return;
-    setOrderStep(targetStep);
+  const navigate = (target: OrderStep) => {
+    // La grille tarifaire ne se change plus en cours de panier : on retourne à l'étape 1,
+    // où le choix de service est explicitement verrouillé tant que des articles sont présents.
+    if (target <= furthestStep) setOrderStep(target);
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-2xl p-4 mb-4 shadow-2xs">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Left: Service badge and switch toggle */}
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setSelectedServiceCategory(null)}
-            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
-            title="Revenir au choix de service"
-            aria-label="Revenir au choix de service"
-          >
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-          </button>
-
-          <div className="flex items-center gap-2">
-            <span
-              className={`px-3 py-1 rounded-full text-[12px] font-bold flex items-center gap-1.5 border ${
-                isPressing
-                  ? 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                  : 'bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800'
-              }`}
-            >
-              {isPressing ? <Shirt className="w-3.5 h-3.5" /> : <Waves className="w-3.5 h-3.5" />}
-              <span>{isPressing ? 'Service Pressing' : 'Service Blanchisserie'}</span>
-            </span>
-
-            {/* Quick Toggle pill between Pressing & Blanchisserie */}
-            <div className="flex bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-[11px] font-semibold">
-              <button
-                type="button"
-                onClick={() => setSelectedServiceCategory('pressing')}
-                className={`px-2 py-0.5 rounded-md transition-all ${
-                  isPressing ? 'bg-blue-600 text-white shadow-2xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50'
-                }`}
-              >
-                Pressing
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedServiceCategory('blanchisserie')}
-                className={`px-2 py-0.5 rounded-md transition-all ${
-                  isBlanchisserie ? 'bg-teal-600 text-white shadow-2xs' : 'text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50'
-                }`}
-              >
-                Blanchisserie
-              </button>
-            </div>
+    <section
+      aria-label="Progression de la prise de commande"
+      className="overflow-hidden rounded-[22px] border border-zinc-200/90 bg-white shadow-[0_12px_35px_-28px_rgba(9,9,11,0.4)] dark:border-zinc-800 dark:bg-zinc-900"
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3 sm:px-5 dark:border-zinc-800">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-lg bg-zinc-950 px-2 text-[12px] font-black text-white dark:bg-zinc-50 dark:text-zinc-950">
+            {orderStep}/4
+          </span>
+          <div>
+            <p className="text-[12.5px] font-black text-zinc-900 dark:text-zinc-100">
+              {STEPS[orderStep - 1].label}
+            </p>
+            <p className="hidden text-[10.5px] text-zinc-500 sm:block dark:text-zinc-400">
+              Réception guidée
+            </p>
           </div>
         </div>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+          <Save className="h-3 w-3" aria-hidden="true" />
+          Brouillon sauvegardé
+        </span>
+      </div>
 
-        {/* Right: Stepper indicators */}
-        <div className="flex items-center gap-2 sm:gap-3 text-[12px]">
-          {steps.map((st, idx) => {
-            const isCurrent = orderStep === st.number;
-            const isCompleted = orderStep > st.number;
-            const isClickable = (st.number === 1) || (st.number === 2 && selectedCustomer) || (st.number === 3 && cartLines.length > 0);
-
-            return (
-              <React.Fragment key={st.number}>
-                <button
-                  type="button"
-                  onClick={() => isClickable && handleStepClick(st.number as 1 | 2 | 3)}
-                  disabled={!isClickable}
-                  className={`flex items-center gap-1.5 font-medium transition-all ${
-                    isCurrent
-                      ? isPressing
-                        ? 'text-blue-700 dark:text-blue-300 font-bold'
-                        : 'text-teal-700 dark:text-teal-300 font-bold'
-                      : isCompleted
-                      ? 'text-zinc-900 dark:text-zinc-100 font-semibold'
-                      : 'text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
+      <ol className="grid grid-cols-4 gap-1.5 p-2.5 sm:gap-2 sm:p-3">
+        {STEPS.map((step) => {
+          const isActive = orderStep === step.id;
+          const isComplete = step.id < orderStep;
+          const isReachable = step.id <= furthestStep;
+          return (
+            <li key={step.id} className="min-w-0">
+              <button
+                type="button"
+                onClick={() => navigate(step.id)}
+                disabled={!isReachable || isActive}
+                aria-current={isActive ? 'step' : undefined}
+                aria-label={`Étape ${step.id} : ${step.label}${isComplete ? ', terminée' : ''}`}
+                className={`group flex h-full w-full min-w-0 items-center gap-2 rounded-xl border px-2 py-2.5 text-left transition-all sm:px-3 ${
+                  isActive
+                    ? 'border-zinc-950 bg-zinc-950 text-white shadow-md dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-950'
+                    : isComplete
+                      ? 'border-blue-200 bg-blue-50 text-blue-900 hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100 dark:hover:bg-blue-900'
+                      : isReachable
+                        ? 'border-zinc-200 bg-white text-zinc-800 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800'
+                        : 'cursor-not-allowed border-zinc-100 bg-zinc-50/70 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-600'
+                }`}
+              >
+                <span
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-black ${
+                    isActive
+                      ? 'bg-white/15 text-white dark:bg-zinc-950/10 dark:text-zinc-950'
+                      : isComplete
+                        ? 'bg-blue-600 text-white'
+                        : isReachable
+                          ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+                          : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
                   }`}
                 >
-                  <span
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${
-                      isCurrent
-                        ? isPressing
-                          ? 'bg-blue-600 text-white ring-2 ring-blue-200 dark:ring-blue-800 shadow-2xs'
-                          : 'bg-teal-600 text-white ring-2 ring-teal-200 dark:ring-teal-800 shadow-2xs'
-                        : isCompleted
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border border-zinc-200 dark:border-zinc-700'
-                    }`}
-                  >
-                    {isCompleted ? <Check className="w-3 h-3" /> : st.number}
+                  {isComplete ? <Check className="h-3.5 w-3.5" /> : isReachable ? step.icon : <LockKeyhole className="h-3 w-3" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-[10.5px] font-black leading-tight sm:text-[12px]">
+                    <span className="sm:hidden">{step.id}. {step.id === 1 ? 'Client' : step.id === 2 ? 'Articles' : step.id === 3 ? 'Retrait' : 'Paiement'}</span>
+                    <span className="hidden sm:inline">{step.id}. {step.label}</span>
                   </span>
-                  <span className="hidden sm:inline">{st.label}</span>
-                </button>
-
-                {idx < steps.length - 1 && (
-                  <ChevronRight className="w-3.5 h-3.5 text-zinc-300 shrink-0" />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
+                  <span className={`mt-0.5 hidden truncate text-[9.5px] lg:block ${isActive ? 'text-zinc-300 dark:text-zinc-600' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                    {step.description}
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="h-1 bg-zinc-100 dark:bg-zinc-800">
+        <div
+          className={`h-full rounded-r-full transition-all duration-300 ${
+            selectedServiceCategory === 'blanchisserie' ? 'bg-teal-500' : 'bg-blue-600'
+          }`}
+          style={{ width: `${orderStep * 25}%` }}
+        />
       </div>
-    </div>
+    </section>
   );
 };

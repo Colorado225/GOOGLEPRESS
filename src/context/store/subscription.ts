@@ -21,6 +21,8 @@ export interface SubscriptionStore {
   subscription: SubscriptionState;
   subscriptionSource: SubscriptionSource;
   effectivePlanId: SubscriptionPlanId;
+  /** Modules fournis par la RPC ; null = repli historique/local, [] = accès fermé. */
+  subscriptionModules: string[] | null;
   chooseSubscriptionPlan: (planId: SubscriptionPlanId) => Promise<ActionResult>;
   refreshSubscription: () => Promise<ActionResult>;
 }
@@ -55,6 +57,9 @@ export const useSubscriptionStore = (workspace: WorkspaceScope): SubscriptionSto
   const [subscriptionSource, setSubscriptionSource] = useState<SubscriptionSource>(() =>
     workspace.mode === 'live' ? 'chargement' : 'local'
   );
+  const [subscriptionModules, setSubscriptionModules] = useState<string[] | null>(() =>
+    workspace.mode === 'live' ? [] : null
+  );
 
   const subscriptionShopId = workspace.mode === 'live' ? workspace.shopId : null;
 
@@ -62,21 +67,26 @@ export const useSubscriptionStore = (workspace: WorkspaceScope): SubscriptionSto
     if (!subscriptionShopId) {
       setSubscription(resolveDefaultSubscription(workspace));
       setSubscriptionSource('local');
+      setSubscriptionModules(null);
       return;
     }
     let cancelled = false;
+    setSubscription(unverifiedSubscription());
+    setSubscriptionModules([]);
     setSubscriptionSource('chargement');
     void (async () => {
       try {
         const remote = await fetchRemoteSubscription(subscriptionShopId);
         if (cancelled) return;
         setSubscription(toSubscriptionState(remote));
+        setSubscriptionModules(remote.modules);
         setSubscriptionSource('serveur');
       } catch {
         if (cancelled) return;
         // Repli fermé et assumé : sans état serveur, aucune fonction payante
         // n'est ouverte. L'écran Paramètres l'explique en une phrase.
         setSubscription(unverifiedSubscription());
+        setSubscriptionModules([]);
         setSubscriptionSource('indisponible');
       }
     })();
@@ -96,10 +106,12 @@ export const useSubscriptionStore = (workspace: WorkspaceScope): SubscriptionSto
     try {
       const remote = await fetchRemoteSubscription(subscriptionShopId);
       setSubscription(toSubscriptionState(remote));
+      setSubscriptionModules(remote.modules);
       setSubscriptionSource('serveur');
       return { ok: true };
     } catch (error) {
       setSubscription(unverifiedSubscription());
+      setSubscriptionModules([]);
       setSubscriptionSource('indisponible');
       return {
         ok: false,
@@ -123,6 +135,7 @@ export const useSubscriptionStore = (workspace: WorkspaceScope): SubscriptionSto
       // par l'éditeur, côté base.
       const remote = await requestRemotePlanChange(subscriptionShopId, planId);
       setSubscription(toSubscriptionState(remote));
+      setSubscriptionModules(remote.modules);
       setSubscriptionSource('serveur');
       return { ok: true };
     } catch (error) {
@@ -137,6 +150,7 @@ export const useSubscriptionStore = (workspace: WorkspaceScope): SubscriptionSto
     subscription,
     subscriptionSource,
     effectivePlanId,
+    subscriptionModules,
     refreshSubscription,
     chooseSubscriptionPlan,
   };

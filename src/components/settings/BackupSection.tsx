@@ -158,8 +158,10 @@ export const BackupSection: React.FC = () => {
     try {
       restoreBackup(analyzedBackup);
       setImportPassphrase('');
-      setMessage('Sauvegarde restaurée dans ce navigateur. Rechargement de l’application…');
-      window.setTimeout(() => window.location.reload(), 900);
+      setImportBusy(false);
+      setMessage(
+        'Sauvegarde restaurée dans ce navigateur. Cliquez sur « Actualiser » dans l’en-tête quand vous souhaitez charger les données restaurées.'
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Restauration impossible.');
       setImportBusy(false);

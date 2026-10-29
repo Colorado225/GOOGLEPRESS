@@ -42,6 +42,7 @@ describe('supabaseSubscription — lecture de l’état', () => {
     expect(remote.trialActive).toBe(true);
     expect(remote.trialDaysLeft).toBe(5);
     expect(remote.limits.ordersPerMonth).toBeNull();
+    expect(remote.modules).toBeNull();
 
     const state = toSubscriptionState(remote);
     expect(state.plan).toBe('free');
@@ -60,6 +61,14 @@ describe('supabaseSubscription — lecture de l’état', () => {
     });
     expect(remote.requestedPlan).toBe('pro');
     expect(toSubscriptionState(remote).requestedAt).toBe('2026-10-25T10:00:00+00:00');
+  });
+
+  it('valide les modules serveur et conserve la compatibilité avec leur absence', () => {
+    expect(parseRemoteSubscription({ ...remotePayload(), modules: ['pos', 'delivery_tracking'] }).modules)
+      .toEqual(['pos', 'delivery_tracking']);
+    expect(parseRemoteSubscription({ ...remotePayload(), modules: [] }).modules).toEqual([]);
+    expect(parseRemoteSubscription(remotePayload()).modules).toBeNull();
+    expect(() => parseRemoteSubscription({ ...remotePayload(), modules: ['pos', 42] })).toThrow(/modules/i);
   });
 
   it('refuse une formule ou un statut inconnus', () => {

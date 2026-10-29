@@ -27,7 +27,6 @@ insert into public.shops (
   id, organization_id, name, slug, public_slug, address, city, phone_display
 ) values
   ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Alpha Cocody', 'cocody', 'alpha-cocody-fictif', 'Rue fictive 1', 'Abidjan', '+225 07 00 00 01 01'),
-  ('20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'Alpha Plateau', 'plateau', 'alpha-plateau-fictif', 'Rue fictive 2', 'Abidjan', '+225 07 00 00 01 02'),
   ('20000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000002', 'Bravo Marcory', 'marcory', 'bravo-marcory-fictif', 'Rue fictive 3', 'Abidjan', '+225 07 00 00 02 01');
 
 -- Les deux organisations de test sont en formule Business : elles portent plus
@@ -40,6 +39,16 @@ update public.shop_subscriptions
    '10000000-0000-4000-8000-000000000001',
    '10000000-0000-4000-8000-000000000002'
  );
+
+-- La seconde agence est créée après le passage en Business, comme dans le
+-- parcours réel : le trigger refuse une seconde agence tant que Free est actif.
+insert into public.shops (
+  id, organization_id, name, slug, public_slug, address, city, phone_display
+) values (
+  '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001',
+  'Alpha Plateau', 'plateau', 'alpha-plateau-fictif', 'Rue fictive 2', 'Abidjan',
+  '+225 07 00 00 01 02'
+);
 
 insert into public.shop_settings (shop_id, organization_id, tagline) values
   ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Alpha propre et rapide'),

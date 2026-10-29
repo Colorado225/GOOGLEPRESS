@@ -33,16 +33,28 @@ export const getStaffAccessEnvironment = (
 });
 
 /**
- * La démonstration locale est un scénario explicitement choisi, pas le mode
- * implicite d'un build de production. Un build de production sans Supabase
- * affiche une erreur de configuration au lieu d'ouvrir l'ERP.
+ * La démonstration locale exige à la fois le développement et son activation
+ * explicite. Elle n’est jamais un repli implicite et reste indisponible dans un
+ * build de production, qui exige Supabase et une session authentifiée.
  */
 export const resolveStaffAccessMode = (
   environment: StaffAccessEnvironment
 ): StaffAccessMode => {
-  if (environment.allowLocalDemo) return 'explicit-local-demo';
+  if (environment.isDevelopment && environment.allowLocalDemo) return 'explicit-local-demo';
   if (environment.supabaseConfigured) return 'supabase-required';
-  return environment.isDevelopment ? 'explicit-local-demo' : 'configuration-required';
+  return 'configuration-required';
+};
+
+/**
+ * Le stockage local peut rester disponible pour l’ERP sans jamais faire passer
+ * la console éditeur en démonstration lorsqu’un projet Supabase est configuré.
+ * Les deux espaces conservent ainsi leurs sources et leurs données distinctes.
+ */
+export const resolvePlatformAdminAccessMode = (
+  environment: StaffAccessEnvironment
+): StaffAccessMode => {
+  if (environment.supabaseConfigured) return 'supabase-required';
+  return resolveStaffAccessMode(environment);
 };
 
 export const isStaffRole = (value: string): value is StaffRole =>

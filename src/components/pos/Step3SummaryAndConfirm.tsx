@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { GarmentColorChip } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { calculateOrderTotals } from '../../lib/pricing';
+import { calculateOrderTotals, isOrderLineExpress, resolveOrderPickupOption } from '../../lib/pricing';
+import { formatPressingWeight } from '../../lib/pressing';
 import { formatLongDateTime, formatPromisedLong, getPickupLabel, resolvePickupLabel, resolvePromisedDate } from '../../lib/dates';
 import { formatLogisticsSchedule } from '../../lib/logistics';
 import { ConfettiButton } from '../../registry/magicui/confetti';
@@ -44,6 +45,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
     pickupOption,
     promisedDateISO,
     orderNotes,
+    setOrderNotes,
     depositAmount,
     setDepositAmount,
     paymentMethod,
@@ -84,10 +86,11 @@ export const Step3SummaryAndConfirm: React.FC = () => {
     deliveryFee: wantsHomeDelivery ? shopSettings.deliveryFee : 0,
   });
 
+  const effectivePickupOption = resolveOrderPickupOption(cartLines, pickupOption);
   const promisedDateStr =
-    pickupOption === 'express' && !promisedDateISO
-      ? `Demain • 12h00 (${getPickupLabel(pickupOption)})`
-      : `${formatPromisedLong(resolvePromisedDate(pickupOption, promisedDateISO))} (${resolvePickupLabel(pickupOption, promisedDateISO)})`;
+    effectivePickupOption === 'express'
+      ? `Demain • 12h00 (${getPickupLabel(effectivePickupOption)})`
+      : `${formatPromisedLong(resolvePromisedDate(effectivePickupOption, promisedDateISO))} (${resolvePickupLabel(effectivePickupOption, promisedDateISO)})`;
 
   const depositDateStr = `Aujourd'hui, ${formatLongDateTime(new Date())}`;
 
@@ -98,7 +101,10 @@ export const Step3SummaryAndConfirm: React.FC = () => {
     try {
       const order = submitNewOrder();
       if (order) {
-        // Successful registration handled inside submitNewOrder
+        // Le ticket reste ouvert en aperçu ; derrière lui, une nouvelle
+        // réception repart proprement à l'étape client avec le même service.
+        setOrderNotes('');
+        setOrderStep(1);
       }
     } catch (e) {
       showToast('Erreur lors de l’enregistrement de la commande');
@@ -109,6 +115,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
 
   const handleCancel = () => {
     resetNewOrderFlow();
+    setOrderNotes('');
     setCancelConfirmOpen(false);
     showToast('Parcours de commande réinitialisé');
   };
@@ -119,10 +126,10 @@ export const Step3SummaryAndConfirm: React.FC = () => {
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-            <span>Étape 3 • Récapitulatif & Enregistrement</span>
+            <span>Étape 4 • Paiement & validation</span>
           </h2>
           <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Vérifiez l'ensemble des informations de la commande avant confirmation et émission du ticket.
+            Contrôlez les articles, les consignes et l’acompte avant l’enregistrement définitif et l’émission du ticket.
           </p>
         </div>
 
@@ -172,7 +179,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               </span>
               <button
                 type="button"
-                onClick={() => setOrderStep(1)}
+                onClick={() => setOrderStep(3)}
                 className="text-[11px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-semibold"
               >
                 Modifier
@@ -259,12 +266,27 @@ export const Step3SummaryAndConfirm: React.FC = () => {
                           <span className="block mt-0.5"><GarmentColorChip color={line.color} /></span>
                         )}
                       </TableCell>
-                      <TableCell className="text-zinc-600 dark:text-zinc-400">{line.serviceType}</TableCell>
+                      <TableCell className="text-zinc-600 dark:text-zinc-400">
+                        <span className="block">{line.serviceType}</span>
+                        {isPressing && (
+                          <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide ${
+                            isOrderLineExpress(line, pickupOption)
+                              ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200'
+                              : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'
+                          }`}>
+                            {isOrderLineExpress(line, pickupOption) ? 'Express 24h' : 'Normal'}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-center font-bold tabular-nums">
                         {line.pricingType === 'kilo'
-                          ? `${line.quantity} kg`
+                          ? `${formatPressingWeight(line.weightKg ?? line.quantity)} kg`
                           : line.unitLabel === 'forfait'
-                            ? `${line.quantity} forfait${line.quantity > 1 ? 's' : ''}`
+                            ? `${line.quantity} forfait${line.quantity > 1 ? 's' : ''}${
+                                line.weightKg !== undefined
+                                  ? ` • ${formatPressingWeight(line.weightKg)} kg couverts`
+                                  : ''
+                              }`
                             : `${line.quantity} vêtement${line.quantity > 1 ? 's' : ''}`}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">
@@ -288,7 +310,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               </div>
               {expressFee > 0 && (
                 <div className="flex justify-between text-amber-800 dark:text-amber-200 font-medium">
-                  <span>Type de service express 24h (×2)</span>
+                  <span>Supplément Express 24h — lignes sélectionnées (×2)</span>
                   <span className="tabular-nums">+{formatFCFA(expressFee)}</span>
                 </div>
               )}
@@ -411,17 +433,18 @@ export const Step3SummaryAndConfirm: React.FC = () => {
             {/* Deposit amount input + remaining balance */}
             <div className="flex items-center gap-3 pt-1">
               <div className="flex-1">
-                <label className="block text-[11px] font-bold uppercase text-zinc-400 dark:text-zinc-500 mb-1">
+                <label htmlFor="pos-deposit-amount" className="pos-field-label">
                   Acompte perçu immédiatement :
                 </label>
                 <div className="relative">
                   <input
+                    id="pos-deposit-amount"
                     type="number"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-full border border-zinc-300 dark:border-zinc-600 rounded-xl px-3 py-2 text-[15px] font-bold tabular-nums text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                    className="pos-field pr-[74px] text-[15px] font-bold"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400 dark:text-zinc-500 font-bold">
+                  <span className="pos-field-affix">
                     FCFA
                   </span>
                 </div>
@@ -456,11 +479,11 @@ export const Step3SummaryAndConfirm: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setOrderStep(2)}
+            onClick={() => setOrderStep(3)}
             className="border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold px-4 py-2.5 rounded-xl transition-colors flex items-center gap-1.5 text-[13px]"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Modifier articles</span>
+            <span>Retrait & consignes</span>
           </button>
 
           <button

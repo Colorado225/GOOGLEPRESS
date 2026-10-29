@@ -2,7 +2,7 @@ import type { PickupOption, ServiceCategory } from '../../types';
 
 export interface OrderFlowDeps {
   setSelectedServiceCategory: (cat: ServiceCategory | null) => void;
-  setOrderStep: (step: 1 | 2 | 3) => void;
+  setOrderStep: (step: 1 | 2 | 3 | 4) => void;
   resetLogisticsDraft: (option?: PickupOption) => void;
   clearCart: () => void;
 }

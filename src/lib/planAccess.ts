@@ -137,8 +137,26 @@ export const resolveEffectivePlanId = (
 export const getPlanCapabilities = (planId: SubscriptionPlanId): PlanCapabilities =>
   PLAN_CAPABILITIES[planId] ?? PLAN_CAPABILITIES.free;
 
-export const isFeatureIncluded = (planId: SubscriptionPlanId, feature: PlanFeature): boolean =>
-  getPlanCapabilities(planId).features[feature] === true;
+export const PLAN_FEATURE_MODULES: Record<PlanFeature, string> = {
+  customerPortal: 'customer_portal',
+  deliveryTracking: 'delivery_tracking',
+  deliveryProof: 'delivery_proof',
+  detailedReports: 'detailed_reports',
+  multiShop: 'multi_shop',
+};
+
+/**
+ * La liste fournie par la RPC est prioritaire dès qu'elle existe. `null` ou
+ * `undefined` conserve le comportement des anciennes réponses et de la démo ;
+ * un tableau vide ferme explicitement toutes les options payantes.
+ */
+export const isFeatureIncluded = (
+  planId: SubscriptionPlanId,
+  feature: PlanFeature,
+  serverModules?: readonly string[] | null
+): boolean => serverModules == null
+  ? getPlanCapabilities(planId).features[feature] === true
+  : serverModules.includes(PLAN_FEATURE_MODULES[feature]);
 
 export const getFeatureDefinition = (feature: PlanFeature): PlanFeatureDefinition =>
   PLAN_FEATURES[feature];

@@ -15,11 +15,12 @@ export default defineConfig(() => {
       // Autorise les hôtes de prévisualisation distants (ex. tunnels de dev).
       // Serveur de développement uniquement — sans effet sur le build prod.
       allowedHosts: true as const,
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modify—file watching is disabled to prevent flickering during agent edits.
+      // En mode agent, HMR peut être coupé pour éviter les rechargements
+      // automatiques pendant les modifications. La surveillance reste active :
+      // sans elle, Vite continuerait à servir l'ancien module même après un
+      // clic explicite sur « Actualiser ».
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      watch: {},
     },
   };
 });

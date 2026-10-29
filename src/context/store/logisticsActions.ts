@@ -18,6 +18,7 @@ import type {
   ServiceCategory,
   ShopSettings,
 } from '../../types';
+import { creditCashRegister } from '../../lib/cashRegister';
 import {
   isValidISODate,
   nowDateTime,
@@ -72,7 +73,7 @@ export interface LogisticsActionsDeps {
   setDeliveryTimeSlotState: (slot: LogisticsTimeSlot) => void;
   setPendingPickupTaskId: (taskId: string | null) => void;
   setSelectedServiceCategory: (cat: ServiceCategory | null) => void;
-  setOrderStep: (step: 1 | 2 | 3) => void;
+  setOrderStep: (step: 1 | 2 | 3 | 4) => void;
   setActiveScreen: (screen: ScreenId) => void;
   setFocusedLogisticsTaskId: (taskId: string | null) => void;
   notify: NotifyFn;
@@ -476,14 +477,7 @@ export const createLogisticsActions = (deps: LogisticsActionsDeps): LogisticsAct
     });
 
     if (balance > 0) {
-      setCashRegister((reg) => ({
-        ...reg,
-        cashAmount: reg.cashAmount + (paymentMethodForBalance === 'especes' ? balance : 0),
-        waveAmount: reg.waveAmount + (paymentMethodForBalance === 'wave' ? balance : 0),
-        momoAmount:
-          reg.momoAmount + (paymentMethodForBalance === 'momo' || paymentMethodForBalance === 'om' ? balance : 0),
-        totalAmount: reg.totalAmount + balance,
-      }));
+      setCashRegister((reg) => creditCashRegister(reg, balance, paymentMethodForBalance));
       setCustomers((prev) =>
         prev.map((customer) =>
           customer.id === order.customerId

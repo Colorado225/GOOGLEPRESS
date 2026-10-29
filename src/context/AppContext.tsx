@@ -13,6 +13,7 @@ import { useCustomersStore } from './store/customers';
 import { useOrdersStore } from './store/orders';
 import { useLogisticsStore } from './store/logistics';
 import { useStorageStore } from './store/storage';
+import { useWorkspaceSyncStore } from './store/workspaceSync';
 import { usePosDraft } from './store/posDraft';
 import { useCartStore } from './store/cart';
 import { useModals } from './store/modals';
@@ -83,6 +84,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     subscription,
     subscriptionSource,
     effectivePlanId,
+    subscriptionModules,
     refreshSubscription,
     chooseSubscriptionPlan,
   } = useSubscriptionStore(workspace);
@@ -92,7 +94,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- 3. Modules autonomes -------------------------------------------------
   const {
     employees,
+    setEmployees,
     attendanceRecords,
+    setAttendanceRecords,
     addEmployee,
     updateEmployee,
     setEmployeeStatus,
@@ -101,7 +105,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   } = useEmployeesStore({ storageKey, seedList, effectivePlanId, notify });
   const {
     products,
+    setProducts,
     stockMovements,
+    setStockMovements,
     createProduct,
     updateProduct,
     setProductActive,
@@ -109,7 +115,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   } = useInventoryStore({ storageKey, seedList, notify });
   const {
     expenses,
+    setExpenses,
     expenseCategories,
+    setExpenseCategories,
     addExpense,
     updateExpense,
     cancelExpense,
@@ -140,6 +148,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     storagePanelViewRequest,
     setStoragePanelViewRequest,
   } = useStorageStore({ workspace, liveWorkspace, storageKey });
+  const { cartLines, setCartLines, selectedGarmentColor, setSelectedGarmentColor } =
+    useCartStore({ storageKey, liveWorkspace });
   const {
     selectedCustomer,
     setSelectedCustomer,
@@ -178,9 +188,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDeliveryScheduleManual,
     setDeliveryDateISOState,
     setDeliveryTimeSlotState,
-  } = usePosDraft({ customers, logisticsTasks });
-  const { cartLines, setCartLines, selectedGarmentColor, setSelectedGarmentColor } =
-    useCartStore();
+  } = usePosDraft({ customers, logisticsTasks, cartLines, storageKey, liveWorkspace });
   const {
     previewTicket,
     setPreviewTicket,
@@ -196,10 +204,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setShortcutHelpOpen,
   } = useModals({ orders });
 
+  // --- 4 bis. Persistance durable des données métier ------------------------
+  const { workspaceSync, retryWorkspaceSync, flushWorkspaceSync } = useWorkspaceSyncStore({
+    enabled: liveWorkspace && Boolean(workspace.shopId),
+    shopId: workspace.shopId,
+    role: workspace.userRole ?? null,
+    storageKey,
+    data: {
+      customers,
+      orders,
+      cashRegister,
+      nextTicketNumber,
+      logisticsTasks,
+      employees,
+      attendanceRecords,
+      products,
+      stockMovements,
+      expenses,
+      expenseCategories,
+    },
+    setters: {
+      customers: setCustomers,
+      orders: setOrders,
+      cashRegister: setCashRegister,
+      nextTicketNumber: setNextTicketNumber,
+      logisticsTasks: setLogisticsTasks,
+      employees: setEmployees,
+      attendanceRecords: setAttendanceRecords,
+      products: setProducts,
+      stockMovements: setStockMovements,
+      expenses: setExpenses,
+      expenseCategories: setExpenseCategories,
+    },
+  });
+
   // --- 5. Fabriques d'actions du cœur ---------------------------------------
-  const { addCartItem, removeCartItem, updateCartItemQty, updateCartLineColor, clearCart } =
-    createCartActions({
+  const {
+    addCartItem,
+    removeCartItem,
+    updateCartItemQty,
+    setCartLineExpress,
+    updateCartLineColor,
+    clearCart,
+  } = createCartActions({
       selectedServiceFilter,
+      pickupOption,
       selectedGarmentColor,
       setCartLines,
       setDepositAmount,
@@ -360,6 +409,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addCartItem,
     removeCartItem,
     updateCartItemQty,
+    setCartLineExpress,
     selectedGarmentColor,
     setSelectedGarmentColor,
     updateCartLineColor,
@@ -462,9 +512,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     retryShopSettingsSync,
     storageSync,
     retryStorageSync,
+    workspaceSync,
+    retryWorkspaceSync,
+    flushWorkspaceSync,
     subscription,
     subscriptionSource,
     effectivePlanId,
+    subscriptionModules,
     chooseSubscriptionPlan,
     refreshSubscription,
     shortcutHelpOpen,
@@ -493,6 +547,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     renameExpenseCategory,
     setExpenseCategoryActive,
   };
+
+  if (liveWorkspace && !workspaceSync.initialized) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-6 dark:bg-zinc-950">
+        <div
+          role="status"
+          className="rounded-2xl border border-zinc-200 bg-white px-6 py-5 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Restauration de vos données…</p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Lecture sécurisée de la dernière sauvegarde de l’agence.</p>
+        </div>
+      </main>
+    );
+  }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
