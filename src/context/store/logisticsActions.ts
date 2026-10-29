@@ -19,10 +19,10 @@ import type {
   ShopSettings,
 } from '../../types';
 import {
-  getPromisedDate,
   isValidISODate,
   nowDateTime,
   nowISODateTime,
+  resolvePromisedDate,
   toISODate,
   todayISO,
 } from '../../lib/dates';
@@ -58,6 +58,7 @@ export interface LogisticsActionsDeps {
   // Brouillon POS, pour la conversion ramassage → commande.
   selectedCustomer: Customer | null;
   pickupOption: PickupOption;
+  promisedDateISO: string | null;
   pendingPickupTaskId: string | null;
   setCartLines: Dispatch<SetStateAction<OrderLine[]>>;
   setDepositAmount: (amt: number) => void;
@@ -120,6 +121,7 @@ export const createLogisticsActions = (deps: LogisticsActionsDeps): LogisticsAct
     setActiveHandoverOrder,
     selectedCustomer,
     pickupOption,
+    promisedDateISO,
     pendingPickupTaskId,
     setCartLines,
     setDepositAmount,
@@ -571,7 +573,7 @@ export const createLogisticsActions = (deps: LogisticsActionsDeps): LogisticsAct
     setDeliveryAddress(task.address);
     setDeliveryAddressDetails(task.addressDetails ?? '');
     setDeliveryScheduleManual(false);
-    setDeliveryDateISOState(toISODate(getPromisedDate(pickupOption)));
+    setDeliveryDateISOState(toISODate(resolvePromisedDate(pickupOption, promisedDateISO)));
     setDeliveryTimeSlotState(getDefaultDeliveryTimeSlot(pickupOption));
     setPendingPickupTaskId(task.id);
     setSelectedServiceCategory(null);

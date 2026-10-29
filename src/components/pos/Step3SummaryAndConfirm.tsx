@@ -3,7 +3,7 @@ import { GarmentColorChip } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { calculateOrderTotals } from '../../lib/pricing';
-import { formatLongDateTime, formatPromisedLong, getPickupLabel, getPromisedDate } from '../../lib/dates';
+import { formatLongDateTime, formatPromisedLong, getPickupLabel, resolvePickupLabel, resolvePromisedDate } from '../../lib/dates';
 import { formatLogisticsSchedule } from '../../lib/logistics';
 import { ConfettiButton } from '../../registry/magicui/confetti';
 import {
@@ -42,6 +42,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
     cartLines,
     selectedCustomer,
     pickupOption,
+    promisedDateISO,
     orderNotes,
     depositAmount,
     setDepositAmount,
@@ -84,9 +85,9 @@ export const Step3SummaryAndConfirm: React.FC = () => {
   });
 
   const promisedDateStr =
-    pickupOption === 'express'
+    pickupOption === 'express' && !promisedDateISO
       ? `Demain • 12h00 (${getPickupLabel(pickupOption)})`
-      : `${formatPromisedLong(getPromisedDate(pickupOption))} (${getPickupLabel(pickupOption)})`;
+      : `${formatPromisedLong(resolvePromisedDate(pickupOption, promisedDateISO))} (${resolvePickupLabel(pickupOption, promisedDateISO)})`;
 
   const depositDateStr = `Aujourd'hui, ${formatLongDateTime(new Date())}`;
 

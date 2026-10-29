@@ -7,7 +7,7 @@ import type {
   PickupOption,
   ServiceCategory,
 } from '../../types';
-import { getPromisedDate, toISODate } from '../../lib/dates';
+import { getPromisedDate, resolvePromisedDate, toISODate } from '../../lib/dates';
 import { getDefaultDeliveryTimeSlot } from '../../lib/logistics';
 
 export interface PosDraftDeps {
@@ -26,6 +26,8 @@ export interface PosDraftStore {
   setSelectedCustomer: (customer: Customer) => void;
   pickupOption: PickupOption;
   setPickupOption: (opt: PickupOption) => void;
+  promisedDateISO: string | null;
+  setPromisedDateISO: (iso: string | null) => void;
   orderFulfillmentMethod: FulfillmentMethod;
   setOrderFulfillmentMethod: (method: FulfillmentMethod) => void;
   deliveryAddress: string;
@@ -80,6 +82,7 @@ export const usePosDraft = ({ customers, logisticsTasks }: PosDraftDeps): PosDra
     customers[0] ?? null
   );
   const [pickupOption, setPickupOption] = useState<PickupOption>('standard');
+  const [promisedDateISO, setPromisedDateISO] = useState<string | null>(null);
 
   // Brouillon logistique du POS : mode de restitution et, si livraison,
   // adresse/créneau saisis avant l'enregistrement de la commande.
@@ -116,9 +119,12 @@ export const usePosDraft = ({ customers, logisticsTasks }: PosDraftDeps): PosDra
     setDeliveryAddress(selectedCustomer?.address || '');
     setDeliveryAddressDetails('');
     setDeliveryScheduleManual(false);
-    setDeliveryDateISOState(toISODate(getPromisedDate(option)));
+    // Nouveau départ : la date libre éventuelle est oubliée, le créneau
+    // proposé repart de l'option seule.
+    setDeliveryDateISOState(toISODate(resolvePromisedDate(option, null)));
     setDeliveryTimeSlotState(getDefaultDeliveryTimeSlot(option));
     setPendingPickupTaskId(null);
+    setPromisedDateISO(null);
   };
 
   // L'adresse proposée suit le client sélectionné, sauf pendant la conversion
@@ -128,12 +134,12 @@ export const usePosDraft = ({ customers, logisticsTasks }: PosDraftDeps): PosDra
   }, [selectedCustomer?.id, pendingPickupTaskId]);
 
   // Tant que le créneau n'a pas été choisi manuellement, la livraison suit la
-  // date promise par l'option standard/express/différé.
+  // date promise — option calculée ou date libre choisie au POS.
   useEffect(() => {
     if (deliveryScheduleManual) return;
-    setDeliveryDateISOState(toISODate(getPromisedDate(pickupOption)));
+    setDeliveryDateISOState(toISODate(resolvePromisedDate(pickupOption, promisedDateISO)));
     setDeliveryTimeSlotState(getDefaultDeliveryTimeSlot(pickupOption));
-  }, [pickupOption, deliveryScheduleManual]);
+  }, [pickupOption, promisedDateISO, deliveryScheduleManual]);
 
   const [orderNotes, setOrderNotes] = useState<string>(
     'Consigne : tache de sauce graine sur boubou — détachage doux. Cliente prévient sur WhatsApp.'
@@ -147,6 +153,8 @@ export const usePosDraft = ({ customers, logisticsTasks }: PosDraftDeps): PosDra
     setSelectedCustomer,
     pickupOption,
     setPickupOption,
+    promisedDateISO,
+    setPromisedDateISO,
     orderFulfillmentMethod,
     setOrderFulfillmentMethod,
     deliveryAddress,

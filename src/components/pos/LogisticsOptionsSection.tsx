@@ -2,7 +2,7 @@ import React from 'react';
 import { Calendar, Clock, MapPin, PackageCheck, Store, Truck, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { getPromisedDate, toISODate, todayISO } from '../../lib/dates';
+import { resolvePromisedDate, toISODate, todayISO } from '../../lib/dates';
 import {
   LOGISTICS_TIME_SLOTS,
   formatLogisticsSchedule,
@@ -69,6 +69,7 @@ export const LogisticsOptionsSection: React.FC = () => {
     pendingPickupTask,
     shopSettings,
     pickupOption,
+    promisedDateISO,
     orderFulfillmentMethod,
     setOrderFulfillmentMethod,
     deliveryAddress,
@@ -82,7 +83,7 @@ export const LogisticsOptionsSection: React.FC = () => {
   } = useApp();
 
   const wantsHomeDelivery = orderFulfillmentMethod === 'home_delivery';
-  const promisedISO = toISODate(getPromisedDate(pickupOption));
+  const promisedISO = toISODate(resolvePromisedDate(pickupOption, promisedDateISO));
   const isBeforeProductionPromise = wantsHomeDelivery && deliveryDateISO < promisedISO;
 
   return (

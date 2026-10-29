@@ -8,6 +8,8 @@ import {
   isValidISODate,
   parseISODate,
   parseStoredDateTime,
+  resolvePickupLabel,
+  resolvePromisedDate,
   toISODate,
 } from '../../src/lib/dates';
 
@@ -53,5 +55,21 @@ describe('dates', () => {
     const from = new Date(2026, 9, 28, 8, 0);
     expect(formatPromised(new Date(2026, 9, 28, 17, 0), from)).toBe('Aujourd’hui • 17h');
     expect(formatPromised(new Date(2026, 9, 29, 12, 0), from)).toBe('Demain • 12h');
+  });
+
+  it('fait primer une date libre valide sur l’option, à 17h', () => {
+    const wednesday = new Date(2026, 9, 28, 15, 30);
+    const resolved = resolvePromisedDate('standard', '2026-11-15', wednesday);
+    expect(toISODate(resolved)).toBe('2026-11-15');
+    expect(resolved.getHours()).toBe(17);
+    // Sans surcharge ou surcharge illisible : l’option s’applique.
+    expect(toISODate(resolvePromisedDate('express', null, wednesday))).toBe('2026-10-29');
+    expect(toISODate(resolvePromisedDate('standard', 'pas-une-date', wednesday))).toBe('2026-10-30');
+  });
+
+  it('libelle la date libre au lieu de l’option', () => {
+    expect(resolvePickupLabel('standard', '2026-11-15')).toBe('Date libre');
+    expect(resolvePickupLabel('express', null)).toBe('Express 24h');
+    expect(resolvePickupLabel('delayed', 'pas-une-date')).toBe('Différé — samedi');
   });
 });

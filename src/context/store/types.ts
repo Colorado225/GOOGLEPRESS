@@ -133,6 +133,13 @@ export interface AppContextType {
   clearCart: () => void;
   pickupOption: PickupOption;
   setPickupOption: (opt: PickupOption) => void;
+  /**
+   * Date de retrait libre choisie au POS (ISO `AAAA-MM-JJ`), sans plafond de
+   * disponibilité. `null` = date calculée de l'option. Une date libre est
+   * toujours au tarif standard ; seul le service Express 24h vaut ×2.
+   */
+  promisedDateISO: string | null;
+  setPromisedDateISO: (iso: string | null) => void;
   /** Brouillon logistique de la commande en cours de saisie au POS. */
   orderFulfillmentMethod: FulfillmentMethod;
   setOrderFulfillmentMethod: (method: FulfillmentMethod) => void;

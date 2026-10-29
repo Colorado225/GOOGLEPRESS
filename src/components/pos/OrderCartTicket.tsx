@@ -3,7 +3,7 @@ import { LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { calculateOrderTotals } from '../../lib/pricing';
-import { formatPromised, getPromisedDate, isValidISODate, nowDateTime, todayISO } from '../../lib/dates';
+import { formatPromised, isValidISODate, nowDateTime, resolvePromisedDate, todayISO } from '../../lib/dates';
 import { formatLogisticsSchedule } from '../../lib/logistics';
 import { resolveShopDisplayName } from '../../lib/shopIdentity';
 import { Trash2, Plus, Minus, Printer, MessageSquare, Check, ShieldAlert, Sparkles } from 'lucide-react';
@@ -16,6 +16,7 @@ export const OrderCartTicket: React.FC = () => {
     updateCartItemQty,
     selectedCustomer,
     pickupOption,
+    promisedDateISO,
     depositAmount,
     setDepositAmount,
     paymentMethod,
@@ -343,7 +344,7 @@ export const OrderCartTicket: React.FC = () => {
           Message à copier après validation : « Merci {selectedCustomer?.name?.split(' ')[0] ?? 'cher client'} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}.{' '}
           {wantsHomeDelivery
             ? `Livraison ${formatLogisticsSchedule(deliveryDateISO, deliveryTimeSlot).toLowerCase()}`
-            : `Retrait ${formatPromised(getPromisedDate(pickupOption)).toLowerCase()}`}
+            : `Retrait ${formatPromised(resolvePromisedDate(pickupOption, promisedDateISO)).toLowerCase()}`}
           . {resolveShopDisplayName(shopSettings, workspace)} »
         </p>
       </div>

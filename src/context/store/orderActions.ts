@@ -16,10 +16,10 @@ import { fireOrderCelebration } from '../../registry/magicui/confetti';
 import { calculateOrderTotals } from '../../lib/pricing';
 import {
   formatPromised,
-  getPromisedDate,
   isValidISODate,
   nowDateTime,
   nowISODateTime,
+  resolvePromisedDate,
   todayISO,
 } from '../../lib/dates';
 import {
@@ -39,6 +39,7 @@ export interface OrderActionsDeps {
   cartLines: OrderLine[];
   selectedCustomer: Customer | null;
   pickupOption: PickupOption;
+  promisedDateISO: string | null;
   orderFulfillmentMethod: FulfillmentMethod;
   deliveryAddress: string;
   deliveryAddressDetails: string;
@@ -85,6 +86,7 @@ export const createOrderActions = (deps: OrderActionsDeps): OrderActions => {
     cartLines,
     selectedCustomer,
     pickupOption,
+    promisedDateISO,
     orderFulfillmentMethod,
     deliveryAddress,
     deliveryAddressDetails,
@@ -150,6 +152,12 @@ export const createOrderActions = (deps: OrderActionsDeps): OrderActions => {
       }
     }
 
+    // Date de retrait libre : un jour calendaire lisible, jamais dans le passé.
+    if (promisedDateISO !== null && (!isValidISODate(promisedDateISO) || promisedDateISO < todayISO())) {
+      notify('Choisissez une date de retrait libre valide, aujourd’hui ou plus tard.');
+      return null;
+    }
+
     const wantsHomeDelivery = orderFulfillmentMethod === 'home_delivery';
     const cleanDeliveryAddress = deliveryAddress.trim();
     const cleanDeliveryDetails = deliveryAddressDetails.trim();
@@ -179,7 +187,7 @@ export const createOrderActions = (deps: OrderActionsDeps): OrderActions => {
       });
 
     const nextTicketNum = `#TK-${nextTicketNumber}`;
-    const promised = formatPromised(getPromisedDate(pickupOption));
+    const promised = formatPromised(resolvePromisedDate(pickupOption, promisedDateISO));
     const orderId = genId('ord');
     const nowIso = nowISODateTime();
 
