@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildShopSettingsRow,
   describeShopSettingsSyncError,
+  isMissingSettingsColumn,
   readRemoteShopSettings,
 } from '../../src/lib/shopSettingsSync';
 import { DEFAULT_SHOP_SETTINGS, mergeShopSettings } from '../../src/lib/shopSettings';
@@ -119,5 +120,21 @@ describe('describeShopSettingsSyncError', () => {
     expect(describeShopSettingsSyncError(null)).toBe(
       'Enregistrement sur le serveur impossible pour le moment.'
     );
+  });
+});
+
+describe('isMissingSettingsColumn', () => {
+  it('reconnaît une base antérieure à la migration', () => {
+    expect(
+      isMissingSettingsColumn({ code: '42703', message: 'column "settings" does not exist' })
+    ).toBe(true);
+    expect(
+      isMissingSettingsColumn({ code: 'PGRST204', message: "Could not find the 'settings' column" })
+    ).toBe(true);
+  });
+
+  it('ne confond pas un refus de rôle avec une base non migrée', () => {
+    expect(isMissingSettingsColumn({ code: '42501', message: 'permission denied' })).toBe(false);
+    expect(isMissingSettingsColumn(null)).toBe(false);
   });
 });

@@ -154,13 +154,42 @@ export const saveRemoteShopSettings = async (input: {
   const client = input.client ?? getSupabaseClient();
   if (!client) return { ok: false, error: 'Supabase n’est pas configuré sur cet appareil.' };
 
+  const payload = buildShopSettingsRow(input);
+
   try {
-    const { data, error } = await client
-      .from('shop_settings')
-      .upsert(buildShopSettingsRow(input) as never, { onConflict: 'shop_id' })
-      .select('settings_updated_at')
-      .maybeSingle();
-    if (error) return { ok: false, error: describeShopSettingsSyncError(error) };
+    let data: unknown = null;
+    {
+      const response = await client
+        .from('shop_settings')
+        .upsert(payload as never, { onConflict: 'shop_id' })
+        .select('settings_updated_at')
+        .maybeSingle();
+      if (response.error && isMissingSettingsColumn(response.error)) {
+        // Base pas encore migrée : on enregistre au moins ce que les colonnes
+        // historiques savent porter, plutôt que de tout perdre.
+        const { settings: _ignored, ...legacyPayload } = payload;
+        const fallback = await client
+          .from('shop_settings')
+          .upsert(legacyPayload as never, { onConflict: 'shop_id' })
+          .select('updated_at')
+          .maybeSingle();
+        if (fallback.error) {
+          return { ok: false, error: describeShopSettingsSyncError(fallback.error) };
+        }
+        const legacyUpdatedAt =
+          isRecord(fallback.data) && typeof fallback.data.updated_at === 'string'
+            ? fallback.data.updated_at
+            : null;
+        return {
+          ok: true,
+          updatedAt: legacyUpdatedAt,
+          warning:
+            'La base n’a pas encore la colonne des paramètres : seuls les réglages historiques (tarifs, slogan, rangement) ont été enregistrés. Appliquez la migration 20261028180000 pour enregistrer le reste.',
+        };
+      }
+      if (response.error) return { ok: false, error: describeShopSettingsSyncError(response.error) };
+      data = response.data;
+    }
 
     const updatedAt =
       isRecord(data) && typeof data.settings_updated_at === 'string'
@@ -206,4 +235,20 @@ export const describeShopSettingsSyncError = (error: unknown): string => {
     return 'Serveur injoignable : les paramètres restent enregistrés sur cet appareil.';
   }
   return message.trim() || 'Enregistrement sur le serveur impossible pour le moment.';
+};
+
+/**
+ * Détecte une base antérieure à la migration de l'instantané.
+ *
+ * Sans ce garde-fou, chaque enregistrement échouerait avec un message
+ * technique tant que la migration n'est pas appliquée au projet hébergé.
+ */
+export const isMissingSettingsColumn = (error: unknown): boolean => {
+  const message = isRecord(error) && typeof error.message === 'string' ? error.message : '';
+  const code = isRecord(error) && typeof error.code === 'string' ? error.code : '';
+  return (
+    code === '42703' ||
+    code === 'PGRST204' ||
+    (/column/i.test(message) && /settings(_updated_at)?/i.test(message) && /does not exist/i.test(message))
+  );
 };

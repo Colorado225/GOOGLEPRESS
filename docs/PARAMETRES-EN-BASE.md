@@ -97,6 +97,7 @@ paramètres de cette agence. »
 | Aucune agence rattachée | mention « les réglages restent sur cet appareil » (rien n'est inventé) |
 | Démonstration locale | aucun envoi : le bandeau dit que les réglages restent dans ce navigateur |
 | Deux appareils modifient en même temps | **le dernier enregistrement gagne**, sans fusion ; recharger l'écran pour voir la version distante |
+| Base pas encore migrée | repli automatique sur les colonnes historiques (slogan, tarifs, rangement) + avertissement invitant à appliquer la migration : aucun enregistrement perdu, aucun message technique |
 
 ## 6. Limites, dites franchement
 
@@ -115,7 +116,8 @@ paramètres de cette agence. »
 - **Aucune migration n'a été appliquée au projet hébergé depuis cet
   environnement** : le SQL est vérifié en PGlite (voir § 8) mais reste à
   pousser vers `Pressing_Pro` avec `supabase db push` (ou l'éditeur SQL) avant
-  que la production en profite.
+  que la production en profite. En attendant, le repli décrit au § 5 s'applique
+  et l'écran affiche l'avertissement correspondant.
 
 ## 7. Sur un compte existant
 
@@ -130,7 +132,8 @@ l'instantané complet. Rien n'est perdu, rien n'est deviné.
 - **267 tests unitaires** (25 fichiers) : dont 7 nouveaux sur l'instantané
   (`buildShopSettingsRow` borne les montants négatifs, `readRemoteShopSettings`
   privilégie le JSON et retombe sur les colonnes, `mergeShopSettings` n'écrase
-  rien avec une sauvegarde vide et nettoie les valeurs douteuses).
+  rien avec une sauvegarde vide et nettoie les valeurs douteuses,
+  `isMissingSettingsColumn` distingue une base non migrée d'un refus de rôle).
 - **PGlite (58 vérifications)** : la migration s'applique, le propriétaire
   enregistre l'instantané, l'horodatage serveur est posé, un caissier ne
   modifie aucune ligne.
