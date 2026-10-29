@@ -8,7 +8,7 @@
  *  - Modules du serveur de dev Vite (/src/, /@…, node_modules) : jamais interceptés.
  * Incrémenter VERSION à chaque évolution de ce fichier pour purger l'ancien cache.
  */
-const VERSION = 'pressingpro-v1';
+const VERSION = 'pressingpro-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -24,7 +24,6 @@ self.addEventListener('install', (event) => {
     caches
       .open(VERSION)
       .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting()),
   );
 });
 
@@ -33,7 +32,6 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((key) => key !== VERSION).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim()),
   );
 });
 
