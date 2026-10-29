@@ -46,10 +46,6 @@ import {
   reorderSidebarItems,
 } from '../../lib/sidebarLayout';
 import { loadPersistedString, persistString } from '../../lib/localPersistence';
-import {
-  normalizeSubscription,
-  resolveDefaultSubscription,
-} from '../../lib/subscription';
 import { getBrandInitials, resolveShopDisplayName } from '../../lib/shopIdentity';
 import { SubscriptionPlanCard } from './SubscriptionPlanCard';
 import {
@@ -120,6 +116,8 @@ export const AppSidebar: React.FC = () => {
     cashRegister,
     employees,
     workspace,
+    subscription,
+    requestSettingsTab,
   } = useApp();
 
   // En tiroir mobile, la barre est toujours rendue déployée (le repli ne concerne que le bureau)
@@ -174,26 +172,6 @@ export const AppSidebar: React.FC = () => {
       return true;
     });
   }, [activeScreen, workshopGroupStorageKey]);
-
-  // --- Plan d'abonnement ---------------------------------------------------
-  const [subscription, setSubscription] = useState(() =>
-    resolveDefaultSubscription(workspace)
-  );
-  useEffect(() => {
-    const fallback = resolveDefaultSubscription(workspace);
-    const stored = loadPersistedString(
-      scopeStorageKey(workspace, 'pressingpro_subscription')
-    );
-    if (!stored) {
-      setSubscription(fallback);
-      return;
-    }
-    try {
-      setSubscription(normalizeSubscription(JSON.parse(stored), fallback));
-    } catch {
-      setSubscription(fallback);
-    }
-  }, [workspace]);
 
   const receivedCount = orders.filter((o) => o.status === 'received').length;
   const stockAlertCount = getAlertProducts(products).length;
@@ -789,6 +767,7 @@ export const AppSidebar: React.FC = () => {
           subscription={subscription}
           collapsed={collapsed}
           onManage={() => {
+            requestSettingsTab('subscription');
             setActiveScreen('settings');
             setMobileMenuOpen(false);
           }}

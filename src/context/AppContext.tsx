@@ -66,6 +66,13 @@ import {
   saveRemoteStorageLocations,
   type StorageSyncState,
 } from '../lib/storageLocationsSync';
+import {
+  SUBSCRIPTION_STORAGE_KEY,
+  normalizeSubscription,
+  resolveDefaultSubscription,
+  type SubscriptionPlanId,
+  type SubscriptionState,
+} from '../lib/subscription';
 import { isValidLogoDataUrl } from '../lib/shopIdentity';
 import { normalizeBlanchisserieSettings } from '../lib/blanchisserie';
 import { normalizePressingSettings } from '../lib/pressing';
@@ -118,7 +125,8 @@ export type SettingsTab =
   | 'storage'
   | 'devices'
   | 'backend'
-  | 'backup';
+  | 'backup'
+  | 'subscription';
 
 interface AppContextType {
   /** Portée courante : démonstration locale amorcée ou organisation réelle vide. */
@@ -265,6 +273,9 @@ interface AppContextType {
   /** État d'enregistrement des emplacements de rangement. */
   storageSync: StorageSyncState;
   retryStorageSync: () => void;
+  /** Formule choisie (Free / Pro / Business) — demande commerciale locale. */
+  subscription: SubscriptionState;
+  chooseSubscriptionPlan: (planId: SubscriptionPlanId) => void;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -544,6 +555,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageLocations, liveWorkspace, workspace.shopId]);
+
+  // --- Abonnement --------------------------------------------------------
+  // Le choix d'une formule est une demande commerciale : elle est conservée
+  // sur cet appareil et présentée comme telle, aucun paiement n'étant encaissé
+  // par l'application.
+  const [subscription, setSubscription] = useState<SubscriptionState>(() =>
+    resolveDefaultSubscription(workspace)
+  );
+
+  useEffect(() => {
+    const fallback = resolveDefaultSubscription(workspace);
+    const stored = loadPersistedString(scopeStorageKey(workspace, SUBSCRIPTION_STORAGE_KEY));
+    if (!stored) {
+      setSubscription(fallback);
+      return;
+    }
+    try {
+      setSubscription(normalizeSubscription(JSON.parse(stored), fallback));
+    } catch {
+      setSubscription(fallback);
+    }
+  }, [workspace]);
+
+  const chooseSubscriptionPlan = (planId: SubscriptionPlanId) => {
+    const next: SubscriptionState = { ...subscription, plan: planId };
+    setSubscription(next);
+    persistString(
+      scopeStorageKey(workspace, SUBSCRIPTION_STORAGE_KEY),
+      JSON.stringify(next)
+    );
+  };
 
   const [focusedStorageOrderId, setFocusedStorageOrderId] = useState<string | null>(null);
   const [storagePanelViewRequest, setStoragePanelViewRequest] =
@@ -2673,6 +2715,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         retryShopSettingsSync,
         storageSync,
         retryStorageSync,
+        subscription,
+        chooseSubscriptionPlan,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,

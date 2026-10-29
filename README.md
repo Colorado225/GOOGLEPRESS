@@ -290,7 +290,9 @@ la reprise des pages de connexion et d’inscription dans
 « aucune donnée de démonstration sur un compte réel » dans
 [`docs/DONNEES-DEMO-ET-ESPACE-REEL.md`](docs/DONNEES-DEMO-ET-ESPACE-REEL.md),
 la barre latérale personnalisable et la carte d'abonnement dans
-[`docs/BARRE-LATERALE.md`](docs/BARRE-LATERALE.md), le nom et le logo propres à
+[`docs/BARRE-LATERALE.md`](docs/BARRE-LATERALE.md), les formules Free / Pro /
+Business et la stratégie commerciale dans
+[`docs/ABONNEMENTS.md`](docs/ABONNEMENTS.md), le nom et le logo propres à
 chaque pressing dans
 [`docs/IDENTITE-ETABLISSEMENT.md`](docs/IDENTITE-ETABLISSEMENT.md), la
 paramètres enregistrés dans la base dans

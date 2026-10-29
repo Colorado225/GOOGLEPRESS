@@ -11,6 +11,7 @@ import {
   Smartphone,
   Printer,
   Building2,
+  Crown,
   Database,
   Download,
   CheckCircle2,
@@ -39,6 +40,7 @@ import {
   resolveShopDisplayName,
 } from '../../lib/shopIdentity';
 import { SettingsSyncStatus } from './SettingsSyncStatus';
+import { SubscriptionSection } from './SubscriptionSection';
 
 /**
  * Carte « Application installable (PWA) » : reflète l'état réel détecté dans le
@@ -406,6 +408,11 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
             },
             { id: 'devices', label: 'Périphériques & passerelles', icon: <Sliders className="w-4 h-4" aria-hidden="true" /> },
             { id: 'backend', label: 'Backend Supabase', icon: <Database className="w-4 h-4" aria-hidden="true" /> },
+            {
+              id: 'subscription',
+              label: 'Abonnement',
+              icon: <Crown className="w-4 h-4" aria-hidden="true" />,
+            },
             { id: 'backup', label: 'Sauvegarde', icon: <Download className="w-4 h-4" aria-hidden="true" /> },
           ]}
         />
@@ -1071,9 +1078,11 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
 
         {tab === 'backend' && <SupabaseBackendSection />}
 
+        {tab === 'subscription' && <SubscriptionSection />}
+
         {tab === 'backup' && <BackupSection />}
 
-        {tab !== 'backend' && tab !== 'backup' && (
+        {tab !== 'backend' && tab !== 'backup' && tab !== 'subscription' && (
           <>
             <button
               type="submit"

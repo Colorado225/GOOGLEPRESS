@@ -1,38 +1,119 @@
 import type { WorkspaceScope } from './workspaceScope';
 
 /**
- * Plan d'abonnement affiché dans la barre latérale.
+ * Formules d'abonnement de PressingPro.
  *
- * Aucune facturation n'existe encore côté serveur : l'état est donc une
- * préférence locale, explicitement présentée comme telle. Le jour où Supabase
- * portera les abonnements, seule la source de `resolveSubscriptionState`
- * changera ; l'affichage restera identique.
+ * Trois paliers seulement — Free, Pro, Business — pensés pour un pressing
+ * ivoirien : une offre gratuite qui installe l'habitude, une offre Pro qui
+ * couvre le quotidien d'une agence, une offre Business pour les enseignes à
+ * plusieurs points de vente et les besoins d'accompagnement.
+ *
+ * **Aucun paiement n'est encaissé dans l'application.** Le choix d'une formule
+ * est une demande commerciale enregistrée localement ; l'activation se fait
+ * avec l'équipe. Les limites affichées sont des engagements commerciaux, pas
+ * encore des blocages techniques — c'est dit tel quel dans l'écran.
  */
 
-export type SubscriptionPlanId = 'decouverte' | 'standard' | 'pro';
+export type SubscriptionPlanId = 'free' | 'pro' | 'business';
 export type SubscriptionStatus = 'essai' | 'actif' | 'suspendu';
+
+export type PlanLimit = number | 'illimite';
+
+export interface SubscriptionPlanLimits {
+  /** Agences (points de vente) couvertes par la formule. */
+  shops: PlanLimit;
+  /** Comptes de connexion actifs. */
+  users: PlanLimit;
+  /** Commandes enregistrées par mois. */
+  ordersPerMonth: PlanLimit;
+  /** Emplacements de rangement (casiers). */
+  storageLocations: PlanLimit;
+}
 
 export interface SubscriptionPlanDefinition {
   id: SubscriptionPlanId;
   label: string;
   tagline: string;
+  /** Prix mensuel en FCFA (0 pour la formule gratuite). */
+  priceMonthlyXof: number;
+  /** Prix annuel en FCFA, deux mois offerts par rapport au mensuel. */
+  priceYearlyXof: number;
+  /** À qui la formule s'adresse, en une phrase. */
+  audience: string;
+  limits: SubscriptionPlanLimits;
+  /** Ce qui est réellement disponible aujourd'hui dans l'application. */
+  features: string[];
+  /** Ce qui est annoncé mais pas encore livré, dit franchement. */
+  comingSoon?: string[];
+  /** Formule mise en avant dans l'écran (celle qu'on veut vendre). */
+  highlighted?: boolean;
 }
 
 export const SUBSCRIPTION_PLANS: readonly SubscriptionPlanDefinition[] = [
   {
-    id: 'decouverte',
-    label: 'Formule Découverte',
-    tagline: 'Phase pilote, sans facturation',
-  },
-  {
-    id: 'standard',
-    label: 'Formule Standard',
-    tagline: 'Une agence, suivi client inclus',
+    id: 'free',
+    label: 'Free',
+    tagline: 'Pour démarrer sans risque',
+    priceMonthlyXof: 0,
+    priceYearlyXof: 0,
+    audience: 'Pressing qui teste l’outil ou travaille seul.',
+    limits: { shops: 1, users: 2, ordersPerMonth: 100, storageLocations: 10 },
+    features: [
+      'Caisse, tickets et encaissements',
+      'Catalogue des prestations et des vêtements',
+      'Rangement des commandes et étiquettes de casier',
+      'Rapports du jour',
+      'Sauvegarde manuelle des données',
+    ],
+    comingSoon: ['Support par e-mail'],
   },
   {
     id: 'pro',
-    label: 'Formule Pro',
-    tagline: 'Multi-agences et rapports avancés',
+    label: 'Pro',
+    tagline: 'Le quotidien d’une agence',
+    priceMonthlyXof: 12_000,
+    priceYearlyXof: 120_000,
+    audience: 'Pressing établi avec une équipe et des livraisons.',
+    limits: {
+      shops: 1,
+      users: 8,
+      ordersPerMonth: 'illimite',
+      storageLocations: 'illimite',
+    },
+    features: [
+      'Tout ce que contient Free',
+      'Comptes illimités pour l’équipe (dans la limite de 8)',
+      'Espace client : suivi de commande en ligne',
+      'Tournées de livraison, carte et heure d’arrivée',
+      'Preuve de remise : photo, signature, code',
+      'Rapports détaillés et exports',
+      'Sauvegarde automatique dans la base',
+    ],
+    comingSoon: ['Relances clients par SMS'],
+    highlighted: true,
+  },
+  {
+    id: 'business',
+    label: 'Business',
+    tagline: 'Plusieurs agences, un seul pilotage',
+    priceMonthlyXof: 29_000,
+    priceYearlyXof: 290_000,
+    audience: 'Enseignes à plusieurs points de vente et franchises.',
+    limits: {
+      shops: 3,
+      users: 'illimite',
+      ordersPerMonth: 'illimite',
+      storageLocations: 'illimite',
+    },
+    features: [
+      'Tout ce que contient Pro',
+      'Utilisateurs illimités',
+      'Rôles et accès par agence',
+      'Accompagnement à la mise en place',
+      'Formation de l’équipe sur site',
+      'Support prioritaire et gestionnaire dédié',
+    ],
+    comingSoon: ['Tableau de bord consolidé multi-agences', 'API et webhooks'],
   },
 ];
 
@@ -45,26 +126,36 @@ export interface SubscriptionState {
 
 export const SUBSCRIPTION_STORAGE_KEY = 'pressingpro_subscription';
 
-/**
- * État par défaut, honnête dans les deux portées :
- *
- * - espace réel : formule Découverte en essai — c'est ce que vit réellement un
- *   compte qui vient d'être créé, aucune facturation n'étant branchée ;
- * - démonstration : formule Pro, marquée « essai » pour ne pas laisser croire
- *   à un abonnement payé.
- */
+export const getSubscriptionPlan = (planId: SubscriptionPlanId): SubscriptionPlanDefinition =>
+  SUBSCRIPTION_PLANS.find((plan) => plan.id === planId) ?? SUBSCRIPTION_PLANS[0];
+
+/** Espace réel : Free, sans facturation. Démonstration : Pro, marqué « essai ». */
 export const resolveDefaultSubscription = (
   scope: Pick<WorkspaceScope, 'mode'>
 ): SubscriptionState =>
   scope.mode === 'live'
-    ? { plan: 'decouverte', status: 'essai', renewsOn: null }
+    ? { plan: 'free', status: 'essai', renewsOn: null }
     : { plan: 'pro', status: 'essai', renewsOn: null };
 
-const isPlanId = (value: unknown): value is SubscriptionPlanId =>
-  value === 'decouverte' || value === 'standard' || value === 'pro';
+/**
+ * Anciens noms de formules (Découverte / Standard) : une sauvegarde locale
+ * antérieure reste lisible au lieu de retomber brutalement sur Free.
+ * L'ancien identifiant « pro » est conservé tel quel : il correspond
+ * désormais à la formule Pro, sans surclasser personne en Business.
+ */
+const LEGACY_PLAN_IDS: Record<string, SubscriptionPlanId> = {
+  decouverte: 'free',
+  standard: 'pro',
+};
 
 const isStatus = (value: unknown): value is SubscriptionStatus =>
   value === 'essai' || value === 'actif' || value === 'suspendu';
+
+const resolvePlanId = (value: unknown): SubscriptionPlanId | null => {
+  if (typeof value !== 'string') return null;
+  if (value === 'free' || value === 'pro' || value === 'business') return value;
+  return LEGACY_PLAN_IDS[value] ?? null;
+};
 
 /** Valide une sauvegarde locale ; toute valeur douteuse retombe sur le défaut. */
 export const normalizeSubscription = (
@@ -74,7 +165,7 @@ export const normalizeSubscription = (
   if (!value || typeof value !== 'object') return fallback;
   const candidate = value as Partial<SubscriptionState>;
   return {
-    plan: isPlanId(candidate.plan) ? candidate.plan : fallback.plan,
+    plan: resolvePlanId(candidate.plan) ?? fallback.plan,
     status: isStatus(candidate.status) ? candidate.status : fallback.status,
     renewsOn:
       typeof candidate.renewsOn === 'string' && candidate.renewsOn.trim()
@@ -83,12 +174,23 @@ export const normalizeSubscription = (
   };
 };
 
-export const getSubscriptionPlan = (
-  planId: SubscriptionPlanId
-): SubscriptionPlanDefinition =>
-  SUBSCRIPTION_PLANS.find((plan) => plan.id === planId) ?? SUBSCRIPTION_PLANS[0];
+/** « 12 000 FCFA » — espace insécable fine pour la lecture à l'écran. */
+export const formatXof = (amount: number): string =>
+  `${new Intl.NumberFormat('fr-FR').format(Math.max(0, Math.round(amount))).replace(/\u202f|\u00a0/g, ' ')} FCFA`;
 
-/** Libellé de statut, jamais « actif » par défaut. */
+export const formatPlanLimit = (limit: PlanLimit): string =>
+  limit === 'illimite' ? 'Illimité' : new Intl.NumberFormat('fr-FR').format(limit);
+
+/** Économie réalisée en payant l'année (deux mois offerts). */
+export const getYearlySavingXof = (plan: SubscriptionPlanDefinition): number =>
+  Math.max(0, plan.priceMonthlyXof * 12 - plan.priceYearlyXof);
+
+/** Reste-t-il une raison commerciale de faire évoluer ce compte ? */
+export const canUpgradeFrom = (planId: SubscriptionPlanId): boolean => {
+  const order = SUBSCRIPTION_PLANS.map((plan) => plan.id);
+  return order.indexOf(planId) < order.length - 1;
+};
+
 export const getSubscriptionStatusLabel = (status: SubscriptionStatus): string => {
   switch (status) {
     case 'actif':
@@ -121,4 +223,23 @@ export const getSubscriptionStatusTone = (
         dot: 'bg-red-400',
       };
   }
+};
+
+/** Récapitulatif copiable pour envoyer sa demande à l'équipe (WhatsApp, e-mail). */
+export const buildPlanRequestMessage = (input: {
+  planId: SubscriptionPlanId;
+  yearly: boolean;
+  shopName: string;
+}): string => {
+  const plan = getSubscriptionPlan(input.planId);
+  const price =
+    plan.priceMonthlyXof === 0
+      ? 'formule gratuite'
+      : input.yearly
+        ? `${formatXof(plan.priceYearlyXof)} / an`
+        : `${formatXof(plan.priceMonthlyXof)} / mois`;
+  return [
+    `Bonjour, je souhaite activer la formule ${plan.label} de PressingPro pour « ${input.shopName} » (${price}).`,
+    'Merci de me confirmer les modalités de mise en service.',
+  ].join(' ');
 };
