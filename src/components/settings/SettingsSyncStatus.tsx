@@ -16,10 +16,7 @@ export const SettingsSyncStatus: React.FC = () => {
     return (
       <p className="flex items-start gap-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2.5 text-[11.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
         <Cloud className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>
-          Démonstration locale : les réglages restent dans ce navigateur. Sur un compte réel, ils
-          sont enregistrés dans la base de votre agence et suivent vos appareils.
-        </span>
+        <span>Démonstration locale : les réglages restent dans ce navigateur.</span>
       </p>
     );
   }

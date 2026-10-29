@@ -274,10 +274,13 @@ for each row execute function private.enforce_membership_quota();
 -- 5. État complet lu par l'application (une seule requête)
 -- ---------------------------------------------------------------------------
 
+-- `volatile` et non `stable` : la fonction complète la ligne manquante. En
+-- pratique le trigger sur `public.shops` et la reprise ci-dessus la créent
+-- toujours, mais une fonction qui écrit ne doit pas être déclarée stable.
 create or replace function public.get_shop_subscription_state(p_shop_id uuid)
 returns jsonb
 language plpgsql
-stable
+volatile
 security definer
 set search_path = private, pg_catalog
 as $$
