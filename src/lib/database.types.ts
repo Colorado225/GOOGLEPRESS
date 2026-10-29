@@ -2189,10 +2189,10 @@ export type Database = {
           "messaging_business_hours": Json;
           "messaging_out_of_hours_message": string | null;
           "show_storage_code_to_customers": boolean;
-          "settings": Json;
-          "settings_updated_at": string;
           "created_at": string;
           "updated_at": string;
+          "settings": Json;
+          "settings_updated_at": string;
         };
         Insert: {
           "shop_id": string;
@@ -2210,10 +2210,10 @@ export type Database = {
           "messaging_business_hours"?: Json;
           "messaging_out_of_hours_message"?: string | null;
           "show_storage_code_to_customers"?: boolean;
-          "settings"?: Json;
-          "settings_updated_at"?: string;
           "created_at"?: string;
           "updated_at"?: string;
+          "settings"?: Json;
+          "settings_updated_at"?: string;
         };
         Update: {
           "shop_id"?: string;
@@ -2231,14 +2231,61 @@ export type Database = {
           "messaging_business_hours"?: Json;
           "messaging_out_of_hours_message"?: string | null;
           "show_storage_code_to_customers"?: boolean;
+          "created_at"?: string;
+          "updated_at"?: string;
           "settings"?: Json;
           "settings_updated_at"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shop_settings_organization_id_shop_id_fkey";
+            columns: ["organization_id","shop_id"];
+            isOneToOne: false;
+            referencedRelation: "shops";
+            referencedColumns: ["organization_id","id"];
+          }
+        ];
+      };
+      "shop_subscriptions": {
+        Row: {
+          "shop_id": string;
+          "organization_id": string;
+          "plan": string;
+          "status": string;
+          "trial_started_at": string;
+          "requested_plan": string | null;
+          "requested_at": string | null;
+          "renews_on": string | null;
+          "created_at": string;
+          "updated_at": string;
+        };
+        Insert: {
+          "shop_id": string;
+          "organization_id": string;
+          "plan"?: string;
+          "status"?: string;
+          "trial_started_at"?: string;
+          "requested_plan"?: string | null;
+          "requested_at"?: string | null;
+          "renews_on"?: string | null;
+          "created_at"?: string;
+          "updated_at"?: string;
+        };
+        Update: {
+          "shop_id"?: string;
+          "organization_id"?: string;
+          "plan"?: string;
+          "status"?: string;
+          "trial_started_at"?: string;
+          "requested_plan"?: string | null;
+          "requested_at"?: string | null;
+          "renews_on"?: string | null;
           "created_at"?: string;
           "updated_at"?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "shop_settings_organization_id_shop_id_fkey";
+            foreignKeyName: "shop_subscriptions_shop_fk";
             columns: ["organization_id","shop_id"];
             isOneToOne: false;
             referencedRelation: "shops";
@@ -2569,13 +2616,6 @@ export type Database = {
         };
         Returns: Json;
       };
-      "request_subscription_plan": {
-        Args: {
-          "p_shop_id": string;
-          "p_plan": string;
-        };
-        Returns: Json;
-      };
       "record_order_payment": {
         Args: {
           "p_order_id": string;
@@ -2597,6 +2637,13 @@ export type Database = {
           "p_external_reference"?: string | null;
         };
         Returns: Database["public"]["Tables"]["payments"]["Row"];
+      };
+      "request_subscription_plan": {
+        Args: {
+          "p_shop_id": string;
+          "p_plan": string;
+        };
+        Returns: Json;
       };
       "transition_order_status": {
         Args: {
