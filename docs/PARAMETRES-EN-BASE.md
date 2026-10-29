@@ -88,6 +88,21 @@ Un caissier qui tente d'enregistrer les paramètres n'obtient aucune ligne
 modifiée : l'écran affiche « Votre rôle ne permet pas de modifier les
 paramètres de cette agence. »
 
+### Pourquoi le client n'utilise pas `upsert`
+
+PostgREST traduit `upsert` en `insert … on conflict do update set` sur **toutes**
+les colonnes envoyées — y compris `shop_id` et `organization_id`, que la phase 0
+n'accorde volontairement pas en écriture. Résultat observé en production : un
+propriétaire légitime recevait « Votre rôle ne permet pas de modifier les
+paramètres de cette agence », alors que la RLS l'autorisait.
+
+`src/lib/supabaseWrite.ts` fait donc la même chose sans conflit : mise à jour
+ciblée, création seulement si aucune ligne n'a été touchée, nouvelle tentative
+si la création bute sur une clé déjà présente (ligne existante mais invisible).
+Le contrôle PGlite « les colonnes d'identité des paramètres ne sont pas
+modifiables » fige cette contrainte. Le même helper sert aux profils clients
+(`profiles.user_id`), qui souffraient du même défaut.
+
 ## 5. Ce qui se passe quand ça se passe mal
 
 | Situation | Comportement |
@@ -98,6 +113,7 @@ paramètres de cette agence. »
 | Démonstration locale | aucun envoi : le bandeau dit que les réglages restent dans ce navigateur |
 | Deux appareils modifient en même temps | **le dernier enregistrement gagne**, sans fusion ; recharger l'écran pour voir la version distante |
 | Base pas encore migrée | repli automatique sur les colonnes historiques (slogan, tarifs, rangement) + avertissement invitant à appliquer la migration : aucun enregistrement perdu, aucun message technique |
+| Droits par colonne / `upsert` refusé | mise à jour ciblée puis création (jamais d'upsert), donc plus de faux « rôle insuffisant » pour un propriétaire |
 
 ## 6. Limites, dites franchement
 

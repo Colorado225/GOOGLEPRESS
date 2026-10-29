@@ -1303,6 +1303,18 @@ try {
     assert.equal(unchanged.rows[0].label, 'Portant C-01');
   });
 
+  await expectFailure('les colonnes d’identité des paramètres ne sont pas modifiables', async () => {
+    // Ce qui oblige le client à ne pas utiliser `upsert` : PostgREST le traduit
+    // en `on conflict do update set` sur toutes les colonnes envoyées.
+    await queryAs(
+      users.ownerA,
+      `update public.shop_settings
+          set shop_id = shop_id
+        where shop_id = '20000000-0000-4000-8000-000000000001'
+        returning shop_id`
+    );
+  }, /permission denied/i);
+
   await expectFailure('un caissier ne peut pas créer de casier', async () => {
     await queryAs(
       users.cashierA1,

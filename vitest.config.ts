@@ -27,6 +27,7 @@ export default defineConfig({
         'src/lib/shopSettings.ts',
         'src/lib/shopSettingsSync.ts',
         'src/lib/storageLocationsSync.ts',
+        'src/lib/supabaseWrite.ts',
       ],
       thresholds: {
         statements: 70,

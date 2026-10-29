@@ -1,6 +1,7 @@
 import type { ShopSettings } from '../types';
 import type { Json } from './database.types';
 import { getSupabaseClient } from './supabase';
+import { updateOrInsert } from './supabaseWrite';
 import { mergeShopSettings } from './shopSettings';
 
 /**
@@ -139,6 +140,42 @@ export const buildShopSettingsRow = (input: {
 };
 
 /**
+ * Écrit la ligne de paramètres **sans upsert**.
+ *
+ * PostgREST traduit `upsert` en `insert … on conflict do update set` sur
+ * *toutes* les colonnes envoyées, y compris `shop_id` et `organization_id`
+ * qui ne sont volontairement pas modifiables par `authenticated`. Résultat :
+ * « permission denied for table shop_settings » alors que le propriétaire a
+ * parfaitement le droit d'enregistrer ses réglages. Voir `supabaseWrite.ts`.
+ */
+const writeShopSettingsRow = async (
+  client: Client,
+  shopId: string,
+  payload: Record<string, unknown>,
+  column: string
+): Promise<{ ok: true; row: unknown } | { ok: false; error: unknown }> => {
+  const updatePayload = { ...payload };
+  delete updatePayload.shop_id;
+  delete updatePayload.organization_id;
+
+  return updateOrInsert<unknown>({
+    update: () =>
+      client
+        .from('shop_settings')
+        .update(updatePayload as never)
+        .eq('shop_id', shopId)
+        .select(column)
+        .maybeSingle(),
+    insert: () =>
+      client
+        .from('shop_settings')
+        .insert(payload as never)
+        .select(column)
+        .maybeSingle(),
+  });
+};
+
+/**
  * Enregistre les paramètres de l'agence.
  *
  * L'identité (nom, adresse, téléphone) vit sur `public.shops` : elle y est
@@ -157,48 +194,37 @@ export const saveRemoteShopSettings = async (input: {
   const payload = buildShopSettingsRow(input);
 
   try {
-    let data: unknown = null;
-    {
-      const response = await client
-        .from('shop_settings')
-        .upsert(payload as never, { onConflict: 'shop_id' })
-        .select('settings_updated_at')
-        .maybeSingle();
-      if (response.error && isMissingSettingsColumn(response.error)) {
-        // Base pas encore migrée : on enregistre au moins ce que les colonnes
-        // historiques savent porter, plutôt que de tout perdre.
-        const { settings: _ignored, ...legacyPayload } = payload;
-        const fallback = await client
-          .from('shop_settings')
-          .upsert(legacyPayload as never, { onConflict: 'shop_id' })
-          .select('updated_at')
-          .maybeSingle();
-        if (fallback.error) {
-          return { ok: false, error: describeShopSettingsSyncError(fallback.error) };
-        }
-        const legacyUpdatedAt =
-          isRecord(fallback.data) && typeof fallback.data.updated_at === 'string'
-            ? fallback.data.updated_at
-            : null;
-        return {
-          ok: true,
-          updatedAt: legacyUpdatedAt,
-          warning:
-            'La base n’a pas encore la colonne des paramètres : seuls les réglages historiques (tarifs, slogan, rangement) ont été enregistrés. Appliquez la migration 20261028180000 pour enregistrer le reste.',
-        };
-      }
-      if (response.error) return { ok: false, error: describeShopSettingsSyncError(response.error) };
-      data = response.data;
+    let written = await writeShopSettingsRow(
+      client,
+      input.shopId,
+      payload,
+      'settings_updated_at'
+    );
+    let columnWarning: string | undefined;
+
+    if (!written.ok && isMissingSettingsColumn(written.error)) {
+      // Base pas encore migrée : on enregistre au moins ce que les colonnes
+      // historiques savent porter, plutôt que de tout perdre.
+      const { settings: _ignored, ...legacyPayload } = payload;
+      written = await writeShopSettingsRow(client, input.shopId, legacyPayload, 'updated_at');
+      columnWarning =
+        'La base n’a pas encore la colonne des paramètres : seuls les réglages historiques (tarifs, slogan, rangement) ont été enregistrés. Appliquez la migration 20261028180000 pour enregistrer le reste.';
+    }
+    if (!written.ok) {
+      return { ok: false, error: describeShopSettingsSyncError(written.error) };
     }
 
+    const data = written.row;
     const updatedAt =
       isRecord(data) && typeof data.settings_updated_at === 'string'
         ? data.settings_updated_at
-        : null;
+        : isRecord(data) && typeof data.updated_at === 'string'
+          ? data.updated_at
+          : null;
 
     // Second temps : l'enseigne elle-même. Un échec ici ne perd pas les
     // paramètres déjà enregistrés, il est signalé sans bloquer l'écran.
-    let warning: string | undefined;
+    let warning = columnWarning;
     const { error: shopError } = await client
       .from('shops')
       .update({
@@ -208,9 +234,10 @@ export const saveRemoteShopSettings = async (input: {
       })
       .eq('id', input.shopId);
     if (shopError) {
-      warning = `Paramètres enregistrés, mais l’identité de l’agence n’a pas pu l’être : ${describeShopSettingsSyncError(
+      const identityMessage = `Paramètres enregistrés, mais l’identité de l’agence n’a pas pu l’être : ${describeShopSettingsSyncError(
         shopError
       )}`;
+      warning = warning ? `${warning} ${identityMessage}` : identityMessage;
     }
 
     return { ok: true, updatedAt, warning };

@@ -4,6 +4,7 @@ import {
   describeShopSettingsSyncError,
   isMissingSettingsColumn,
   readRemoteShopSettings,
+  saveRemoteShopSettings,
 } from '../../src/lib/shopSettingsSync';
 import { DEFAULT_SHOP_SETTINGS, mergeShopSettings } from '../../src/lib/shopSettings';
 
@@ -136,5 +137,176 @@ describe('isMissingSettingsColumn', () => {
   it('ne confond pas un refus de rôle avec une base non migrée', () => {
     expect(isMissingSettingsColumn({ code: '42501', message: 'permission denied' })).toBe(false);
     expect(isMissingSettingsColumn(null)).toBe(false);
+  });
+});
+
+/**
+ * Faux client Supabase : enregistre les appels et rend les réponses dans
+ * l'ordre fourni. Sert à vérifier la *forme* des requêtes — c'est elle qui
+ * cassait l'enregistrement réel (« permission denied » sur un upsert).
+ */
+type QueryResult = { data?: unknown; error?: unknown };
+
+interface RecordedCall {
+  table: string;
+  action: 'update' | 'insert';
+  payload: Record<string, unknown>;
+  eq?: { column: string; value: unknown };
+  select?: string;
+}
+
+const makeFakeClient = (options: {
+  updates?: QueryResult[];
+  inserts?: QueryResult[];
+  shopUpdate?: QueryResult;
+}) => {
+  const calls: RecordedCall[] = [];
+  const updates = [...(options.updates ?? [])];
+  const inserts = [...(options.inserts ?? [])];
+  const nextUpdate = () => updates.shift() ?? { data: null, error: null };
+  const nextInsert = () => inserts.shift() ?? { data: null, error: null };
+
+  const chain = (call: RecordedCall, resolve: () => QueryResult) => {
+    const api: Record<string, unknown> = {
+      eq: (column: string, value: unknown) => {
+        call.eq = { column, value };
+        return api;
+      },
+      select: (columns: string) => {
+        call.select = columns;
+        return api;
+      },
+      maybeSingle: async () => resolve(),
+      then: (onFulfilled: unknown, onRejected: unknown) =>
+        Promise.resolve(resolve()).then(
+          onFulfilled as (value: unknown) => unknown,
+          onRejected as (reason: unknown) => unknown
+        ),
+    };
+    return api;
+  };
+
+  const client = {
+    from: (table: string) => ({
+      update: (payload: Record<string, unknown>) => {
+        const call: RecordedCall = { table, action: 'update', payload };
+        calls.push(call);
+        return chain(
+          call,
+          table === 'shops' ? () => options.shopUpdate ?? { data: null, error: null } : nextUpdate
+        );
+      },
+      insert: (payload: Record<string, unknown>) => {
+        const call: RecordedCall = { table, action: 'insert', payload };
+        calls.push(call);
+        return chain(call, nextInsert);
+      },
+    }),
+  };
+
+  return { client, calls };
+};
+
+const save = (client: unknown) =>
+  saveRemoteShopSettings({
+    shopId: 'shop-1',
+    organizationId: 'org-1',
+    settings,
+    client: client as never,
+  });
+
+describe('saveRemoteShopSettings', () => {
+  it('met à jour la ligne existante sans renvoyer les colonnes d’identité', async () => {
+    const { client, calls } = makeFakeClient({
+      updates: [{ data: { settings_updated_at: '2026-10-29T10:00:00.000Z' }, error: null }],
+    });
+
+    const result = await save(client);
+
+    expect(result).toEqual({
+      ok: true,
+      updatedAt: '2026-10-29T10:00:00.000Z',
+      warning: undefined,
+    });
+
+    const settingsUpdate = calls.find((call) => call.table === 'shop_settings');
+    expect(settingsUpdate?.payload).not.toHaveProperty('shop_id');
+    expect(settingsUpdate?.payload).not.toHaveProperty('organization_id');
+    expect(settingsUpdate?.payload).toHaveProperty('settings');
+    expect(settingsUpdate?.eq).toEqual({ column: 'shop_id', value: 'shop-1' });
+    expect(settingsUpdate?.select).toBe('settings_updated_at');
+    // Aucune création : la ligne existait.
+    expect(calls.filter((call) => call.action === 'insert')).toHaveLength(0);
+  });
+
+  it('crée la ligne quand l’agence n’en a pas encore', async () => {
+    const { client, calls } = makeFakeClient({
+      updates: [{ data: null, error: null }],
+      inserts: [{ data: { settings_updated_at: '2026-10-29T11:00:00.000Z' }, error: null }],
+    });
+
+    const result = await save(client);
+
+    expect(result).toMatchObject({ ok: true, updatedAt: '2026-10-29T11:00:00.000Z' });
+    const insert = calls.find((call) => call.action === 'insert');
+    expect(insert?.payload).toMatchObject({ shop_id: 'shop-1', organization_id: 'org-1' });
+    expect(insert?.select).toBe('settings_updated_at');
+  });
+
+  it('un conflit d’unicité signifie une ligne invisible : la mise à jour est retentée', async () => {
+    const { client, calls } = makeFakeClient({
+      updates: [{ data: null, error: null }, { data: { settings_updated_at: '2026-10-29T12:00:00.000Z' }, error: null }],
+      inserts: [{ data: null, error: { code: '23505', message: 'duplicate key value' } }],
+    });
+
+    const result = await save(client);
+
+    expect(result).toMatchObject({ ok: true, updatedAt: '2026-10-29T12:00:00.000Z' });
+    expect(calls.filter((call) => call.action === 'update' && call.table === 'shop_settings')).toHaveLength(2);
+  });
+
+  it('un refus de rôle remonte le message honnête, sans tenter de création', async () => {
+    const { client, calls } = makeFakeClient({
+      updates: [{ data: null, error: { code: '42501', message: 'permission denied for table shop_settings' } }],
+    });
+
+    const result = await save(client);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('Votre rôle ne permet pas');
+    expect(calls.filter((call) => call.action === 'insert')).toHaveLength(0);
+  });
+
+  it('une ligne invisible n’est jamais présentée comme enregistrée', async () => {
+    const { client } = makeFakeClient({
+      updates: [{ data: null, error: null }, { data: null, error: null }],
+      inserts: [{ data: null, error: { code: '23505', message: 'duplicate key value' } }],
+    });
+
+    const result = await save(client);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain('Votre rôle ne permet pas');
+  });
+
+  it('base sans colonne settings : repli historique, avec avertissement', async () => {
+    const { client, calls } = makeFakeClient({
+      updates: [
+        { data: null, error: { code: '42703', message: 'column shop_settings.settings does not exist' } },
+        { data: { updated_at: '2026-10-28T09:00:00.000Z' }, error: null },
+      ],
+    });
+
+    const result = await save(client);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.updatedAt).toBe('2026-10-28T09:00:00.000Z');
+      expect(result.warning).toContain('migration');
+    }
+    const updates = calls.filter((call) => call.table === 'shop_settings');
+    expect(updates).toHaveLength(2);
+    expect(updates[1].payload).not.toHaveProperty('settings');
+    expect(updates[1].select).toBe('updated_at');
   });
 });
