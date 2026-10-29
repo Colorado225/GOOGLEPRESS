@@ -36,6 +36,8 @@ export interface RemoteSubscriptionState {
   status: SubscriptionStatus;
   /** Formule réellement appliquée, essai et suspension déjà arbitrés. */
   effectivePlan: SubscriptionPlanId;
+  /** Modules de la formule effective ; null pour une ancienne RPC sans ce champ. */
+  modules: string[] | null;
   /** Demande déposée, en attente d'activation par l'éditeur. */
   requestedPlan: SubscriptionPlanId | null;
   requestedAt: string | null;
@@ -107,6 +109,16 @@ const readStatus = (record: Record<string, unknown>): SubscriptionStatus => {
   return value as SubscriptionStatus;
 };
 
+const readModules = (record: Record<string, unknown>): string[] | null => {
+  const value = record.modules;
+  // Compatibilité avec la RPC déployée avant le durcissement des opérations.
+  if (value === undefined || value === null) return null;
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string' || !entry.trim())) {
+    throw new Error('Réponse d’abonnement invalide : champ modules.');
+  }
+  return [...new Set(value)];
+};
+
 const readCount = (record: Record<string, unknown>, key: string): number => {
   const value = record[key];
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
@@ -139,6 +151,7 @@ export const parseRemoteSubscription = (raw: unknown): RemoteSubscriptionState =
     plan: readPlan(raw, 'plan'),
     status: readStatus(raw),
     effectivePlan: readPlan(raw, 'effective_plan'),
+    modules: readModules(raw),
     requestedPlan: readNullablePlan(raw, 'requested_plan'),
     requestedAt: readNullableString(raw, 'requested_at'),
     renewsOn: readNullableString(raw, 'renews_on'),

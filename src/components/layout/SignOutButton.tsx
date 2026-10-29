@@ -5,6 +5,7 @@ import { useWorkspaceScope } from '../../context/WorkspaceScopeContext';
 import { getSupabaseClient } from '../../lib/supabase';
 import { mapStaffAuthError } from '../../lib/staffAuth';
 import { getUserDisplayName, isLiveWorkspace } from '../../lib/workspaceScope';
+import { useApp } from '../../context/AppContext';
 
 /**
  * Déconnexion du compte professionnel.
@@ -14,12 +15,13 @@ import { getUserDisplayName, isLiveWorkspace } from '../../lib/workspaceScope';
  * laisserait croire à un compte qui n'existe pas.
  *
  * Après `signOut()`, la perte de session est détectée par `StaffAccessGate`,
- * qui renvoie vers la page de connexion en conservant la destination visée.
- * Rien n'est effacé sur l'appareil : les données déjà enregistrées restent
- * intactes pour le prochain compte qui se connecte.
+ * qui efface le brouillon et le panier persistés de cette organisation puis
+ * renvoie vers la page de connexion. Les données métier déjà enregistrées
+ * (commandes, clients, paramètres…) restent intactes.
  */
 export const SignOutButton: React.FC<{ className?: string }> = ({ className = '' }) => {
   const workspace = useWorkspaceScope();
+  const { flushWorkspaceSync } = useApp();
   const client = getSupabaseClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,6 +42,13 @@ export const SignOutButton: React.FC<{ className?: string }> = ({ className = ''
     setBusy(true);
     setError(null);
     try {
+      const synchronized = await flushWorkspaceSync();
+      if (!synchronized) {
+        setError(
+          'Les dernières modifications n’ont pas pu être enregistrées dans Supabase. Elles restent sur cet appareil : reconnectez-vous au réseau, cliquez sur l’indicateur de synchronisation, puis réessayez de vous déconnecter.'
+        );
+        return;
+      }
       const { error: signOutError } = await client.auth.signOut();
       if (signOutError) {
         setError(mapStaffAuthError(signOutError));
@@ -73,8 +82,8 @@ export const SignOutButton: React.FC<{ className?: string }> = ({ className = ''
           description={
             <>
               La session de <strong className="font-semibold">{displayName}</strong> va être fermée
-              sur cet appareil. Vous devrez vous reconnecter pour revenir dans l’espace, et les
-              données déjà enregistrées restent intactes.
+              sur cet appareil. Le brouillon et le panier en cours seront effacés ; les commandes,
+              clients et autres données déjà enregistrées restent intactes.
             </>
           }
           confirmLabel={busy ? 'Déconnexion…' : 'Se déconnecter'}

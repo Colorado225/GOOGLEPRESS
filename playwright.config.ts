@@ -21,6 +21,10 @@ export default defineConfig({
       VITE_SUPABASE_URL: '',
       VITE_SUPABASE_ANON_KEY: '',
       VITE_SUPABASE_PUBLISHABLE_KEY: '',
+      // Les parcours utilisent volontairement la démonstration explicite,
+      // sans compte ni donnée réelle. Cette variable ne vaut que pour le
+      // serveur Vite lancé par Playwright, jamais pour le build de production.
+      VITE_ALLOW_LOCAL_DEMO: 'true',
     },
   },
   projects: [

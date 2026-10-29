@@ -36,11 +36,12 @@ clôture journalière Z.
 - **Accès personnel distant** — en production configurée avec Supabase, le
   shell ERP exige une session et un membership actif (propriétaire,
   responsable, caisse, atelier ou coursier). Il n’y a ni inscription libre du
-  personnel ni compte par défaut. La démonstration locale reste réservée au
-  développement ou au mode explicite `VITE_ALLOW_LOCAL_DEMO=true`.
+  personnel ni compte par défaut. La démonstration locale exige à la fois le
+  mode développement et l'activation explicite `VITE_ALLOW_LOCAL_DEMO=true`.
   Une fois connecté, le bouton **Déconnexion** de l’en-tête ferme la session
   (avec confirmation) sans rien effacer des données du pressing ; il n’apparaît
   pas en démonstration locale, où aucun compte n’existe.
+- **Administration plateforme** — route séparée `/administration` pour le super-admin unique : comptes clients, offres et quotas, finances, tickets, campagnes ciblées, MFA, audit et supervision, sans commandes ni stock des pressings. Les messages externes restent en file d’attente sans provider réel. Voir [`docs/ADMINISTRATION-PLATEFORME.md`](docs/ADMINISTRATION-PLATEFORME.md) pour le périmètre, la récupération d’urgence et l’état de déploiement des migrations.
 - **Espace client distant** — pages séparées `/client/connexion`,
   `/client/inscription`, `/client/nouveau-mot-de-passe` et `/client`, reliées
   à Supabase Auth. Après liaison vérifiée par le pressing, la cliente voit ses
@@ -64,16 +65,37 @@ clôture journalière Z.
   `F2` réception, `F3` atelier, `F4` clôture Z, `Alt+7/8/9/0` Personnel /
   Stocks / Dépenses / Rapports, `F9` / `?` aide, `Échap` ferme les fenêtres.
 
+## Persistance des comptes réels
+
+- La migration additive `20261029210000_workspace_snapshots.sql` crée une
+  sauvegarde par agence et deux RPC (`get_workspace_snapshot`,
+  `save_workspace_snapshot`). Aucune donnée existante n'est supprimée et les
+  migrations précédentes ne sont pas rejouées.
+- Clients, commandes et compteur de tickets, caisse, logistique, personnel,
+  présences, produits, mouvements de stock, dépenses et catégories sont
+  restaurés à la connexion puis enregistrés après chaque modification. Les
+  identifiants locaux historiques et leurs relations sont conservés.
+- La copie du navigateur reste une sauvegarde de secours. Les sections
+  modifiées hors ligne sont marquées puis rejouées à la reconnexion ; un
+  numéro de version détecte les écritures concurrentes. L'indicateur de
+  l'en-tête signale « Synchronisé », « Sauvegarde… » ou « À synchroniser ».
+- La base revérifie les droits de lecture et d'écriture section par section.
+  La table n'est pas lisible directement par les comptes authentifiés et le
+  super-admin plateforme n'a aucun accès implicite aux données d'un pressing.
+- Le brouillon POS, le panier et les positions GPS éphémères ne sont pas
+  envoyés dans cet instantané. Paramètres boutique et emplacements de
+  rangement conservent leurs synchronisations normalisées existantes.
+
 ## Stack technique
 
 React 19 · TypeScript strict · Vite 8 · Tailwind CSS v4 · lucide-react ·
 canvas-confetti. Les écrans ERP et le portail client sont découpés en chunks
-chargés à la demande. Les écrans métier historiques restent pour l’instant
-locaux ; la fondation Supabase multi-tenant porte le suivi distant et
-l’espace client. La création de commande serveur, le journal de paiements
-et l’onboarding propriétaire sont appliqués à Pressing_Pro depuis le
-28 octobre 2026 (testés sous PGlite et par recette hébergée annulée), mais
-le POS n’écrit pas encore dans Supabase à ce stade.
+chargés à la demande. La fondation Supabase multi-tenant porte le suivi distant,
+l’espace client et la sauvegarde des espaces de travail. La création de commande
+normalisée, le journal de paiements et l’onboarding propriétaire sont appliqués
+à Pressing_Pro depuis le 28 octobre 2026. Le POS conserve ses identifiants et
+ses relations dans la sauvegarde d’agence ; il n’utilise pas encore la RPC
+normalisée `create_order` réservée au suivi distant.
 
 ## Démarrage
 

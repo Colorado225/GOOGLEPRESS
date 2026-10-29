@@ -13,7 +13,7 @@ import type {
   ShopSettings,
 } from '../../types';
 import { fireOrderCelebration } from '../../registry/magicui/confetti';
-import { calculateOrderTotals } from '../../lib/pricing';
+import { calculateOrderTotals, isOrderLineExpress, resolveOrderPickupOption } from '../../lib/pricing';
 import {
   formatPromised,
   isValidISODate,
@@ -28,6 +28,7 @@ import {
   normalizeLogisticsFee,
 } from '../../lib/logistics';
 import { generateDeliveryCode } from '../../lib/deliveryProof';
+import { creditCashRegister } from '../../lib/cashRegister';
 import { countOrdersInMonth, guardMonthlyOrderCount } from '../../lib/planAccess';
 import type { SubscriptionPlanId } from '../../lib/subscription';
 import { createLocalId as genId } from '../../lib/localPersistence';
@@ -152,8 +153,10 @@ export const createOrderActions = (deps: OrderActionsDeps): OrderActions => {
       }
     }
 
-    // Date de retrait libre : un jour calendaire lisible, jamais dans le passé.
-    if (promisedDateISO !== null && (!isValidISODate(promisedDateISO) || promisedDateISO < todayISO())) {
+    const effectivePickupOption = resolveOrderPickupOption(cartLines, pickupOption);
+
+    // Une ancienne date libre ne peut ni repousser ni bloquer une priorité Express.
+    if (effectivePickupOption !== 'express' && promisedDateISO !== null && (!isValidISODate(promisedDateISO) || promisedDateISO < todayISO())) {
       notify('Choisissez une date de retrait libre valide, aujourd’hui ou plus tard.');
       return null;
     }
@@ -187,7 +190,7 @@ export const createOrderActions = (deps: OrderActionsDeps): OrderActions => {
       });
 
     const nextTicketNum = `#TK-${nextTicketNumber}`;
-    const promised = formatPromised(resolvePromisedDate(pickupOption, promisedDateISO));
+    const promised = formatPromised(resolvePromisedDate(effectivePickupOption, promisedDateISO));
     const orderId = genId('ord');
     const nowIso = nowISODateTime();
 
@@ -230,6 +233,9 @@ export const createOrderActions = (deps: OrderActionsDeps): OrderActions => {
       remainingBalance: remaining,
       paymentMethod,
       status: 'received',
+      // Une commande mixte reste unique, mais l'atelier doit la repérer dès
+      // qu'au moins une ligne exige le circuit Express 24h.
+      isUrgent: cartLines.some((line) => isOrderLineExpress(line, pickupOption)),
       receivedAt: nowDateTime(),
       promisedAt: promised,
       notes: orderNotes,
@@ -272,18 +278,7 @@ export const createOrderActions = (deps: OrderActionsDeps): OrderActions => {
 
     // Update cash register if deposit received
     if (deposit > 0) {
-      setCashRegister((prev) => {
-        const cashInc = paymentMethod === 'especes' ? deposit : 0;
-        const waveInc = paymentMethod === 'wave' ? deposit : 0;
-        const momoInc = paymentMethod === 'momo' || paymentMethod === 'om' ? deposit : 0;
-        return {
-          ...prev,
-          cashAmount: prev.cashAmount + cashInc,
-          waveAmount: prev.waveAmount + waveInc,
-          momoAmount: prev.momoAmount + momoInc,
-          totalAmount: prev.totalAmount + deposit,
-        };
-      });
+      setCashRegister((prev) => creditCashRegister(prev, deposit, paymentMethod));
     }
 
     // Update customer deposits
@@ -416,13 +411,7 @@ export const createOrderActions = (deps: OrderActionsDeps): OrderActions => {
     );
 
     if (balance > 0) {
-      setCashRegister((reg) => ({
-        ...reg,
-        cashAmount: reg.cashAmount + (method === 'especes' ? balance : 0),
-        waveAmount: reg.waveAmount + (method === 'wave' ? balance : 0),
-        momoAmount: reg.momoAmount + (method === 'momo' || method === 'om' ? balance : 0),
-        totalAmount: reg.totalAmount + balance,
-      }));
+      setCashRegister((reg) => creditCashRegister(reg, balance, method));
       // Le reste à payer avait été ajouté au solde dû du client à la création
       // de la commande : on le déduit maintenant qu'il est encaissé.
       setCustomers((prev) =>

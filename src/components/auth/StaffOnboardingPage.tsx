@@ -13,6 +13,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { isPlatformAdminUser } from '../../lib/platformAdmin';
+import { PLATFORM_ADMIN_PATH } from '../../lib/platformAdminAuth';
 import { getActiveStaffMemberships, formatStaffRole } from '../../lib/staffAccess';
 import {
   STAFF_LOGIN_PATH,
@@ -48,6 +50,7 @@ type Phase =
   | 'loading'
   | 'unconfigured'
   | 'signed-out'
+  | 'error'
   | 'already-member'
   | 'form'
   | 'success';
@@ -71,6 +74,7 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [memberships, setMemberships] = useState<RemoteMembership[]>([]);
   const [created, setCreated] = useState<CreatedOrganization | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [organizationName, setOrganizationName] = useState('');
@@ -105,7 +109,14 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
           return;
         }
         setAccountEmail(data.session.user.email ?? null);
-        const remoteMemberships = await listCurrentMemberships(data.session.user.id);
+        const userId = data.session.user.id;
+        const platformAdmin = await isPlatformAdminUser(userId).catch(() => false);
+        if (cancelled) return;
+        if (platformAdmin) {
+          onNavigate(PLATFORM_ADMIN_PATH, { replace: true });
+          return;
+        }
+        const remoteMemberships = await listCurrentMemberships(userId);
         if (cancelled) return;
         setMemberships(remoteMemberships);
         setPhase(
@@ -117,13 +128,13 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
       .catch((sessionError: unknown) => {
         if (cancelled) return;
         setError(mapStaffAuthError(sessionError));
-        setPhase('signed-out');
+        setPhase('error');
       });
 
     return () => {
       cancelled = true;
     };
-  }, [authClient]);
+  }, [authClient, onNavigate, retryTick]);
 
   // Le pressing vient d'être créé côté serveur : on célèbre la validation
   // de la configuration avant l'entrée au tableau de bord (une seule fois).
@@ -166,6 +177,42 @@ export const StaffOnboardingPage: React.FC<StaffOnboardingPageProps> = ({
             >
               Retour à l’accueil
             </StaffAuthLink>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (phase === 'error') {
+    return (
+      <main className={staffShellClassName}>
+        <section className={staffWidePanelClassName}>
+          <StaffAuthHeader
+            title="Vérification des rattachements impossible"
+            description="Le service n’a pas permis de confirmer si ce compte possède déjà un pressing. Aucune organisation ne sera créée sur la base d’une lecture en échec."
+          />
+          <div className="mt-6 space-y-4">
+            {error && <StaffAuthAlert tone="error">{error}</StaffAuthAlert>}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                className={staffPrimaryButtonClassName}
+                onClick={() => {
+                  setError(null);
+                  setPhase('loading');
+                  setRetryTick((value) => value + 1);
+                }}
+              >
+                Revérifier les rattachements
+              </button>
+              <StaffAuthLink
+                path={STAFF_LOGIN_PATH}
+                onNavigate={onNavigate}
+                className={staffSecondaryButtonClassName}
+              >
+                Retour à la connexion
+              </StaffAuthLink>
+            </div>
           </div>
         </section>
       </main>

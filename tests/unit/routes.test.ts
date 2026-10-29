@@ -38,6 +38,7 @@ describe('parseErpRoute', () => {
 
   it('rejette les chemins hors ERP et les sous-vues internes', () => {
     expect(parseErpRoute('/connexion')).toBeNull();
+    expect(parseErpRoute('/administration')).toBeNull();
     expect(parseErpRoute('/client/connexion')).toBeNull();
     // Les onglets de l’atelier sont des vues internes, pas des routes.
     expect(parseErpRoute('/atelier/rangement')).toBeNull();
@@ -100,6 +101,8 @@ describe('resolveAppRoute', () => {
       context: 'staff',
       route: 'onboarding',
     });
+    expect(resolveAppRoute('/administration')).toEqual({ context: 'platform-admin' });
+    expect(resolveAppRoute('/administration/')).toEqual({ context: 'platform-admin' });
     expect(resolveAppRoute('/atelier')).toEqual({ context: 'erp' });
     expect(resolveAppRoute('/chemin-inconnu')).toEqual({ context: 'erp' });
   });
@@ -121,6 +124,9 @@ describe('resolveStaffReturnPath', () => {
     expect(resolveStaffReturnPath('?retour=%2F%2Fevil.example')).toBeNull();
     expect(resolveStaffReturnPath('?retour=javascript:alert(1)')).toBeNull();
     expect(resolveStaffReturnPath('?retour=/connexion')).toBeNull();
+    // La route admin n'est jamais choisie par un simple paramètre : la
+    // connexion vérifie platform_admins avant d'y rediriger.
+    expect(resolveStaffReturnPath('?retour=/administration')).toBeNull();
     expect(resolveStaffReturnPath('?retour=/client/connexion')).toBeNull();
     expect(resolveStaffReturnPath('?retour=/atelier?onglet=caisse')).toBeNull();
     expect(resolveStaffReturnPath('?retour=\\atelier')).toBeNull();

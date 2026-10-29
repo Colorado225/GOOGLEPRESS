@@ -32,6 +32,16 @@ const LegalPage = lazy(() =>
     default: module.LegalPage,
   }))
 );
+const PlatformAdminGate = lazy(() =>
+  import('./components/platform-admin/PlatformAdminGate').then((module) => ({
+    default: module.PlatformAdminGate,
+  }))
+);
+const PlatformAdminPage = lazy(() =>
+  import('./components/platform-admin/PlatformAdminPage').then((module) => ({
+    default: module.PlatformAdminPage,
+  }))
+);
 import { getCanonicalCustomerPath } from './lib/customerAuth';
 import { resolveAppRoute } from './lib/routes';
 import { useErpRouteSync } from './components/layout/useErpRouteSync';
@@ -98,6 +108,7 @@ import { NewCustomerModal } from './components/pos/NewCustomerModal';
 import { KeyboardShortcutsModal } from './components/modals/KeyboardShortcutsModal';
 import { ToastNotification } from './components/common/ToastNotification';
 import { MainLayoutHeader } from './components/layout/MainLayoutHeader';
+import { PlatformAnnouncement } from './components/layout/PlatformAnnouncement';
 import { PWA_UPDATE_EVENT } from './lib/pwa';
 
 const ScreenLoadingFallback: React.FC = () => (
@@ -164,7 +175,7 @@ const MainLayout: React.FC = () => {
   // Mise à jour PWA téléchargée : prévenir sans interrompre le travail en cours
   useEffect(() => {
     const onPwaUpdate = () =>
-      showToast('Nouvelle version de l’application disponible : rechargez la page pour l’appliquer');
+      showToast('Nouvelle version disponible : cliquez sur Actualiser quand vous souhaitez l’appliquer');
     window.addEventListener(PWA_UPDATE_EVENT, onPwaUpdate);
     return () => window.removeEventListener(PWA_UPDATE_EVENT, onPwaUpdate);
   }, [showToast]);
@@ -173,6 +184,7 @@ const MainLayout: React.FC = () => {
     <div className="min-h-screen bg-[#f4f4f5] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col">
       {/* Main Layout Header (contains Desktop Sidebar Toggle Trigger, Breadcrumbs, Shortcuts & Profile) */}
       <MainLayoutHeader />
+      <PlatformAnnouncement />
 
       {/* Main Container */}
       <div className="max-w-none w-full mx-auto flex-1 flex flex-col md:flex-row relative items-stretch">
@@ -274,6 +286,18 @@ export default function App() {
   // espace client, pages légales et accès du personnel vivent hors du
   // shell ERP ; tout le reste relève de l'ERP protégé par la garde.
   const appRoute = resolveAppRoute(pathname);
+
+  // Administration de l'éditeur : frontière et contexte totalement séparés de
+  // l'ERP. Aucun état métier local d'un pressing n'est monté sur cette route.
+  if (appRoute.context === 'platform-admin') {
+    return (
+      <Suspense fallback={<ScreenLoadingFallback />}>
+        <PlatformAdminGate>
+          <PlatformAdminPage onNavigate={navigate} />
+        </PlatformAdminGate>
+      </Suspense>
+    );
+  }
 
   // L'espace client est volontairement hors du shell ERP et de son contexte
   // local : un client ne doit ni voir la navigation métier ni charger les

@@ -45,48 +45,55 @@ export const NewCustomerModal: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="p-5 space-y-3.5 text-[13px]">
           <div>
-            <label className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1">
+            <label htmlFor="new-customer-name" className="pos-field-label">
               Nom complet du client *
             </label>
             <input
+              id="new-customer-name"
               type="text"
+              autoComplete="name"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Kouamé Koffi Junior"
-              className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              className="pos-field"
             />
           </div>
 
           <div>
-            <label className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1 flex items-center gap-1">
+            <label htmlFor="new-customer-phone" className="pos-field-label">
               <Phone className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> Numéro de téléphone (SMS & WhatsApp) *
             </label>
             <input
-              type="text"
+              id="new-customer-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="07 00 00 00 00"
-              className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              className="pos-field tabular-nums"
             />
           </div>
 
           <div>
-            <label className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1 flex items-center gap-1">
+            <label htmlFor="new-customer-address" className="pos-field-label">
               <MapPin className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> Quartier & Commune (Abidjan)
             </label>
             <input
+              id="new-customer-address"
               type="text"
+              autoComplete="street-address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Ex: Cocody Angré 7e Tranche"
-              className="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 text-[13.5px] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+              className="pos-field"
             />
           </div>
 
           <div>
-            <label className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400 uppercase mb-1 flex items-center gap-1">
+            <label className="pos-field-label">
               <Percent className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> Remise fidélité accordée
             </label>
             <div className="flex gap-2">

@@ -58,6 +58,8 @@ export interface CreateRemoteOrderLineInput {
   quantity: number;
   color?: string | null;
   serviceType?: string | null;
+  /** Délai de cette ligne ; absent = repli sur l'option globale historique. */
+  isExpress?: boolean | null;
 }
 
 export interface CreateRemoteOrderInput {
@@ -249,6 +251,7 @@ export async function createRemoteOrder(
     quantity: line.quantity,
     color: line.color?.trim() || null,
     serviceType: line.serviceType?.trim() || null,
+    isExpress: line.isExpress ?? null,
   })) as unknown as Json;
 
   const { data, error } = await resolved.rpc('create_order', {

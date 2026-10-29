@@ -1,7 +1,7 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type { CashRegisterData, LaundryOrder } from '../../types';
 import { INITIAL_CASH_REGISTER, INITIAL_ORDERS } from '../../data/demoData';
-import { todayISO } from '../../lib/dates';
+import { createEmptyCashRegister, normalizeCashRegister } from '../../lib/cashRegister';
 import {
   TICKET_COUNTER_STORAGE_KEY as TICKET_COUNTER_KEY,
   loadPersistedState,
@@ -26,18 +26,6 @@ export interface OrdersStore {
   setCashRegister: Dispatch<SetStateAction<CashRegisterData>>;
 }
 
-/** Caisse vierge du jour pour un espace réel : aucun montant inventé. */
-const createEmptyCashRegister = (): CashRegisterData => ({
-  date: todayISO(),
-  cashAmount: 0,
-  waveAmount: 0,
-  momoAmount: 0,
-  totalAmount: 0,
-  floatAmount: 0,
-  targetGoal: 0,
-  monthAchieved: 0,
-});
-
 /**
  * Commandes, compteur séquentiel de tickets et caisse du jour. État seul :
  * les transitions (création, statuts, remises, livraisons) vivent dans les
@@ -50,12 +38,13 @@ export const useOrdersStore = ({ storageKey, seedList, liveWorkspace }: OrdersDe
 
   // Caisse du jour : montants réels uniquement. Aucun objectif ni fond de
   // caisse d'exemple n'est repris sur un compte réel.
-  const [cashRegister, setCashRegister] = useState<CashRegisterData>(() =>
-    loadPersistedState(
-      storageKey('pressingpro_cash_register'),
-      liveWorkspace ? createEmptyCashRegister() : INITIAL_CASH_REGISTER
-    )
-  );
+  const [cashRegister, setCashRegister] = useState<CashRegisterData>(() => {
+    const fallback = liveWorkspace ? createEmptyCashRegister() : INITIAL_CASH_REGISTER;
+    return normalizeCashRegister(
+      loadPersistedState(storageKey('pressingpro_cash_register'), fallback),
+      fallback
+    );
+  });
 
   useEffect(() => {
     persistState(storageKey('pressingpro_orders'), orders);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type {
   ActionResult,
   AttendanceRecord,
@@ -25,7 +25,9 @@ export interface EmployeesDeps {
 
 export interface EmployeesStore {
   employees: Employee[];
+  setEmployees: Dispatch<SetStateAction<Employee[]>>;
   attendanceRecords: AttendanceRecord[];
+  setAttendanceRecords: Dispatch<SetStateAction<AttendanceRecord[]>>;
   addEmployee: (data: EmployeeFormData) => ActionResult & { employee?: Employee };
   updateEmployee: (id: string, data: EmployeeFormData) => boolean;
   setEmployeeStatus: (id: string, status: EmployeeStatus) => void;
@@ -40,8 +42,8 @@ export interface EmployeesStore {
 
 /**
  * Module Personnel : registre des employés et saisie des présences.
- * Persistance locale uniquement ; l'ajout d'un compte respecte le plafond
- * de la formule effective.
+ * La copie locale est relayée par la sauvegarde d'agence ; l'ajout d'un compte
+ * respecte le plafond de la formule effective.
  */
 export const useEmployeesStore = ({
   storageKey,
@@ -137,7 +139,9 @@ export const useEmployeesStore = ({
 
   return {
     employees,
+    setEmployees,
     attendanceRecords,
+    setAttendanceRecords,
     addEmployee,
     updateEmployee,
     setEmployeeStatus,

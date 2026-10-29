@@ -19,6 +19,7 @@ import {
   Truck,
   ImagePlus,
   Trash2,
+  LifeBuoy,
 } from 'lucide-react';
 import {
   calculateStorageOccupancy,
@@ -42,6 +43,7 @@ import {
 import { SettingsSyncStatus } from './SettingsSyncStatus';
 import { SubscriptionSection } from './SubscriptionSection';
 import { PlanLockPanel } from '../subscription/PlanLockPanel';
+import { TenantSupportSection } from './TenantSupportSection';
 import { isFeatureIncluded } from '../../lib/planAccess';
 
 /**
@@ -136,10 +138,11 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
     settingsTabRequest,
     clearSettingsTabRequest,
     effectivePlanId,
+    subscriptionModules,
   } = useApp();
 
-  const canUseDeliveryTracking = isFeatureIncluded(effectivePlanId, 'deliveryTracking');
-  const canUseDeliveryProof = isFeatureIncluded(effectivePlanId, 'deliveryProof');
+  const canUseDeliveryTracking = isFeatureIncluded(effectivePlanId, 'deliveryTracking', subscriptionModules);
+  const canUseDeliveryProof = isFeatureIncluded(effectivePlanId, 'deliveryProof', subscriptionModules);
 
   // Le formulaire démarre depuis les paramètres persistés (contexte).
   const [shopName, setShopName] = useState(shopSettings.name);
@@ -419,6 +422,7 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
               label: 'Abonnement',
               icon: <Crown className="w-4 h-4" aria-hidden="true" />,
             },
+            { id: 'support', label: 'Assistance éditeur', icon: <LifeBuoy className="w-4 h-4" aria-hidden="true" /> },
             { id: 'backup', label: 'Sauvegarde', icon: <Download className="w-4 h-4" aria-hidden="true" /> },
           ]}
         />
@@ -1100,9 +1104,11 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
 
         {tab === 'subscription' && <SubscriptionSection />}
 
+        {tab === 'support' && <TenantSupportSection workspace={workspace} />}
+
         {tab === 'backup' && <BackupSection />}
 
-        {tab !== 'backend' && tab !== 'backup' && tab !== 'subscription' && (
+        {tab !== 'backend' && tab !== 'backup' && tab !== 'subscription' && tab !== 'support' && (
           <>
             <button
               type="submit"

@@ -121,8 +121,9 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
   let kilos = 0;
   order.lines.forEach((line) => {
     if (line.pricingType === 'kilo') kilos += line.weightKg ?? line.quantity;
-    // Un forfait couvre plusieurs vêtements : on compte les vêtements réels,
-    // pas les blocs de forfait facturés.
+    // Un forfait Pressing au poids expose le poids couvert par son bloc ;
+    // un forfait Blanchisserie continue de compter ses vêtements réels.
+    else if (line.unitLabel === 'forfait' && line.weightKg !== undefined) kilos += line.weightKg;
     else pieces += line.garments ?? line.quantity;
   });
   const itemsSummaryParts: string[] = [];
@@ -291,14 +292,19 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
           <div className="divide-y divide-zinc-200 dark:divide-zinc-700 mt-1">
             {order.lines.map((line, idx) => {
               const isKilo = line.pricingType === 'kilo';
+              const isPackage = line.unitLabel === 'forfait';
               const qtyLabel = isKilo
                 ? `${formatQty(line.weightKg ?? line.quantity)} kg`
-                : `${formatQty(line.quantity)} ×`;
+                : isPackage
+                  ? `${formatQty(line.quantity)} forfait${line.quantity > 1 ? 's' : ''}`
+                  : `${formatQty(line.quantity)} ×`;
               const priceDetail = isKilo
                 ? `à ${formatFCFA(line.unitPrice)}/kg`
-                : line.quantity > 1
-                ? `${formatQty(line.quantity)} × ${formatFCFA(line.unitPrice)}`
-                : formatFCFA(line.unitPrice);
+                : isPackage
+                  ? `${formatFCFA(line.unitPrice)} / forfait`
+                  : line.quantity > 1
+                    ? `${formatQty(line.quantity)} × ${formatFCFA(line.unitPrice)}`
+                    : formatFCFA(line.unitPrice);
               return (
                 <div key={line.id ?? idx} className="py-1.5">
                   <div className="flex justify-between gap-3">
@@ -311,7 +317,13 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
                   </div>
                   <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">
                     {line.serviceType}
+                    {order.serviceCategory === 'pressing'
+                      ? ` • ${(line.isExpress ?? order.isUrgent) ? 'Express 24h' : 'Normal'}`
+                      : ''}
                     {isClient ? ` • ${priceDetail}` : ''}
+                    {isPackage && line.weightKg !== undefined
+                      ? ` • Poids couvert : ${formatQty(line.weightKg)} kg`
+                      : ''}
                     {line.color ? ` • Couleur : ${line.color}` : ''}
                   </p>
                   {line.notes && (

@@ -1,18 +1,22 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { KeyRound, Loader2, LogOut, RefreshCw, Store } from 'lucide-react';
+import { KeyRound, Loader2, LockKeyhole, LogOut, RefreshCw, Store } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { fetchPlatformPublicConfig, isPlatformAdminUser } from '../../lib/platformAdmin';
+import { PLATFORM_ADMIN_PATH } from '../../lib/platformAdminAuth';
 import { validateNewPassword } from '../../lib/customerAuth';
 import {
   STAFF_ONBOARDING_PATH,
   mapStaffAuthError,
 } from '../../lib/staffAuth';
 import { getStaffLoginRedirectPath } from '../../lib/routes';
+import { clearWorkspaceSessionPersistence } from '../../lib/sessionPersistence';
 import {
   formatStaffRole,
   getActiveStaffMemberships,
   getStaffAccessEnvironment,
   resolveStaffAccessMode,
+  type StaffRole,
 } from '../../lib/staffAccess';
 import {
   listAccessibleOrganizations,
@@ -42,7 +46,7 @@ interface StaffAccessGateProps {
 
 /**
  * Frontière d'accès de l'ERP :
- * - démonstration locale explicite (développement ou variable dédiée) :
+ * - démonstration locale explicite (développement avec variable dédiée) :
  *   l'ERP s'ouvre immédiatement, avec des données locales du navigateur ;
  * - production configurée : session Supabase + membership actif exigés.
  *   Sans session, on redirige vers la page /connexion ; sans rattachement,
@@ -67,6 +71,12 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
   // Tant qu'elle n'est pas résolue, l'ERP n'est pas monté — sans quoi il
   // choisirait la portée de démonstration (données d'exemple).
   const [workspaceScope, setWorkspaceScope] = useState<WorkspaceScope | null>(null);
+  const [workspaceSuspended, setWorkspaceSuspended] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
+  // Référence à jour pour l'écouteur Auth, conservé sans le réabonner à
+  // chaque chargement des informations de l'organisation.
+  const workspaceScopeRef = useRef<WorkspaceScope | null>(null);
+  workspaceScopeRef.current = workspaceScope;
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -96,6 +106,14 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
       });
 
     const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'SIGNED_OUT') {
+        // Supabase supprime le jeton Auth ; retirer aussi le brouillon et le
+        // panier de cette session, sans effacer les données métier validées.
+        if (workspaceScopeRef.current) {
+          clearWorkspaceSessionPersistence(workspaceScopeRef.current);
+        }
+        workspaceScopeRef.current = null;
+      }
       setSession(nextSession);
       setLoadingSession(false);
       if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true);
@@ -104,6 +122,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
         setMembershipCheckComplete(false);
         setRecoveryMode(false);
         setWorkspaceScope(null);
+        setWorkspaceSuspended(false);
       }
     });
 
@@ -117,6 +136,8 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
     if (!supabase || !session || recoveryMode) return;
     setCheckingMemberships(true);
     setMembershipCheckComplete(false);
+    setWorkspaceSuspended(false);
+    setMaintenanceMessage(null);
     setError(null);
     try {
       const remoteMemberships = await listCurrentMemberships(session.user.id);
@@ -124,6 +145,21 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
 
       const activeMemberships = getActiveStaffMemberships(remoteMemberships);
       if (activeMemberships.length === 0) {
+        const platformAdmin = await isPlatformAdminUser(session.user.id).catch(() => false);
+        if (platformAdmin) {
+          window.location.replace(PLATFORM_ADMIN_PATH);
+          return;
+        }
+        setWorkspaceScope(null);
+        return;
+      }
+
+      const platformConfig = await fetchPlatformPublicConfig().catch(() => null);
+      if (platformConfig?.maintenance_mode) {
+        setMaintenanceMessage(
+          platformConfig.support_message.trim() ||
+            'Une maintenance de PressingPro CI est en cours. Réessayez après l’intervention.'
+        );
         setWorkspaceScope(null);
         return;
       }
@@ -131,7 +167,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
       // Le nom de l'enseigne ne conditionne jamais l'accès : si la lecture
       // échoue, l'ERP s'ouvre avec un libellé neutre, mais la portée reste
       // « réelle » et donc vide de toute donnée d'exemple.
-      const primary = activeMemberships[0];
+      let primary = activeMemberships[0];
       let organizationName: string | null = null;
       let shopName: string | null = null;
       // Le propriétaire initial est rattaché à l'organisation sans agence :
@@ -143,6 +179,23 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
           listAccessibleOrganizations(),
           listAccessibleShops(),
         ]);
+        const accessiblePrimary = activeMemberships.find((membership) => {
+          if (!organizations.some((entry) => entry.id === membership.organization_id)) {
+            return false;
+          }
+          const organizationShops = shops.filter(
+            (shop) => shop.organization_id === membership.organization_id
+          );
+          return membership.shop_id
+            ? organizationShops.some((shop) => shop.id === membership.shop_id)
+            : organizationShops.length > 0;
+        });
+        if (!accessiblePrimary) {
+          setWorkspaceSuspended(true);
+          setWorkspaceScope(null);
+          return;
+        }
+        primary = accessiblePrimary;
         organizationName =
           organizations.find((entry) => entry.id === primary.organization_id)?.name ?? null;
         const organizationShops = shops.filter(
@@ -183,6 +236,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
         shopName,
         userName,
         userRoleLabel: formatStaffRole(primary.role),
+        userRole: primary.role as StaffRole,
       });
     } catch (membershipError) {
       setMemberships([]);
@@ -198,10 +252,17 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
     }
   }, [recoveryMode, session]);
 
+  const sessionUserId = session?.user.id ?? null;
   useEffect(() => {
-    if (mode !== 'supabase-required' || !session || recoveryMode) return;
+    if (mode !== 'supabase-required' || !sessionUserId || recoveryMode) return;
     void loadMemberships();
-  }, [loadMemberships, mode, recoveryMode, refreshTick, session]);
+    // `loadMemberships` lit la session du rendu courant. Ne pas relancer ce
+    // chargement à chaque nouvel objet Session : Supabase en émet notamment
+    // au retour sur l'onglet (SIGNED_IN) et après un TOKEN_REFRESHED. Seuls
+    // un changement d'utilisateur ou une revérification explicite justifient
+    // de refermer temporairement le shell ERP.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, recoveryMode, refreshTick, sessionUserId]);
 
   // Aucune session établie : la connexion vit sur sa page dédiée. Si le
   // visiteur visait un écran ERP précis (lien profond), la destination est
@@ -309,6 +370,81 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
     return <StaffAuthLoading label="Redirection vers la page de connexion…" />;
   }
 
+  if (session && maintenanceMessage) {
+    return (
+      <main className={staffShellClassName}>
+        <section className={staffPanelClassName}>
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
+            <LockKeyhole className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <StaffAuthHeader
+            title="Maintenance de PressingPro CI"
+            description="L’éditeur a planifié une interruption pour votre espace. Vos données restent conservées ; seule la console d’administration plateforme reste ouverte pendant l’opération."
+          />
+          <div className="mt-5 space-y-4">
+            <StaffAuthAlert tone="warning">{maintenanceMessage}</StaffAuthAlert>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                className={authSecondaryButtonClassName}
+                onClick={() => setRefreshTick((value) => value + 1)}
+                disabled={busy || checkingMemberships}
+              >
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                Revérifier la disponibilité
+              </button>
+              <button
+                type="button"
+                className={authSecondaryButtonClassName}
+                onClick={() => void signOut()}
+                disabled={busy}
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                Se déconnecter
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (session && workspaceSuspended) {
+    return (
+      <main className={staffShellClassName}>
+        <section className={staffPanelClassName}>
+          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300">
+            <LockKeyhole className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <StaffAuthHeader
+            title="Compte du pressing verrouillé"
+            description="L’accès de cette organisation est suspendu par l’administration de PressingPro CI. Les données sont conservées, mais les écrans métier et les écritures restent fermés. Contactez le support de l’éditeur pour régulariser le compte."
+          />
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              className={authSecondaryButtonClassName}
+              onClick={() => setRefreshTick((value) => value + 1)}
+              disabled={busy || checkingMemberships}
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              Revérifier l’accès
+            </button>
+            <button
+              type="button"
+              className={authPrimaryButtonClassName}
+              onClick={() => void signOut()}
+              disabled={busy}
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Se déconnecter
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   if (
     loadingSession ||
     (session &&
@@ -383,7 +519,43 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
     );
   }
 
-  if (session && membershipCheckComplete && activeMemberships.length === 0) {
+  if (session && membershipCheckComplete && activeMemberships.length === 0 && error) {
+    return (
+      <main className={staffShellClassName}>
+        <section className={staffPanelClassName}>
+          <StaffAuthHeader
+            title="Vérification des accès impossible"
+            description="Le service n’a pas pu lire les rattachements du compte. Ce résultat n’est pas traité comme une absence de pressing et aucun parcours de création ne vous est proposé."
+          />
+          <div className="mt-5 space-y-4">
+            <StaffAuthAlert tone="error">{error}</StaffAuthAlert>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                className={authSecondaryButtonClassName}
+                onClick={() => setRefreshTick((value) => value + 1)}
+                disabled={busy || checkingMemberships}
+              >
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                Revérifier mes accès
+              </button>
+              <button
+                type="button"
+                className={authSecondaryButtonClassName}
+                onClick={() => void signOut()}
+                disabled={busy}
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                Se déconnecter
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (session && membershipCheckComplete && activeMemberships.length === 0 && !error) {
     return (
       <main className={staffShellClassName}>
         <section className={staffPanelClassName}>

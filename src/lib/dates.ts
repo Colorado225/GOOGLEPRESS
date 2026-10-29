@@ -183,8 +183,8 @@ export function getPickupLabel(option: PickupOption): string {
 
 /**
  * Date de retrait promise en tenant compte d'une éventuelle date libre
- * choisie au POS. Une surcharge valide (jour calendaire lisible) prime sur
- * l'option, à l'heure de retrait standard (17h) ; sinon, l'option s'applique.
+ * choisie au POS. La priorité Express 24h ne peut jamais être repoussée par
+ * une date libre. Sans Express, une date valide prime sur Standard/Différé.
  * Le refus d'une date libre passée se fait à la validation, pas ici.
  */
 export function resolvePromisedDate(
@@ -192,17 +192,19 @@ export function resolvePromisedDate(
   promisedDateISO?: string | null,
   from: Date = new Date()
 ): Date {
-  const custom = parseISODate(promisedDateISO);
-  if (custom) {
-    custom.setHours(17, 0, 0, 0);
-    return custom;
+  if (option !== 'express') {
+    const custom = parseISODate(promisedDateISO);
+    if (custom) {
+      custom.setHours(17, 0, 0, 0);
+      return custom;
+    }
   }
   return getPromisedDate(option, from);
 }
 
-/** Libellé de l'option tenant compte d'une éventuelle date libre. */
+/** Libellé effectif : Express reste prioritaire sur une éventuelle date libre. */
 export function resolvePickupLabel(option: PickupOption, promisedDateISO?: string | null): string {
-  if (parseISODate(promisedDateISO)) return 'Date libre';
+  if (option !== 'express' && parseISODate(promisedDateISO)) return 'Date libre';
   return getPickupLabel(option);
 }
 

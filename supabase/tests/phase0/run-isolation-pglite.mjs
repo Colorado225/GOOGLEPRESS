@@ -82,6 +82,17 @@ try {
       phone text,
       raw_user_meta_data jsonb not null default '{}'::jsonb
     );
+    create table auth.sessions (
+      id uuid primary key default gen_random_uuid(),
+      user_id uuid not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      refreshed_at timestamp,
+      not_after timestamptz,
+      ip inet,
+      user_agent text,
+      aal text not null default 'aal1'
+    );
     create or replace function auth.uid()
     returns uuid
     language sql
@@ -95,7 +106,13 @@ try {
     .filter((file) => file.endsWith('.sql'))
     .sort();
   for (const file of migrationFiles) {
-    await db.exec(await readFile(join(migrationsDir, file), 'utf8'));
+    try {
+      await db.exec(await readFile(join(migrationsDir, file), 'utf8'));
+    } catch (error) {
+      throw new Error(`${file}: ${error instanceof Error ? error.message : String(error)}`, {
+        cause: error,
+      });
+    }
   }
   await db.exec(await readFile(fixturesPath, 'utf8'));
 
@@ -107,8 +124,8 @@ try {
       join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'public' and c.relkind = 'r'
     `);
-    assert.equal(result.rows[0].total, 39);
-    assert.equal(result.rows[0].protected, 39);
+    assert.equal(result.rows[0].total, 56);
+    assert.equal(result.rows[0].protected, 56);
   });
 
   await check('chaque propriétaire ne voit que ses agences', async () => {
@@ -388,6 +405,54 @@ try {
     assert.equal(express.rows[0].discount_xof, 0);
     assert.equal(express.rows[0].total_xof, 2000);
   });
+
+  await check('create_order facture seulement les lots Express dans une commande mixte', async () => {
+    const mixed = await queryAs(
+      users.cashierA1,
+      `
+        select
+          subtotal_xof::int,
+          service_fees_xof::int,
+          total_xof::int,
+          is_urgent,
+          lines -> 0 ->> 'isExpress' as first_speed,
+          lines -> 1 ->> 'isExpress' as second_speed
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000003'::uuid,
+          '[
+            {"legacyKey":"chemise","quantity":2,"isExpress":false},
+            {"legacyKey":"chemise","quantity":1,"isExpress":true}
+          ]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-mixed-express-001',
+          p_pickup_option => 'standard'
+        )
+      `
+    );
+    assert.equal(mixed.rows[0].subtotal_xof, 1500);
+    assert.equal(mixed.rows[0].service_fees_xof, 500);
+    assert.equal(mixed.rows[0].total_xof, 2000);
+    assert.equal(mixed.rows[0].is_urgent, true);
+    assert.equal(mixed.rows[0].first_speed, 'false');
+    assert.equal(mixed.rows[0].second_speed, 'true');
+  });
+
+  await expectFailure('create_order rejette un délai Express de ligne non booléen', async () => {
+    await queryAs(
+      users.cashierA1,
+      `
+        select id
+        from public.create_order(
+          '20000000-0000-4000-8000-000000000001'::uuid,
+          '40000000-0000-4000-8000-000000000003'::uuid,
+          '[{"legacyKey":"chemise","quantity":1,"isExpress":"oui"}]'::jsonb,
+          '2026-11-01T10:00:00Z'::timestamptz,
+          'phase0-create-order-invalid-line-speed'
+        )
+      `
+    );
+  }, /délai Express.*booléen/i);
 
   await check('la RPC déplace une étape et journalise acteur, note et visibilité', async () => {
     const transitioned = await queryAs(
@@ -1653,6 +1718,476 @@ try {
       );
     }
   });
+
+  await check('le super-admin lit les comptes clients sans leurs commandes métier', async () => {
+    const result = await queryAs(
+      users.platform,
+      'select public.get_platform_admin_snapshot() as snapshot'
+    );
+    const snapshot = result.rows[0].snapshot;
+    assert.ok(snapshot.organizations.length >= 2);
+    assert.equal(snapshot.config.registrations_open, true);
+    assert.ok(snapshot.organizations.every((organization) => !('orders' in organization)));
+    assert.ok(snapshot.organizations.every((organization) => Array.isArray(organization.shops)));
+  });
+
+  await expectFailure('un propriétaire ne peut pas lire la console super-admin', async () => {
+    await queryAs(users.ownerA, 'select public.get_platform_admin_snapshot()');
+  }, /réservé au super-admin/i);
+
+  await expectFailure('un second super-admin actif est impossible', async () => {
+    await db.query(
+      `insert into public.platform_admins (user_id, note)
+       values ('00000000-0000-4000-8000-000000000101', 'Second admin interdit')`
+    );
+  }, /duplicate|unique/i);
+
+  await check('le super-admin valide une demande d’abonnement et journalise l’action', async () => {
+    await queryAs(
+      users.ownerA,
+      `select public.request_subscription_plan('20000000-0000-4000-8000-000000000001', 'pro')`
+    );
+    await queryAs(
+      users.platform,
+      `select public.admin_set_shop_subscription(
+        '20000000-0000-4000-8000-000000000001', 'pro', 'actif',
+        date '2027-01-31', 'Paiement fictif vérifié'
+      )`
+    );
+    const result = await db.query(
+      `select plan, status, requested_plan, renews_on
+         from public.shop_subscriptions
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(result.rows[0].plan, 'pro');
+    assert.equal(result.rows[0].status, 'actif');
+    assert.equal(result.rows[0].requested_plan, null);
+    assert.ok(result.rows[0].renews_on);
+    const audit = await db.query(
+      `select actor_type, action from public.audit_log
+        where action = 'platform.subscription_updated'
+          and shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(audit.rows.length, 1);
+    assert.equal(audit.rows[0].actor_type, 'platform');
+  });
+
+  await expectFailure('un propriétaire ne peut pas appliquer lui-même une formule par la RPC admin', async () => {
+    await queryAs(
+      users.ownerA,
+      `select public.admin_set_shop_subscription(
+        '20000000-0000-4000-8000-000000000001', 'business', 'actif'
+      )`
+    );
+  }, /réservé au super-admin/i);
+
+  await check('le verrouillage super-admin ferme réellement les accès RLS puis les rouvre', async () => {
+    await queryAs(
+      users.platform,
+      `select public.admin_set_organization_status(
+        '10000000-0000-4000-8000-000000000002', 'suspended', 'Support : compte fictif verrouillé'
+      )`
+    );
+    const lockedShops = await queryAs(users.ownerB, 'select id from public.shops');
+    const lockedOrders = await queryAs(users.ownerB, 'select id from public.orders');
+    assert.equal(lockedShops.rows.length, 0);
+    assert.equal(lockedOrders.rows.length, 0);
+    await expectFailure('un compte verrouillé ne lit plus son abonnement', async () => {
+      await queryAs(
+        users.ownerB,
+        `select public.get_shop_subscription_state('20000000-0000-4000-8000-000000000003')`
+      );
+    }, /Accès refusé/i);
+
+    await queryAs(
+      users.platform,
+      `select public.admin_set_organization_status(
+        '10000000-0000-4000-8000-000000000002', 'active', 'Support : compte fictif réactivé'
+      )`
+    );
+    const restored = await queryAs(users.ownerB, 'select id from public.shops');
+    assert.equal(restored.rows.length, 1);
+  });
+
+  await expectFailure('un propriétaire ne peut pas verrouiller un autre compte', async () => {
+    await queryAs(
+      users.ownerA,
+      `select public.admin_set_organization_status(
+        '10000000-0000-4000-8000-000000000002', 'suspended', 'Tentative interdite'
+      )`
+    );
+  }, /réservé au super-admin/i);
+
+  await check('les notes de support restent internes au super-admin', async () => {
+    const result = await queryAs(
+      users.platform,
+      `select public.admin_add_support_note(
+        '10000000-0000-4000-8000-000000000002', 'configuration',
+        'Réglage fictif vérifié avec le propriétaire',
+        '20000000-0000-4000-8000-000000000003'
+      ) as snapshot`
+    );
+    const organization = result.rows[0].snapshot.organizations.find(
+      (entry) => entry.id === '10000000-0000-4000-8000-000000000002'
+    );
+    assert.equal(organization.support_notes.length, 1);
+    assert.equal(organization.support_notes[0].category, 'configuration');
+    await expectFailure('un propriétaire ne lit pas les notes internes directement', async () => {
+      await queryAs(users.ownerB, 'select id from public.platform_support_notes');
+    }, /permission denied/i);
+  });
+
+  await check('la configuration globale ferme puis rouvre les nouvelles inscriptions', async () => {
+    await queryAs(
+      users.platform,
+      `select public.admin_update_platform_config(false, 'Maintenance technique fictive', 'warning')`
+    );
+    const publicConfig = await queryAs(
+      users.ownerA,
+      'select public.get_platform_public_config() as config'
+    );
+    assert.equal(publicConfig.rows[0].config.registrations_open, false);
+    assert.equal(publicConfig.rows[0].config.support_message, 'Maintenance technique fictive');
+    await expectFailure('un nouveau pressing ne peut pas être créé pendant la fermeture', async () => {
+      await queryAs(
+        users.otherCustomer,
+        `select public.create_my_organization('Inscription Fermée Fictive', 'Agence Fermée')`
+      );
+    }, /temporairement fermées/i);
+
+    await queryAs(
+      users.platform,
+      `select public.admin_update_platform_config(true, '', 'info')`
+    );
+    const reopened = await queryAs(
+      users.ownerA,
+      'select public.get_platform_public_config() as config'
+    );
+    assert.equal(reopened.rows[0].config.registrations_open, true);
+  });
+
+  await expectFailure('un propriétaire ne peut pas changer la configuration globale', async () => {
+    await queryAs(
+      users.ownerA,
+      `select public.admin_update_platform_config(false, 'Tentative interdite', 'critical')`
+    );
+  }, /réservé au super-admin/i);
+
+  await check('le super-admin lit les opérations sans données métier et le tenant est refusé', async () => {
+    const result = await queryAs(users.platform, 'select public.get_platform_operations_snapshot() as snapshot');
+    const snapshot = result.rows[0].snapshot;
+    assert.ok(Array.isArray(snapshot.plan_offers));
+    assert.ok(Array.isArray(snapshot.invoices));
+    assert.ok(!('orders' in snapshot));
+    assert.ok(!('customers' in snapshot));
+    assert.ok(!('stock' in snapshot));
+    await expectFailure('un propriétaire ne peut pas lire les opérations plateforme', async () => {
+      await queryAs(users.ownerA, 'select public.get_platform_operations_snapshot()');
+    }, /réservé au super-admin/i);
+  });
+
+  await check('la facturation gère paiement partiel, remboursement, avoir et audit avant/après', async () => {
+    await queryAs(
+      users.platform,
+      `select public.admin_platform_command('invoice.create', jsonb_build_object(
+        'organization_id', '10000000-0000-4000-8000-000000000001',
+        'shop_id', '20000000-0000-4000-8000-000000000001',
+        'period_start', date '2026-11-01', 'period_end', date '2026-12-01',
+        'due_on', date '2026-12-01', 'subtotal_xof', 10000,
+        'discount_xof', 0, 'note', 'Facture de test PGlite'
+      ))`
+    );
+    const created = await db.query(
+      `select id, total_xof from public.platform_invoices
+        where note = 'Facture de test PGlite' order by created_at desc limit 1`
+    );
+    const invoiceId = created.rows[0].id;
+    assert.equal(created.rows[0].total_xof, 10000);
+    await queryAs(users.platform, `select public.admin_platform_command('payment.record', jsonb_build_object(
+      'invoice_id', '${invoiceId}', 'amount_xof', 4000,
+      'method', 'wave', 'status', 'recorded', 'reference', 'WAVE-PGLITE-1'
+    ))`);
+    let state = await db.query(`select status from public.platform_invoices where id = '${invoiceId}'`);
+    assert.equal(state.rows[0].status, 'issued');
+    await queryAs(users.platform, `select public.admin_platform_command('payment.record', jsonb_build_object(
+      'invoice_id', '${invoiceId}', 'amount_xof', 6000,
+      'method', 'orange_money', 'status', 'recorded', 'reference', 'OM-PGLITE-1'
+    ))`);
+    state = await db.query(`select status from public.platform_invoices where id = '${invoiceId}'`);
+    assert.equal(state.rows[0].status, 'paid');
+    await queryAs(users.platform, `select public.admin_platform_command('payment.record', jsonb_build_object(
+      'invoice_id', '${invoiceId}', 'amount_xof', 2000,
+      'method', 'wave', 'status', 'refunded', 'reference', 'REFUND-PGLITE-1'
+    ))`);
+    state = await db.query(`select status from public.platform_invoices where id = '${invoiceId}'`);
+    assert.equal(state.rows[0].status, 'issued');
+    await queryAs(users.platform, `select public.admin_platform_command('credit_note.create', jsonb_build_object(
+      'invoice_id', '${invoiceId}', 'amount_xof', 2000, 'reason', 'Avoir de test PGlite'
+    ))`);
+    state = await db.query(`select status from public.platform_invoices where id = '${invoiceId}'`);
+    assert.equal(state.rows[0].status, 'paid');
+    const audit = await db.query(
+      `select metadata from public.audit_log
+        where action like 'platform.platform_%' and resource_id = '${invoiceId}'
+        order by created_at desc limit 1`
+    );
+    assert.ok(audit.rows.length > 0);
+    assert.ok('before' in audit.rows[0].metadata);
+    assert.ok('after' in audit.rows[0].metadata);
+    await expectFailure('un avoir ne peut pas dépasser le solde après encaissements', async () => {
+      await queryAs(users.platform, `select public.admin_platform_command('credit_note.create', jsonb_build_object(
+        'invoice_id', '${invoiceId}', 'amount_xof', 1, 'reason', 'Avoir excessif interdit'
+      ))`);
+    }, /solde restant/i);
+    await expectFailure('un paiement Mobile Money confirmé exige une référence opérateur', async () => {
+      await queryAs(users.platform, `select public.admin_platform_command('invoice.create', jsonb_build_object(
+        'organization_id', '10000000-0000-4000-8000-000000000001',
+        'shop_id', '20000000-0000-4000-8000-000000000001',
+        'period_start', date '2026-11-01', 'period_end', date '2026-12-01',
+        'due_on', date '2026-12-01', 'subtotal_xof', 5000,
+        'discount_xof', 0, 'note', 'Facture référence obligatoire PGlite'
+      ))`);
+      const referenceInvoice = await db.query(`select id from public.platform_invoices where note = 'Facture référence obligatoire PGlite'`);
+      await queryAs(users.platform, `select public.admin_platform_command('payment.record', jsonb_build_object(
+        'invoice_id', '${referenceInvoice.rows[0].id}', 'amount_xof', 100,
+        'method', 'wave', 'status', 'recorded', 'reference', ''
+      ))`);
+    }, /référence opérateur/i);
+    await expectFailure('un tenant ne peut pas appeler la commande de facturation admin', async () => {
+      await queryAs(users.ownerA, `select public.admin_platform_command('payment.record', '{}'::jsonb)`);
+    }, /réservé au super-admin/i);
+  });
+
+  await check('le support isole les tenants et masque les notes internes', async () => {
+    const adminSnapshot = await queryAs(users.platform, `select public.admin_platform_command('ticket.create', jsonb_build_object(
+      'organization_id', '10000000-0000-4000-8000-000000000001',
+      'shop_id', '20000000-0000-4000-8000-000000000001',
+      'subject', 'Ticket PGlite privé', 'priority', 'high',
+      'body', 'Note interne initiale', 'internal', true
+    )) as snapshot`);
+    const ticket = adminSnapshot.rows[0].snapshot.tickets.find((entry) => entry.subject === 'Ticket PGlite privé');
+    assert.ok(ticket);
+    await queryAs(users.platform, `select public.admin_platform_command('ticket.reply', jsonb_build_object(
+      'ticket_id', '${ticket.id}', 'body', 'Réponse visible du support', 'internal', false
+    ))`);
+    const ownerA = await queryAs(users.ownerA, 'select public.get_my_support_snapshot() as snapshot');
+    const visible = ownerA.rows[0].snapshot.tickets.find((entry) => entry.id === ticket.id);
+    assert.ok(visible);
+    assert.equal(visible.messages.length, 1);
+    assert.equal(visible.messages[0].body, 'Réponse visible du support');
+    const ownerB = await queryAs(users.ownerB, 'select public.get_my_support_snapshot() as snapshot');
+    assert.ok(!ownerB.rows[0].snapshot.tickets.some((entry) => entry.id === ticket.id));
+    await expectFailure('un autre tenant ne peut pas répondre au ticket', async () => {
+      await queryAs(users.ownerB, `select public.tenant_support_command('reply', jsonb_build_object(
+        'ticket_id', '${ticket.id}', 'body', 'Intrusion interdite'
+      ))`);
+    }, /introuvable|refusé/i);
+  });
+
+  await check('une campagne cible la maintenance et prépare les messages sans les marquer envoyés', async () => {
+    await queryAs(users.platform, `select public.admin_platform_command('campaign.save', jsonb_build_object(
+      'title', 'Maintenance Alpha PGlite', 'body', 'Intervention ciblée fictive',
+      'tone', 'warning', 'audience_type', 'organization',
+      'audience_value', '10000000-0000-4000-8000-000000000001',
+      'channels', jsonb_build_array('in_app', 'email', 'whatsapp'), 'status', 'published', 'maintenance', true
+    ))`);
+    const ownerA = await queryAs(users.ownerA, 'select public.get_platform_public_config() as config');
+    assert.equal(ownerA.rows[0].config.maintenance_mode, true);
+    assert.equal(ownerA.rows[0].config.support_message, 'Intervention ciblée fictive');
+    const ownerB = await queryAs(users.ownerB, 'select public.get_platform_public_config() as config');
+    assert.equal(ownerB.rows[0].config.maintenance_mode, false);
+    const outbound = await db.query(`select channel, recipient, status from public.platform_outbound_messages where subject = 'Maintenance Alpha PGlite'`);
+    assert.ok(outbound.rows.length > 0);
+    assert.ok(outbound.rows.every((entry) => entry.status === 'queued'));
+    assert.equal(outbound.rows.find((entry) => entry.channel === 'email')?.recipient, 'proprietaire-a@example.test');
+    assert.equal(outbound.rows.find((entry) => entry.channel === 'whatsapp')?.recipient, '+2250700000101');
+    await db.query(`update public.platform_campaigns set status = 'archived' where title = 'Maintenance Alpha PGlite'`);
+    const cancelled = await db.query(`select status from public.platform_outbound_messages where subject = 'Maintenance Alpha PGlite' and channel <> 'in_app'`);
+    assert.ok(cancelled.rows.length > 0);
+    assert.ok(cancelled.rows.every((entry) => entry.status === 'cancelled'));
+  });
+
+  await check('le cycle d’automatisation passe une facture échue en retard', async () => {
+    await queryAs(users.platform, `select public.admin_platform_command('invoice.create', jsonb_build_object(
+      'organization_id', '10000000-0000-4000-8000-000000000001',
+      'shop_id', '20000000-0000-4000-8000-000000000001',
+      'period_start', date '2020-01-01', 'period_end', date '2020-02-01',
+      'due_on', date '2020-02-01', 'subtotal_xof', 5000,
+      'discount_xof', 0, 'note', 'Facture échue PGlite'
+    ))`);
+    await queryAs(users.platform, `select public.admin_platform_command('automation.run', '{}'::jsonb)`);
+    const overdue = await db.query(`select status from public.platform_invoices where note = 'Facture échue PGlite'`);
+    assert.equal(overdue.rows[0].status, 'overdue');
+    const runs = await db.query(`select summary from public.platform_automation_runs order by created_at desc limit 1`);
+    assert.ok(Number(runs.rows[0].summary.overdue_invoices) >= 1);
+  });
+
+  await check('une offre inactive conserve ses quotas et expose les modules de la formule effective', async () => {
+    await db.query(`update public.shop_subscriptions set plan = 'business', status = 'actif', requested_plan = null, requested_at = null where shop_id = '20000000-0000-4000-8000-000000000001'`);
+    await db.query(`update public.platform_plan_offers
+      set active = false, max_users = 9, modules = array['pos', 'priority_support']
+      where plan = 'business'`);
+    try {
+      const state = await queryAs(users.ownerA, `select public.get_shop_subscription_state('20000000-0000-4000-8000-000000000001') as state`);
+      assert.equal(state.rows[0].state.effective_plan, 'business');
+      assert.equal(state.rows[0].state.limits.users, 9);
+      assert.deepEqual(state.rows[0].state.modules, ['pos', 'priority_support']);
+      await expectFailure('une formule inactive ne peut plus être demandée', async () => {
+        await queryAs(users.ownerA, `select public.request_subscription_plan('20000000-0000-4000-8000-000000000001', 'business')`);
+      }, /plus proposée/i);
+    } finally {
+      await db.query(`update public.platform_plan_offers
+        set active = true, max_users = null,
+            modules = array['pos', 'catalog', 'daily_reports', 'manual_backup', 'customer_portal', 'delivery_tracking', 'delivery_proof', 'detailed_reports', 'multi_shop', 'priority_support']
+        where plan = 'business'`);
+    }
+  });
+
+  await check('les sessions du compte admin alimentent historique et alerte inhabituelle', async () => {
+    await db.query(`insert into auth.sessions (user_id, ip, user_agent) values
+      ('${users.platform}', '127.0.0.1', 'Navigateur initial PGlite')`);
+    await db.query(`insert into auth.sessions (user_id, ip, user_agent) values
+      ('${users.platform}', '127.0.0.2', 'Nouvel appareil PGlite')`);
+    const result = await queryAs(users.platform, 'select public.get_platform_operations_snapshot() as snapshot');
+    assert.ok(result.rows[0].snapshot.sessions.length >= 2);
+    assert.ok(result.rows[0].snapshot.security_events.length >= 2);
+    assert.ok(result.rows[0].snapshot.notifications.some((entry) => entry.kind === 'security'));
+  });
+
+  await check('le propriétaire enregistre une sauvegarde métier avec ses identifiants historiques', async () => {
+    const result = await queryAs(
+      users.ownerA,
+      `select public.save_workspace_snapshot($1, $2::jsonb, $3) as save`,
+      [
+        '20000000-0000-4000-8000-000000000001',
+        JSON.stringify({
+          customers: [{ id: 'client-local-1', name: 'Cliente Historique', phone: '0700000000' }],
+          orders: [{ id: 'order-local-1', ticketNumber: 42, customerId: 'client-local-1', status: 'pending' }],
+          employees: [{ id: 'employee-local-1', fullName: 'Employé Historique' }],
+          expenses: [{ id: 'expense-local-1', amountXof: 2500 }],
+          cashRegister: { status: 'open', currentCashXof: 15000 },
+          nextTicketNumber: 43,
+        }),
+        0,
+      ]
+    );
+    assert.equal(result.rows[0].save.version, 1);
+    assert.equal(result.rows[0].save.sections.length, 6);
+  });
+
+  await check('la reconnexion restaure la sauvegarde exacte et les permissions du propriétaire', async () => {
+    const result = await queryAs(
+      users.ownerA,
+      `select public.get_workspace_snapshot('20000000-0000-4000-8000-000000000001') as snapshot`
+    );
+    const snapshot = result.rows[0].snapshot;
+    assert.equal(snapshot.version, 1);
+    assert.equal(snapshot.data.orders[0].id, 'order-local-1');
+    assert.equal(snapshot.data.orders[0].ticketNumber, 42);
+    assert.equal(snapshot.data.orders[0].customerId, 'client-local-1');
+    assert.equal(snapshot.data.nextTicketNumber, 43);
+    assert.equal(snapshot.permissions.expenses.write, true);
+  });
+
+  await check('la caisse lit ses sections sans recevoir les dépenses ni les présences', async () => {
+    const result = await queryAs(
+      users.cashierA1,
+      `select public.get_workspace_snapshot('20000000-0000-4000-8000-000000000001') as snapshot`
+    );
+    const snapshot = result.rows[0].snapshot;
+    assert.equal(snapshot.data.customers[0].id, 'client-local-1');
+    assert.equal(snapshot.data.cashRegister.currentCashXof, 15000);
+    assert.ok(!('expenses' in snapshot.data));
+    assert.ok(!('attendanceRecords' in snapshot.data));
+    assert.equal(snapshot.permissions.employees.read, true);
+    assert.equal(snapshot.permissions.employees.write, false);
+  });
+
+  await check('la caisse peut enregistrer ses clients avec contrôle de version', async () => {
+    const result = await queryAs(
+      users.cashierA1,
+      `select public.save_workspace_snapshot($1, $2::jsonb, $3) as save`,
+      [
+        '20000000-0000-4000-8000-000000000001',
+        JSON.stringify({ customers: [{ id: 'client-local-1', name: 'Cliente Mise à Jour' }] }),
+        1,
+      ]
+    );
+    assert.equal(result.rows[0].save.version, 2);
+  });
+
+  await expectFailure('la caisse ne peut pas écrire le personnel dans la sauvegarde', async () => {
+    await queryAs(
+      users.cashierA1,
+      `select public.save_workspace_snapshot($1, $2::jsonb, $3)`,
+      [
+        '20000000-0000-4000-8000-000000000001',
+        JSON.stringify({ employees: [{ id: 'employee-forbidden' }] }),
+        2,
+      ]
+    );
+  }, /rôle ne permet pas/i);
+
+  await check('l’atelier peut synchroniser le stock sans recevoir le CRM ni les dépenses', async () => {
+    const before = await queryAs(
+      users.workshopA2,
+      `select public.get_workspace_snapshot('20000000-0000-4000-8000-000000000002') as snapshot`
+    );
+    assert.ok(!('customers' in before.rows[0].snapshot.data));
+    assert.ok(!('expenses' in before.rows[0].snapshot.data));
+    const result = await queryAs(
+      users.workshopA2,
+      `select public.save_workspace_snapshot($1, $2::jsonb, $3) as save`,
+      [
+        '20000000-0000-4000-8000-000000000002',
+        JSON.stringify({ stockMovements: [{ id: 'movement-local-1', type: 'out', quantity: 2 }] }),
+        0,
+      ]
+    );
+    assert.equal(result.rows[0].save.version, 1);
+  });
+
+  await expectFailure('une autre organisation ne peut pas lire la sauvegarde du pressing', async () => {
+    await queryAs(
+      users.ownerB,
+      `select public.get_workspace_snapshot('20000000-0000-4000-8000-000000000001')`
+    );
+  }, /introuvable ou inaccessible/i);
+
+  await expectFailure('une écriture sur une ancienne version est refusée', async () => {
+    await queryAs(
+      users.ownerA,
+      `select public.save_workspace_snapshot($1, $2::jsonb, $3)`,
+      [
+        '20000000-0000-4000-8000-000000000001',
+        JSON.stringify({ nextTicketNumber: 44 }),
+        0,
+      ]
+    );
+  }, /Conflit de version/i);
+
+  await expectFailure('le super-admin sans rattachement ne lit pas la sauvegarde métier', async () => {
+    await queryAs(
+      users.platform,
+      `select public.get_workspace_snapshot('20000000-0000-4000-8000-000000000001')`
+    );
+  }, /introuvable ou inaccessible/i);
+
+  await expectFailure('la table de sauvegarde ne peut pas être lue directement par un compte authentifié', async () => {
+    await queryAs(users.ownerA, 'select data from public.workspace_snapshots');
+  }, /permission denied/i);
+
+  await expectFailure('une section arbitraire est refusée par la sauvegarde', async () => {
+    await queryAs(
+      users.ownerA,
+      `select public.save_workspace_snapshot($1, $2::jsonb, $3)`,
+      [
+        '20000000-0000-4000-8000-000000000001',
+        JSON.stringify({ platformSecrets: [{ id: 'forbidden' }] }),
+        2,
+      ]
+    );
+  }, /Section de sauvegarde inconnue/i);
 
   console.log(`\nPhase 0 PGlite : ${passed} vérifications réussies.`);
 } catch (error) {

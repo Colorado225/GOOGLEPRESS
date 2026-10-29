@@ -106,6 +106,53 @@
   }
 }
 
+/* ——— Champs du comptoir : style commun, lisible et tactile ——— */
+@layer components {
+  .pos-field-label {
+    @apply mb-1.5 flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400;
+  }
+
+  .pos-field {
+    @apply block min-h-[44px] w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-[13px] font-medium text-zinc-900 caret-blue-600 shadow-[inset_0_1px_2px_rgba(9,9,11,0.035),0_1px_2px_rgba(9,9,11,0.025)] outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:font-normal placeholder:text-zinc-400 hover:border-zinc-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950/70 dark:text-zinc-100 dark:caret-blue-400 dark:placeholder:text-zinc-500 dark:hover:border-zinc-600 dark:focus:border-blue-400 dark:focus:bg-zinc-950 dark:focus:ring-blue-400/10 dark:disabled:border-zinc-800 dark:disabled:bg-zinc-900 dark:disabled:text-zinc-600;
+  }
+
+  .pos-field-compact {
+    @apply min-h-[36px] rounded-lg px-2.5 py-1.5 text-[12px];
+  }
+
+  .pos-field-teal {
+    @apply caret-teal-600 focus:border-teal-500 focus:ring-teal-500/10 dark:caret-teal-400 dark:focus:border-teal-400 dark:focus:ring-teal-400/10;
+  }
+
+  .pos-field-icon {
+    @apply pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 transition-colors duration-200 group-focus-within:text-blue-600 dark:text-zinc-500 dark:group-focus-within:text-blue-400;
+  }
+
+  .pos-field-affix {
+    @apply pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 rounded-md bg-zinc-100 px-2 py-1 text-[9.5px] font-extrabold tracking-wide text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400;
+  }
+
+  textarea.pos-field {
+    @apply min-h-[88px] resize-y leading-relaxed;
+  }
+
+  select.pos-field {
+    @apply cursor-pointer appearance-none pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.8rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+  }
+
+  input[type='number'].pos-field {
+    @apply tabular-nums;
+  }
+}
+
+.dark select.pos-field {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
 /* ——— Révélation au défilement (composant common/Reveal) ——— */
 .reveal {
   opacity: 0;

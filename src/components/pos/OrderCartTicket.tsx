@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
-import { calculateOrderTotals } from '../../lib/pricing';
+import { calculateOrderTotals, isOrderLineExpress, resolveOrderPickupOption } from '../../lib/pricing';
+import { formatPressingWeight } from '../../lib/pressing';
 import { formatPromised, isValidISODate, nowDateTime, resolvePromisedDate, todayISO } from '../../lib/dates';
 import { formatLogisticsSchedule } from '../../lib/logistics';
 import { resolveShopDisplayName } from '../../lib/shopIdentity';
@@ -33,6 +34,7 @@ export const OrderCartTicket: React.FC = () => {
   } = useApp();
 
   const wantsHomeDelivery = orderFulfillmentMethod === 'home_delivery';
+  const effectivePickupOption = resolveOrderPickupOption(cartLines, pickupOption);
   const deliveryDetailsMissing =
     wantsHomeDelivery &&
     (!deliveryAddress.trim() || !isValidISODate(deliveryDateISO) || deliveryDateISO < todayISO());
@@ -112,13 +114,22 @@ export const OrderCartTicket: React.FC = () => {
                 <div className="flex-1 pr-2">
                   <p className="font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
                     <span className="tabular-nums">
-                      {line.quantity} {line.unitLabel === 'forfait' ? 'forfait' : '×'}
+                      {line.pricingType === 'kilo'
+                        ? `${formatPressingWeight(line.weightKg ?? line.quantity)} kg`
+                        : line.unitLabel === 'forfait'
+                          ? `${line.quantity} forfait${line.quantity > 1 ? 's' : ''}`
+                          : `${line.quantity} ×`}
                     </span>{' '}
                     {line.name}{' '}
                     <span className="font-normal text-zinc-500 dark:text-zinc-400 text-[11.5px]">— {line.serviceType}</span>
+                    {isOrderLineExpress(line, pickupOption) && (
+                      <span className="ml-1 inline-flex rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                        Express 24h
+                      </span>
+                    )}
                   </p>
                   <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 truncate">
-                    {line.notes || `${formatFCFA(line.unitPrice)} / pièce`}
+                    {line.notes || `${formatFCFA(line.unitPrice)} / ${line.unitLabel || 'pièce'}`}
                   </p>
                   <LineColorSelect line={line} />
                 </div>
@@ -185,7 +196,7 @@ export const OrderCartTicket: React.FC = () => {
           </div>
           {expressFee > 0 && (
             <div className="flex justify-between text-amber-800 dark:text-amber-200">
-              <span>Type de service express 24h (×2)</span>
+              <span>Supplément Express 24h — lignes sélectionnées (×2)</span>
               <span className="font-semibold tabular-nums">+{formatFCFA(expressFee)}</span>
             </div>
           )}
@@ -292,12 +303,13 @@ export const OrderCartTicket: React.FC = () => {
             <div className="relative flex-1">
               <input
                 type="number"
+                aria-label="Acompte perçu"
                 value={customDeposit}
                 onChange={(e) => handleDepositChange(e.target.value)}
-                className="border border-zinc-300 dark:border-zinc-600 rounded-lg px-3 py-2 w-full font-bold text-[15px] text-zinc-900 dark:text-zinc-100 tabular-nums focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+                className="pos-field pr-[74px] text-[15px] font-bold"
                 placeholder="Montant FCFA"
               />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400 dark:text-zinc-500 font-semibold">
+              <span className="pos-field-affix">
                 FCFA
               </span>
             </div>
@@ -344,7 +356,7 @@ export const OrderCartTicket: React.FC = () => {
           Message à copier après validation : « Merci {selectedCustomer?.name?.split(' ')[0] ?? 'cher client'} ! Ticket TK-{nextTicketNumber} : {formatFCFA(finalTotal)}.{' '}
           {wantsHomeDelivery
             ? `Livraison ${formatLogisticsSchedule(deliveryDateISO, deliveryTimeSlot).toLowerCase()}`
-            : `Retrait ${formatPromised(resolvePromisedDate(pickupOption, promisedDateISO)).toLowerCase()}`}
+            : `Retrait ${formatPromised(resolvePromisedDate(effectivePickupOption, promisedDateISO)).toLowerCase()}`}
           . {resolveShopDisplayName(shopSettings, workspace)} »
         </p>
       </div>

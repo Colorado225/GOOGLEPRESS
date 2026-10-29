@@ -1,20 +1,19 @@
-import type { ClothingItem, PressingServiceType, PressingSettings } from '../types';
+import type {
+  ClothingItem,
+  PressingPricingMode,
+  PressingServiceType,
+  PressingSettings,
+  PricingType,
+} from '../types';
 
 /**
- * Prestations du pressing.
- *
- * Un **type de prestation** est un traitement appliqué au vêtement :
- * « Lavage + Repassage », « Nettoyage à sec », « Repassage seul », « Teinture »…
- * La liste est réglée dans les Paramètres, avec le prix de chaque vêtement pour
- * chaque prestation.
- *
- * « Express 24h » n'est PAS un traitement : c'est un **type de service**
- * (normal ou express) qui s'applique à la commande entière et double le
- * montant des prestations (voir `EXPRESS_SURCHARGE_RATE` dans `pricing.ts`).
+ * Prestations du pressing : traitement, modèle de facturation et tarifs.
+ * « Express 24h » reste un délai ligne par ligne, jamais une prestation.
  */
 
 export const MAX_PRESSING_SERVICES = 8;
 export const MAX_PRESSING_PRICE_XOF = 1_000_000;
+export const MAX_PRESSING_WEIGHT_KG = 1_000;
 
 /** Prestations proposées au départ ; libellés modifiables dans les Paramètres. */
 export const DEFAULT_PRESSING_SERVICES: readonly PressingServiceType[] = [
@@ -29,7 +28,7 @@ export const EMPTY_PRESSING_SETTINGS: PressingSettings = {
   prices: {},
 };
 
-/** Clé du prix d'un article pour une prestation. */
+/** Clé du prix d'un article pour une prestation à la pièce. */
 export const pressingPriceKey = (itemId: string, serviceId: string): string =>
   `${itemId}:${serviceId}`;
 
@@ -42,14 +41,28 @@ const toPrice = (value: unknown): number | null => {
   return rounded;
 };
 
+const toWeight = (value: unknown): number | null => {
+  const numeric =
+    typeof value === 'string' ? Number(value.replace(',', '.').replace(/[\s\u00a0]/g, '')) : value;
+  if (typeof numeric !== 'number' || !Number.isFinite(numeric)) return null;
+  const rounded = Math.round(numeric * 100) / 100;
+  if (rounded <= 0 || rounded > MAX_PRESSING_WEIGHT_KG) return null;
+  return rounded;
+};
+
+const isPrice = (value: unknown): value is number => toPrice(value) !== null;
+const isWeight = (value: unknown): value is number => toWeight(value) !== null;
+
 const toText = (value: unknown): string =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
 
+export const getPressingPricingMode = (
+  service: Pick<PressingServiceType, 'pricingMode'> | undefined
+): PressingPricingMode => service?.pricingMode ?? 'unit';
+
 /**
- * Nettoie les prestations lues depuis la sauvegarde locale : libellés vides
- * écartés, doublons supprimés, prix hors bornes ignorés. Si plus aucune
- * prestation ne subsiste, la liste par défaut revient — sans quoi le comptoir
- * n'aurait plus rien à proposer.
+ * Nettoie les prestations lues depuis la sauvegarde locale. L'absence de
+ * `pricingMode` conserve exactement l'ancienne facturation à la pièce.
  */
 export const normalizePressingSettings = (value: unknown): PressingSettings => {
   const source = (value && typeof value === 'object' ? value : {}) as Partial<PressingSettings>;
@@ -59,12 +72,37 @@ export const normalizePressingSettings = (value: unknown): PressingSettings => {
 
   for (const rawService of rawServices) {
     if (!rawService || typeof rawService !== 'object') continue;
-    const label = toText((rawService as PressingServiceType).label);
+    const candidate = rawService as PressingServiceType;
+    const label = toText(candidate.label);
     if (!label) continue;
-    const id = toText((rawService as PressingServiceType).id) || `svc-${services.length + 1}`;
+    const id = toText(candidate.id) || `svc-${services.length + 1}`;
     if (seenIds.has(id)) continue;
     seenIds.add(id);
-    services.push({ id, label });
+
+    const mode = getPressingPricingMode(candidate);
+    if (mode === 'kilo') {
+      const kiloPrice = toPrice(candidate.kiloPrice);
+      services.push({
+        id,
+        label,
+        pricingMode: 'kilo',
+        ...(kiloPrice !== null ? { kiloPrice } : {}),
+      });
+    } else if (mode === 'forfait') {
+      const packageWeightKg = toWeight(candidate.packageWeightKg);
+      const packagePrice = toPrice(candidate.packagePrice);
+      const extraKiloPrice = toPrice(candidate.extraKiloPrice);
+      services.push({
+        id,
+        label,
+        pricingMode: 'forfait',
+        ...(packageWeightKg !== null ? { packageWeightKg } : {}),
+        ...(packagePrice !== null ? { packagePrice } : {}),
+        ...(extraKiloPrice !== null ? { extraKiloPrice } : {}),
+      });
+    } else {
+      services.push({ id, label });
+    }
     if (services.length >= MAX_PRESSING_SERVICES) break;
   }
 
@@ -108,6 +146,22 @@ export const validatePressingSettings = (settings: PressingSettings): string | n
     if (!service.id.trim()) return 'Identifiant de prestation manquant.';
     if (ids.has(service.id)) return `La prestation « ${label} » est en double.`;
     ids.add(service.id);
+
+    const mode = getPressingPricingMode(service);
+    if (mode === 'kilo' && !isPrice(service.kiloPrice)) {
+      return `Définissez un prix au kilo valide pour « ${label} ».`;
+    }
+    if (mode === 'forfait') {
+      if (!isWeight(service.packageWeightKg)) {
+        return `Définissez le poids couvert par le forfait « ${label} ».`;
+      }
+      if (!isPrice(service.packagePrice)) {
+        return `Définissez un prix de forfait valide pour « ${label} ».`;
+      }
+      if (service.extraKiloPrice !== undefined && !isPrice(service.extraKiloPrice)) {
+        return `Le prix du kilo supplémentaire est invalide pour « ${label} ».`;
+      }
+    }
   }
   for (const [key, price] of Object.entries(settings.prices)) {
     if (!Number.isInteger(price) || price < 0 || price > MAX_PRESSING_PRICE_XOF) {
@@ -124,12 +178,7 @@ export const getPressingServiceLabel = (
 ): string =>
   settings.services.find((service) => service.id === serviceId)?.label ?? '';
 
-/**
- * Prix d'un vêtement pour une prestation.
- *
- * Le prix réglé dans les Paramètres prime ; à défaut, le prix de base du
- * catalogue s'applique (aucun tarif n'est inventé).
- */
+/** Prix d'un vêtement pour une prestation à la pièce. */
 export const resolvePressingPrice = (
   item: Pick<ClothingItem, 'id' | 'unitPrice'>,
   settings: PressingSettings,
@@ -146,19 +195,81 @@ export const hasPressingPrice = (
   serviceId: string
 ): boolean => Number.isInteger(settings.prices[pressingPriceKey(itemId, serviceId)]);
 
+export const formatPressingWeight = (weightKg: number): string =>
+  String(Math.round(weightKg * 100) / 100).replace('.', ',');
+
+const weightedItem = (
+  service: PressingServiceType,
+  kind: 'kilo' | 'forfait' | 'extra'
+): ClothingItem => {
+  const packageWeight = service.packageWeightKg ?? 0;
+  const config = {
+    kilo: {
+      suffix: 'kilo',
+      name: `Linge au kilo — ${service.label}`,
+      unitPrice: service.kiloPrice ?? 0,
+      pricingType: 'kilo' as const,
+      unitLabel: 'kg',
+      emoji: '⚖️',
+    },
+    forfait: {
+      suffix: 'forfait',
+      name: `Forfait ${formatPressingWeight(packageWeight)} kg — ${service.label}`,
+      unitPrice: service.packagePrice ?? 0,
+      pricingType: 'unit' as const,
+      unitLabel: 'forfait',
+      emoji: '🧺',
+    },
+    extra: {
+      suffix: 'forfait-extra',
+      name: `Kilos supplémentaires — ${service.label}`,
+      unitPrice: service.extraKiloPrice ?? 0,
+      pricingType: 'kilo' as const,
+      unitLabel: 'kg',
+      emoji: '⚖️',
+    },
+  }[kind];
+  return {
+    id: `pressing:${service.id}:${config.suffix}`,
+    name: config.name,
+    category: 'all',
+    serviceCategory: 'pressing',
+    unitPrice: config.unitPrice,
+    pricingType: config.pricingType,
+    unitLabel: config.unitLabel,
+    emoji: config.emoji,
+    description: service.label,
+  };
+};
+
+/** Articles de catalogue nécessaires à une prestation au poids ou au forfait. */
+const buildWeightedCatalogItems = (service: PressingServiceType): ClothingItem[] => {
+  const mode = getPressingPricingMode(service);
+  if (mode === 'kilo') {
+    return isPrice(service.kiloPrice) ? [weightedItem(service, 'kilo')] : [];
+  }
+  if (mode === 'forfait' && isWeight(service.packageWeightKg) && isPrice(service.packagePrice)) {
+    return [
+      weightedItem(service, 'forfait'),
+      ...(isPrice(service.extraKiloPrice) ? [weightedItem(service, 'extra')] : []),
+    ];
+  }
+  return [];
+};
+
 export interface PressingCatalogEntry {
   legacyKey: string;
   name: string;
   unitPrice: number;
   unitLabel: string;
+  pricingType: PricingType;
   serviceType: string;
   sortOrder: number;
 }
 
 /**
- * Lignes de catalogue à refléter côté Supabase : un article par vêtement et
- * par prestation, à clé stable (`pressing:<prestation>:<article>`), pour que
- * la RPC serveur tarife la bonne prestation.
+ * Lignes de catalogue à refléter côté Supabase. Un forfait est un article
+ * `unit` ; ses kilos supplémentaires ont leur propre article `kilo`.
  */
 export const buildPressingCatalogEntries = (
   items: readonly ClothingItem[],
@@ -168,6 +279,22 @@ export const buildPressingCatalogEntries = (
   let sortOrder = 10;
 
   for (const service of settings.services) {
+    if (getPressingPricingMode(service) !== 'unit') {
+      for (const weighted of buildWeightedCatalogItems(service)) {
+        entries.push({
+          legacyKey: weighted.id,
+          name: weighted.name,
+          unitPrice: weighted.unitPrice,
+          unitLabel: weighted.unitLabel ?? (weighted.pricingType === 'kilo' ? 'kg' : 'forfait'),
+          pricingType: weighted.pricingType,
+          serviceType: service.label,
+          sortOrder,
+        });
+        sortOrder += 10;
+      }
+      continue;
+    }
+
     for (const item of items) {
       if (item.serviceCategory !== 'pressing' && item.serviceCategory !== 'both') continue;
       entries.push({
@@ -175,6 +302,7 @@ export const buildPressingCatalogEntries = (
         name: `${item.name} — ${service.label}`,
         unitPrice: resolvePressingPrice(item, settings, service.id),
         unitLabel: item.unitLabel || 'pièce',
+        pricingType: 'unit',
         serviceType: service.label,
         sortOrder,
       });
@@ -183,4 +311,95 @@ export const buildPressingCatalogEntries = (
   }
 
   return entries;
+};
+
+export interface PressingWeightQuoteBlock {
+  kind: 'kilo' | 'forfait' | 'extra';
+  item: ClothingItem;
+  quantity: number;
+  weightKg: number;
+  subtotal: number;
+}
+
+export interface PressingWeightQuote {
+  weightKg: number;
+  blocks: PressingWeightQuoteBlock[];
+  total: number;
+}
+
+/**
+ * Devis d'une prestation au kilo ou au forfait. Le poids du bloc forfait est
+ * limité au poids couvert ; le reste devient une ligne `extra`, ce qui évite
+ * de compter deux fois les kilos dans le récapitulatif.
+ */
+export const quotePressingWeightService = (
+  service: PressingServiceType,
+  rawWeightKg: number
+): { quote: PressingWeightQuote | null; error: string | null } => {
+  const weightKg = toWeight(rawWeightKg);
+  if (weightKg === null) {
+    return { quote: null, error: `Indiquez un poids entre 0,01 et ${MAX_PRESSING_WEIGHT_KG} kg.` };
+  }
+
+  const mode = getPressingPricingMode(service);
+  if (mode === 'kilo') {
+    if (!isPrice(service.kiloPrice)) {
+      return { quote: null, error: `Définissez d’abord le prix au kilo de « ${service.label} ».` };
+    }
+    const item = weightedItem(service, 'kilo');
+    const block = {
+      kind: 'kilo' as const,
+      item,
+      quantity: 1,
+      weightKg,
+      subtotal: Math.round(item.unitPrice * weightKg),
+    };
+    return { quote: { weightKg, blocks: [block], total: block.subtotal }, error: null };
+  }
+
+  if (mode !== 'forfait') {
+    return { quote: null, error: 'Cette prestation est facturée à la pièce.' };
+  }
+  if (!isWeight(service.packageWeightKg) || !isPrice(service.packagePrice)) {
+    return { quote: null, error: `Complétez d’abord le forfait « ${service.label} » dans les Paramètres.` };
+  }
+
+  const includedWeight = service.packageWeightKg;
+  const baseWeight = Math.min(weightKg, includedWeight);
+  const item = weightedItem(service, 'forfait');
+  const blocks: PressingWeightQuoteBlock[] = [
+    {
+      kind: 'forfait',
+      item,
+      quantity: 1,
+      weightKg: baseWeight,
+      subtotal: item.unitPrice,
+    },
+  ];
+  const extraWeight = Math.round((weightKg - includedWeight) * 100) / 100;
+  if (extraWeight > 0) {
+    if (!isPrice(service.extraKiloPrice)) {
+      return {
+        quote: null,
+        error: `Ce forfait est limité à ${formatPressingWeight(includedWeight)} kg. Définissez le prix du kilo supplémentaire dans les Paramètres.`,
+      };
+    }
+    const extraItem = weightedItem(service, 'extra');
+    blocks.push({
+      kind: 'extra',
+      item: extraItem,
+      quantity: 1,
+      weightKg: extraWeight,
+      subtotal: Math.round(extraItem.unitPrice * extraWeight),
+    });
+  }
+
+  return {
+    quote: {
+      weightKg,
+      blocks,
+      total: blocks.reduce((total, block) => total + block.subtotal, 0),
+    },
+    error: null,
+  };
 };

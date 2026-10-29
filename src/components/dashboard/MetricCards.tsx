@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { parseStoredDateTime } from '../../lib/dates';
 import { getPressingAlerts, getReadyOrdersToMarkNotified } from '../../lib/alerts';
+import { toFiniteNumber } from '../../lib/numbers';
 
 const isToday = (value: string): boolean => {
   const date = parseStoredDateTime(value);
@@ -19,19 +20,30 @@ export const MetricCards: React.FC = () => {
   const { cashRegister, orders, products } = useApp();
 
   const todayOrders = orders.filter((order) => isToday(order.receivedAt));
-  const todayOrdersTotal = todayOrders.reduce((sum, order) => sum + order.total, 0);
+  const todayOrdersTotal = todayOrders.reduce(
+    (sum, order) => sum + toFiniteNumber(order.total),
+    0
+  );
   const averageTodayTicket =
     todayOrders.length > 0 ? Math.round(todayOrdersTotal / todayOrders.length) : null;
 
   const activeOrders = orders.filter((order) => order.status !== 'delivered');
   const activeArticles = activeOrders.reduce(
-    (sum, order) => sum + order.lines.reduce((lineSum, line) => lineSum + line.quantity, 0),
+    (sum, order) =>
+      sum +
+      (Array.isArray(order.lines) ? order.lines : []).reduce(
+        (lineSum, line) => lineSum + toFiniteNumber(line.quantity),
+        0
+      ),
     0
   );
   const lateOrdersCount = activeOrders.filter((order) => order.isLate).length;
 
   const readyOrders = orders.filter((order) => order.status === 'ready');
-  const readyBalanceToCollect = readyOrders.reduce((sum, order) => sum + order.remainingBalance, 0);
+  const readyBalanceToCollect = readyOrders.reduce(
+    (sum, order) => sum + toFiniteNumber(order.remainingBalance),
+    0
+  );
   const readyToNotifyCount = getReadyOrdersToMarkNotified(orders).length;
   const readyMarkedCount = readyOrders.length - readyToNotifyCount;
 
@@ -56,7 +68,7 @@ export const MetricCards: React.FC = () => {
           </span>
         </div>
         <p className="text-[24px] font-extrabold text-zinc-900 dark:text-zinc-100 mt-1 tracking-tight tabular-nums">
-          {formatFCFA(cashRegister.totalAmount)}
+          {formatFCFA(toFiniteNumber(cashRegister.totalAmount))}
         </p>
         <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1">
           {averageTodayTicket === null

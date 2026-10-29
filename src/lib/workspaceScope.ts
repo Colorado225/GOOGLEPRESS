@@ -1,9 +1,9 @@
 /**
  * Portée des données de l'ERP.
  *
- * L'application conserve encore ses données métier dans le navigateur pendant
- * la migration progressive vers Supabase. Deux situations doivent donc rester
- * strictement séparées :
+ * L'application conserve une copie locale de secours et synchronise les
+ * comptes réels avec la sauvegarde Supabase de leur agence. Deux situations
+ * doivent donc rester strictement séparées :
  *
  * - `demo` : démonstration locale explicite, amorcée avec les jeux d'exemple
  *   (`INITIAL_ORDERS`, `INITIAL_CUSTOMERS`, …) ;
@@ -18,6 +18,7 @@
  */
 
 import { getInitials } from './utils';
+import type { StaffRole } from './staffAccess';
 
 export type WorkspaceDataScope = 'demo' | 'live';
 
@@ -32,6 +33,8 @@ export interface WorkspaceScope {
   userName: string | null;
   /** Rôle réel déduit du rattachement actif, en français. */
   userRoleLabel: string | null;
+  /** Code de rôle serveur, utilisé pour marquer les sections synchronisables. */
+  userRole?: StaffRole | null;
 }
 
 /** Portée par défaut : démonstration locale, aucun rattachement. */
@@ -43,6 +46,7 @@ export const DEMO_WORKSPACE_SCOPE: WorkspaceScope = {
   shopName: null,
   userName: null,
   userRoleLabel: null,
+  userRole: null,
 };
 
 const WORKSPACE_STORAGE_ROOT = 'pressingpro_workspace_';

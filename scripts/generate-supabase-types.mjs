@@ -30,6 +30,17 @@ try {
       phone text,
       raw_user_meta_data jsonb not null default '{}'::jsonb
     );
+    create table auth.sessions (
+      id uuid primary key default gen_random_uuid(),
+      user_id uuid not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      refreshed_at timestamp,
+      not_after timestamptz,
+      ip inet,
+      user_agent text,
+      aal text not null default 'aal1'
+    );
     create or replace function auth.uid()
     returns uuid
     language sql

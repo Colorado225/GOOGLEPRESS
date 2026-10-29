@@ -1,0 +1,30 @@
+import React from 'react';
+import { Activity, ArchiveRestore, CheckCircle2, Database, Play, RefreshCw, Server, ShieldAlert, Webhook } from 'lucide-react';
+import { formatPlatformDate } from '../../../lib/platformOperations';
+import { OperationBadge, OperationEmpty, OperationMetric, OperationPanel, operationSecondaryClass, type PlatformOperationPanelProps } from './ui';
+
+export const SystemPanel: React.FC<PlatformOperationPanelProps> = ({ snapshot, run, busy, refresh }) => {
+  const latest = snapshot.health_checks[0];
+  const failedOutbound = snapshot.outbound_messages.filter((entry) => entry.status === 'failed');
+  const queued = snapshot.outbound_messages.filter((entry) => entry.status === 'queued');
+  const technicalEvents = snapshot.audit.filter((entry) => /error|failed|sync|migration/i.test(entry.action)).slice(0, 12);
+  return <div className="space-y-5">
+    <section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><OperationMetric label="API Supabase" value={latest?.status === 'healthy' ? 'Opérationnelle' : latest ? 'À vérifier' : 'Non testée'} detail={latest ? formatPlatformDate(latest.checked_at) : 'Lancez un contrôle manuel'} icon={Database} tone={latest?.status === 'healthy' ? 'success' : 'warning'} /><OperationMetric label="Version applicative" value="0.1.0" detail={`Migration ${snapshot.system.latest_migration ?? 'non exposée'}`} icon={Server} /><OperationMetric label="Messages externes" value={queued.length} detail={`${failedOutbound.length} échec(s) · connecteurs requis`} icon={Webhook} tone={failedOutbound.length ? 'danger' : 'warning'} /><OperationMetric label="Automatisation" value={snapshot.system.automation_scheduled ? 'Planifiée' : 'Manuelle'} detail={snapshot.system.automation_scheduled ? 'Cycle pg_cron quotidien' : 'Bouton ou ordonnanceur externe'} icon={Activity} tone={snapshot.system.automation_scheduled ? 'success' : 'default'} /></section>
+
+    <div className="grid items-start gap-5 xl:grid-cols-2">
+      <OperationPanel title="Contrôle de santé" description="La vérification appelle une RPC PostgreSQL, enregistre un horodatage serveur et mesure les files externes. Elle ne prétend pas tester les services non connectés." action={<button type="button" className={operationSecondaryClass} disabled={busy} onClick={() => run('health.check', {}, 'Contrôle Supabase enregistré avec succès.')}><Play className="h-4 w-4" /> Vérifier maintenant</button>}>
+        <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950/50"><p className="text-[11px] font-bold text-zinc-500">Base</p><p className="mt-1 break-all text-[13px] font-black">{snapshot.system.database_name}</p><p className="mt-1 text-[10.5px] text-zinc-500">PostgreSQL {snapshot.system.postgres_version}</p></div><div className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-950/50"><p className="text-[11px] font-bold text-zinc-500">Horloge serveur</p><p className="mt-1 text-[13px] font-black">{formatPlatformDate(snapshot.server_time)}</p><p className="mt-1 text-[10.5px] text-zinc-500">Référence des échéances et audits</p></div></div>
+        <div className="mt-3 flex flex-wrap gap-2"><button type="button" className={operationSecondaryClass} onClick={refresh}><RefreshCw className="h-4 w-4" /> Relire les indicateurs</button>{latest && <OperationBadge tone={latest.status === 'healthy' ? 'success' : 'danger'}>{latest.component} · {latest.status}</OperationBadge>}</div>
+      </OperationPanel>
+      <OperationPanel title="Sauvegardes et reprise" description="L’état des sauvegardes managées n’est pas exposé par cette RPC. Ne jamais afficher une sauvegarde fictive comme réussie.">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-[11.5px] leading-relaxed text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200"><ArchiveRestore className="mb-2 h-5 w-5" /><strong>Sauvegardes gérées par Supabase.</strong><br />Vérifiez le calendrier, la rétention et les restaurations dans le projet Pressing_Pro. Les exports commerciaux CSV sont disponibles dans Finances et Audit ; ils ne contiennent pas les données métier des pressings.</div>
+        <ul className="mt-3 space-y-2 text-[11px] text-zinc-600 dark:text-zinc-300"><li className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Le verrouillage conserve toutes les données.</li><li className="flex gap-2"><ShieldAlert className="h-4 w-4 text-amber-600" /> Tester régulièrement une restauration sur un projet séparé.</li></ul>
+      </OperationPanel>
+    </div>
+
+    <div className="grid items-start gap-5 xl:grid-cols-2">
+      <OperationPanel title="Historique des contrôles">{snapshot.health_checks.length === 0 ? <OperationEmpty>Aucun contrôle enregistré.</OperationEmpty> : <ul className="space-y-2">{snapshot.health_checks.map((check) => <li key={check.id} className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800"><div className="flex justify-between gap-2"><OperationBadge tone={check.status === 'healthy' ? 'success' : 'danger'}>{check.component} · {check.status}</OperationBadge><time className="text-[10px] text-zinc-400">{formatPlatformDate(check.checked_at)}</time></div><pre className="mt-2 whitespace-pre-wrap break-words font-sans text-[10.5px] text-zinc-500">{Object.entries(check.details).map(([key, value]) => `${key} : ${String(value)}`).join('\n')}</pre></li>)}</ul>}</OperationPanel>
+      <OperationPanel title="Erreurs techniques et synchronisation">{technicalEvents.length === 0 ? <OperationEmpty>Aucun événement d’erreur ou de synchronisation dans les entrées d’audit chargées. Les erreurs des connecteurs externes restent visibles dans la file de messages.</OperationEmpty> : <ul className="space-y-2">{technicalEvents.map((entry) => <li key={entry.id} className="rounded-xl bg-red-50 p-3 dark:bg-red-950/30"><p className="text-[11.5px] font-bold text-red-800 dark:text-red-200">{entry.action}</p><p className="text-[10.5px] text-zinc-500">{entry.organization_name ?? 'Plateforme'} · {formatPlatformDate(entry.created_at)}</p></li>)}</ul>}</OperationPanel>
+    </div>
+  </div>;
+};

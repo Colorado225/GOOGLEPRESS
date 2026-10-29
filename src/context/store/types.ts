@@ -39,11 +39,15 @@ import type { CourierPositions } from '../../lib/courierPositions';
 import type { DeliveryProofDraft } from '../../lib/deliveryProof';
 import type { ShopSettingsSyncState } from '../../lib/shopSettingsSync';
 import type { StorageSyncState } from '../../lib/storageLocationsSync';
+import type { WorkspaceSyncState } from '../../lib/workspaceSync';
 import type {
   SubscriptionPlanId,
   SubscriptionState,
 } from '../../lib/subscription';
 import type { AppTheme } from '../../lib/theme';
+
+/** Étapes du parcours guidé de réception comptoir. */
+export type OrderStep = 1 | 2 | 3 | 4;
 
 /** Écrans de l'ERP, dans l'ordre du workflow d'un pressing. */
 export type ScreenId =
@@ -80,7 +84,8 @@ export type SettingsTab =
   | 'devices'
   | 'backend'
   | 'backup'
-  | 'subscription';
+  | 'subscription'
+  | 'support';
 
 /**
  * Provenance de l'abonnement affiché.
@@ -126,6 +131,8 @@ export interface AppContextType {
   ) => void;
   removeCartItem: (lineId: string) => void;
   updateCartItemQty: (lineId: string, delta: number) => void;
+  /** Normal/Express par ligne, y compris deux lots du même vêtement. */
+  setCartLineExpress: (lineId: string, isExpress: boolean) => void;
   /** Couleur appliquée aux pièces ajoutées au panier (undefined = non précisée). */
   selectedGarmentColor: string | undefined;
   setSelectedGarmentColor: (color: string | undefined) => void;
@@ -236,8 +243,8 @@ export interface AppContextType {
   markReadyOrdersAsNotifiedLocally: () => void;
   selectedServiceCategory: ServiceCategory | null;
   setSelectedServiceCategory: (cat: ServiceCategory | null) => void;
-  orderStep: 1 | 2 | 3;
-  setOrderStep: (step: 1 | 2 | 3) => void;
+  orderStep: 1 | 2 | 3 | 4;
+  setOrderStep: (step: 1 | 2 | 3 | 4) => void;
   resetNewOrderFlow: (category?: ServiceCategory) => void;
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
@@ -255,6 +262,11 @@ export interface AppContextType {
   /** État d'enregistrement des emplacements de rangement. */
   storageSync: StorageSyncState;
   retryStorageSync: () => void;
+  /** Sauvegarde/restauration durable des données métier de l'agence. */
+  workspaceSync: WorkspaceSyncState;
+  retryWorkspaceSync: () => void;
+  /** Attend la dernière sauvegarde avant une déconnexion explicite. */
+  flushWorkspaceSync: () => Promise<boolean>;
   /**
    * Abonnement de l'agence. En espace réel, la formule et la date d'essai
    * viennent de la base (`shop_subscriptions`) ; en démonstration, elles
@@ -263,8 +275,10 @@ export interface AppContextType {
   subscription: SubscriptionState;
   /** Provenance de l'état affiché, pour rester honnête à l'écran. */
   subscriptionSource: SubscriptionSource;
-  /** Formule réellement appliquée (essai de 14 jours inclus). */
+  /** Formule réellement appliquée (essai configurable inclus). */
   effectivePlanId: SubscriptionPlanId;
+  /** Modules serveur de la formule effective ; null = repli local/historique. */
+  subscriptionModules: string[] | null;
   /** Dépose une demande de formule (le propriétaire seul y a droit). */
   chooseSubscriptionPlan: (planId: SubscriptionPlanId) => Promise<ActionResult>;
   /** Relit l'abonnement dans la base (après une demande, par exemple). */

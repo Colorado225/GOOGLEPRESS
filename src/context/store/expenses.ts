@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import type {
   ActionResult,
   Expense,
@@ -22,7 +22,9 @@ export interface ExpensesDeps {
 
 export interface ExpensesStore {
   expenses: Expense[];
+  setExpenses: Dispatch<SetStateAction<Expense[]>>;
   expenseCategories: ExpenseCategory[];
+  setExpenseCategories: Dispatch<SetStateAction<ExpenseCategory[]>>;
   addExpense: (data: ExpenseFormData) => Expense;
   updateExpense: (id: string, data: ExpenseFormData) => boolean;
   cancelExpense: (id: string, reason: string) => void;
@@ -119,7 +121,9 @@ export const useExpensesStore = ({
 
   return {
     expenses,
+    setExpenses,
     expenseCategories,
+    setExpenseCategories,
     addExpense,
     updateExpense,
     cancelExpense,

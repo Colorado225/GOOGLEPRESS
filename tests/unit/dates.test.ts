@@ -67,7 +67,15 @@ describe('dates', () => {
     expect(toISODate(resolvePromisedDate('standard', 'pas-une-date', wednesday))).toBe('2026-10-30');
   });
 
-  it('libelle la date libre au lieu de l’option', () => {
+  it('garde Express 24h prioritaire sur une ancienne date libre', () => {
+    const wednesday = new Date(2026, 9, 28, 15, 30);
+    const resolved = resolvePromisedDate('express', '2026-11-15', wednesday);
+    expect(toISODate(resolved)).toBe('2026-10-29');
+    expect(resolved.getHours()).toBe(12);
+    expect(resolvePickupLabel('express', '2026-11-15')).toBe('Express 24h');
+  });
+
+  it('libelle la date libre au lieu de l’option hors Express', () => {
     expect(resolvePickupLabel('standard', '2026-11-15')).toBe('Date libre');
     expect(resolvePickupLabel('express', null)).toBe('Express 24h');
     expect(resolvePickupLabel('delayed', 'pas-une-date')).toBe('Différé — samedi');

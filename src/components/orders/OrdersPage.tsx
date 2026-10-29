@@ -7,6 +7,7 @@ import { Frame, FramePanel, Table, TableHeader, TableBody, TableRow, TableHead, 
 import { usePagination } from '../../lib/pagination';
 import { getInitials, normalizeText } from '../../lib/utils';
 import { isOrderLate } from '../../lib/reports';
+import { getOrderSpeed, getOrderSpeedLabel, matchesOrderSpeedFilter, type OrderSpeedFilter } from '../../lib/orderSpeed';
 import { formatLogisticsSchedule, isHomeDeliveryOrder, isHomePickupOrder } from '../../lib/logistics';
 import {
   formatPackageCount,
@@ -48,6 +49,7 @@ export const OrdersPage: React.FC = () => {
     focusLogisticsTask,
   } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
+  const [speedFilter, setSpeedFilter] = useState<OrderSpeedFilter>('all');
   const [tab, setTab] = useState<'all' | 'received' | 'washing' | 'ironing' | 'ready' | 'late' | 'delivered'>('all');
 
   const searchedOrders = orders.filter((order) => {
@@ -63,12 +65,14 @@ export const OrdersPage: React.FC = () => {
         order.collectionAddress ?? '',
         getOrderStorageSearchText(order),
         order.storageNotes ?? '',
+        getOrderSpeedLabel(order),
         ...order.lines.map((line) => `${line.name} ${line.color ?? ''}`),
       ].join(' ')
     );
     return haystack.includes(needle);
   });
 
+  const speedFilteredOrders = searchedOrders.filter((order) => matchesOrderSpeedFilter(order, speedFilter));
   const outForDeliveryIds = getOrdersOutForDeliveryIds(logisticsTasks);
 
   // Onglets par statut exact du workflow, plus la file transversale des retards à relancer
@@ -77,9 +81,9 @@ export const OrdersPage: React.FC = () => {
     if (t === 'late') return isOrderLate(order);
     return order.status === t;
   };
-  const countFor = (t: typeof tab) => searchedOrders.filter((o) => inTab(o, t)).length;
-  const filteredOrders = searchedOrders.filter((o) => inTab(o, tab));
-  const { page, pageCount, setPage, pageItems: pagedOrders, rangeStart, rangeEnd } = usePagination(filteredOrders, 10, [searchTerm, tab]);
+  const countFor = (t: typeof tab) => speedFilteredOrders.filter((o) => inTab(o, t)).length;
+  const filteredOrders = speedFilteredOrders.filter((o) => inTab(o, tab));
+  const { page, pageCount, setPage, pageItems: pagedOrders, rangeStart, rangeEnd } = usePagination(filteredOrders, 10, [searchTerm, speedFilter, tab]);
 
   return (
     <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-none">
@@ -116,7 +120,7 @@ export const OrdersPage: React.FC = () => {
         activeId={tab}
         onChange={setTab}
         tabs={[
-          { id: 'all', label: 'Toutes', icon: <List className="w-4 h-4" aria-hidden="true" />, badge: searchedOrders.length },
+          { id: 'all', label: 'Toutes', icon: <List className="w-4 h-4" aria-hidden="true" />, badge: speedFilteredOrders.length },
           { id: 'received', label: 'Réceptionnées', icon: <Inbox className="w-4 h-4" aria-hidden="true" />, badge: countFor('received') },
           { id: 'washing', label: 'Lavage', icon: <WashingMachine className="w-4 h-4" aria-hidden="true" />, badge: countFor('washing') },
           { id: 'ironing', label: 'Repassage', icon: <Shirt className="w-4 h-4" aria-hidden="true" />, badge: countFor('ironing') },
@@ -128,17 +132,33 @@ export const OrdersPage: React.FC = () => {
 
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl overflow-hidden shadow-2xs">
         <div className="p-3 border-b border-zinc-200 dark:border-zinc-700 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
               <input
-                type="text"
+                type="search"
+                aria-label="Rechercher une commande"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Ticket, client, téléphone, casier, vêtement…"
                 className="border border-zinc-200 dark:border-zinc-700 rounded-lg pl-8 pr-3 py-1.5 text-[12.5px] w-64 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100"
               />
             </div>
+            <label className="relative">
+              <span className="sr-only">Filtrer les commandes par délai</span>
+              <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+              <select
+                aria-label="Filtrer les commandes par délai"
+                value={speedFilter}
+                onChange={(event) => setSpeedFilter(event.target.value as OrderSpeedFilter)}
+                className="rounded-lg border border-zinc-200 bg-white py-1.5 pl-8 pr-7 text-[12px] font-semibold text-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:ring-zinc-100"
+              >
+                <option value="all">Tous les délais</option>
+                <option value="normal">Normal</option>
+                <option value="express">Express (prioritaires)</option>
+                <option value="mixed">Express mixtes</option>
+              </select>
+            </label>
           </div>
 
           <span className="text-[12px] text-zinc-500 dark:text-zinc-400 font-medium">
@@ -179,6 +199,9 @@ export const OrdersPage: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       <span>{order.ticketNumber}</span>
                       <Badge variant={order.serviceCategory === 'blanchisserie' ? 'teal' : 'info'} size="sm" className="rounded-md px-1.5 text-[9.5px] uppercase">{order.serviceCategory === 'blanchisserie' ? 'Blanch.' : 'Press.'}</Badge>
+                      <Badge variant={getOrderSpeed(order) === 'normal' ? 'secondary' : 'warning'} size="sm" className="rounded-md px-1.5 text-[9.5px]">
+                        {getOrderSpeedLabel(order)}
+                      </Badge>
                     </div>
                     {(isHomePickupOrder(order) || isHomeDeliveryOrder(order)) && (
                       <div className="mt-1 flex flex-wrap gap-1">
