@@ -12,12 +12,15 @@ import type {
  *
  * - **Lavage simple** et **Lavage + repassage** se vendent au forfait, par
  *   NOMBRE DE VÊTEMENTS (20 vêtements = 3 000 FCFA par exemple) ;
- * - **Repassage** seul se facture au vêtement.
+ * - **Repassage** seul se facture au vêtement, avec un prix par TYPE DE
+ *   VÊTEMENT (robe, pantalon, chemise…), réglé dans les Paramètres.
  *
- * Le kilo et le catalogue de pièces de blanchisserie ont disparu : le prix ne
- * dépend plus du type de linge mais du palier atteint. Au-delà du plus grand
- * palier utilisable, les vêtements restants sont facturés au prix du vêtement
- * supplémentaire, lui aussi réglé dans les Paramètres.
+ * Le kilo et le catalogue de pièces de blanchisserie ont disparu. Pour les
+ * lavages, le prix ne dépend plus du type de linge mais du palier atteint :
+ * au-delà du plus grand palier utilisable, les vêtements restants sont
+ * facturés au prix du vêtement supplémentaire, lui aussi réglé dans les
+ * Paramètres. Pour le repassage, chaque vêtement déposé doit avoir son prix :
+ * un vêtement sans prix bloque le devis au lieu d'inventer un montant.
  */
 
 export interface BlanchisserieServiceDefinition {
@@ -83,6 +86,7 @@ export const EMPTY_BLANCHISSERIE_SETTINGS: BlanchisserieSettings = {
   tiers: [],
   unitPrices: emptyPrices(),
   perGarment: { wash_only: false, wash_iron: false, iron_only: true },
+  ironPrices: {},
 };
 
 /**
@@ -95,8 +99,9 @@ export const DEMO_BLANCHISSERIE_SETTINGS: BlanchisserieSettings = {
     { id: 'tier-20', garments: 20, prices: { wash_only: 3500, wash_iron: 5000, iron_only: 0 } },
     { id: 'tier-30', garments: 30, prices: { wash_only: 4500, wash_iron: 6500, iron_only: 0 } },
   ],
-  unitPrices: { wash_only: 300, wash_iron: 500, iron_only: 250 },
+  unitPrices: { wash_only: 300, wash_iron: 500, iron_only: 0 },
   perGarment: { wash_only: false, wash_iron: false, iron_only: true },
+  ironPrices: { c1: 500, c2: 500, c3: 800 },
 };
 
 const toInteger = (value: unknown, min: number, max: number): number | null => {
@@ -117,13 +122,38 @@ const sanitizePrices = (value: unknown): Record<BlanchisserieServiceId, number> 
   return prices;
 };
 
+const sanitizeIronPrices = (
+  value: unknown,
+  knownGarmentIds?: readonly string[]
+): Record<string, number> => {
+  const source =
+    value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const known = knownGarmentIds ? new Set(knownGarmentIds) : null;
+  const prices: Record<string, number> = {};
+  for (const [rawId, rawPrice] of Object.entries(source)) {
+    const id = rawId.trim();
+    if (!id) continue;
+    if (known && !known.has(id)) continue;
+    const price = toInteger(rawPrice, 0, MAX_PRICE_XOF);
+    if (price === null) continue;
+    prices[id] = price;
+  }
+  return prices;
+};
+
 /**
  * Nettoie une grille lue depuis la sauvegarde locale : paliers hors bornes,
  * doublons de nombre de vêtements et prix absurdes sont écartés, jamais
  * « corrigés » silencieusement en un tarif différent.
+ *
+ * `knownGarmentIds` (fourni par l'écran qui gère les prix de repassage)
+ * élague en plus les lignes de repassage dont le vêtement n'existe plus.
+ * Sans lui, les lignes sont conservées telles quelles : on ne supprime jamais
+ * un tarif hors de l'écran qui l'affiche.
  */
 export const normalizeBlanchisserieSettings = (
-  value: unknown
+  value: unknown,
+  knownGarmentIds?: readonly string[]
 ): BlanchisserieSettings => {
   const source = (value && typeof value === 'object' ? value : {}) as Partial<BlanchisserieSettings>;
   const rawTiers = Array.isArray(source.tiers) ? source.tiers : [];
@@ -158,10 +188,23 @@ export const normalizeBlanchisserieSettings = (
     perGarment: {
       wash_only: perGarmentSource.wash_only === true,
       wash_iron: perGarmentSource.wash_iron === true,
-      iron_only: perGarmentSource.iron_only !== false,
+      // Le repassage est toujours facturé au vêtement, au prix de chaque type
+      // de vêtement : l'interrupteur historique est forcé, jamais relu.
+      iron_only: true,
     },
+    ironPrices: sanitizeIronPrices(source.ironPrices, knownGarmentIds),
   };
 };
+
+/** Prix du repassage d'un vêtement, ou 0 s'il n'est pas tarifé. */
+export const getIronPrice = (
+  settings: BlanchisserieSettings,
+  garmentId: string
+): number => settings.ironPrices[garmentId] ?? 0;
+
+/** Nombre de vêtements avec un prix de repassage utilisable (> 0). */
+export const countPricedIronGarments = (settings: BlanchisserieSettings): number =>
+  Object.values(settings.ironPrices).filter((price) => price > 0).length;
 
 /** Mode de facturation d'une prestation. */
 export const getBlanchisserieMode = (
@@ -183,11 +226,12 @@ export const getServiceTiers = (
 export const isBlanchisserieConfigured = (
   settings: BlanchisserieSettings
 ): boolean =>
-  BLANCHISSERIE_SERVICE_IDS.some((serviceId) =>
-    getBlanchisserieMode(settings, serviceId) === 'per_garment'
+  BLANCHISSERIE_SERVICE_IDS.some((serviceId) => {
+    if (serviceId === 'iron_only') return countPricedIronGarments(settings) > 0;
+    return getBlanchisserieMode(settings, serviceId) === 'per_garment'
       ? settings.unitPrices[serviceId] > 0
-      : getServiceTiers(settings, serviceId).length > 0
-  );
+      : getServiceTiers(settings, serviceId).length > 0;
+  });
 
 /** Message d'erreur de la grille, ou `null` si elle est enregistrable. */
 export const validateBlanchisserieSettings = (
@@ -222,7 +266,7 @@ export const validateBlanchisserieSettings = (
     }
   }
   if (!isBlanchisserieConfigured(settings)) {
-    return 'Définissez au moins un forfait ou un prix à l’unité avant d’enregistrer.';
+    return 'Définissez au moins un forfait, un prix au vêtement ou un prix de repassage avant d’enregistrer.';
   }
   for (const serviceId of PRICE_KEYS) {
     if (
@@ -241,6 +285,9 @@ export interface BlanchisserieQuoteBlock {
   serviceId: BlanchisserieServiceId;
   serviceLabel: string;
   tierId?: string;
+  /** Vignette du vêtement (repassage), si le catalogue en fournit une. */
+  emoji?: string;
+  image?: string;
   /** Vêtements couverts par une unité facturée (forfait) ou 1. */
   garmentsPerUnit: number;
   /** Unités facturées : nombre de forfaits, ou nombre de vêtements. */
@@ -278,12 +325,16 @@ const itemIdFor = (serviceId: BlanchisserieServiceId, suffix: string): string =>
  *
  * Retourne `null` si la grille ne permet pas de tarifer exactement ce nombre
  * de vêtements (aucun forfait utilisable et aucun prix à l'unité).
+ *
+ * Le repassage ne passe plus par ici : son prix dépend du TYPE de chaque
+ * vêtement déposé, pas d'un simple nombre — voir `calculateIroningQuote`.
  */
 export const calculateBlanchisserieQuote = (
   settings: BlanchisserieSettings,
   serviceId: BlanchisserieServiceId,
   garments: number
 ): BlanchisserieQuote | null => {
+  if (serviceId === 'iron_only') return null;
   const count = Math.round(garments);
   if (!Number.isFinite(count) || count <= 0) return null;
 
@@ -394,15 +445,81 @@ export const calculateBlanchisserieQuote = (
   };
 };
 
+/** Ligne de dépôt repassage : un vêtement du catalogue et sa quantité. */
+export interface IroningQuoteLine {
+  item: ClothingItem;
+  quantity: number;
+}
+
+/**
+ * Devis de repassage : chaque vêtement déposé est facturé à son prix réglé
+ * dans les Paramètres.
+ *
+ * Retourne `null` (vente bloquée) si le dépôt est vide, si une quantité est
+ * invalide, ou si l'un des vêtements n'a pas de prix — le comptoir renvoie
+ * alors vers les Paramètres plutôt que d'inventer un montant.
+ */
+export const calculateIroningQuote = (
+  settings: BlanchisserieSettings,
+  lines: readonly IroningQuoteLine[]
+): BlanchisserieQuote | null => {
+  const serviceId: BlanchisserieServiceId = 'iron_only';
+  const serviceLabel = getBlanchisserieServiceLabel(serviceId);
+  const blocks: BlanchisserieQuoteBlock[] = [];
+
+  for (const line of lines) {
+    const quantity = Math.round(line.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) return null;
+    const unitPrice = getIronPrice(settings, line.item.id);
+    if (unitPrice <= 0) return null;
+    blocks.push({
+      key: `${serviceId}-${line.item.id}`,
+      kind: 'per_garment',
+      serviceId,
+      serviceLabel,
+      garmentsPerUnit: 1,
+      quantity,
+      unitPrice,
+      subtotal: unitPrice * quantity,
+      garments: quantity,
+      name: `${serviceLabel} — ${line.item.name}`,
+      unitLabel: line.item.unitLabel ?? 'pièce',
+      itemId: itemIdFor(serviceId, line.item.id),
+      emoji: line.item.emoji,
+      image: line.item.image,
+    });
+  }
+
+  if (blocks.length === 0) return null;
+  const garments = blocks.reduce((total, block) => total + block.garments, 0);
+  const subtotal = blocks.reduce((total, block) => total + block.subtotal, 0);
+  return {
+    serviceId,
+    serviceLabel,
+    garments,
+    blocks,
+    subtotal,
+    averagePerGarment: Math.round(subtotal / garments),
+  };
+};
+
 /** Résumé lisible : « 1 forfait de 20 vêtements + 5 vêtements à l'unité ». */
-export const describeBlanchisserieQuote = (quote: BlanchisserieQuote): string =>
-  quote.blocks
+export const describeBlanchisserieQuote = (quote: BlanchisserieQuote): string => {
+  // Devis multi-vêtements (repassage) : on nomme chaque ligne, sinon le résumé
+  // répéterait « X vêtements à l'unité » sans dire lesquels. Les devis de
+  // lavage (un seul bloc à l'unité au plus) gardent leur libellé habituel.
+  const unitBlocks = quote.blocks.filter((block) => block.kind === 'per_garment');
+  const nameUnitBlocks = unitBlocks.length > 1;
+  return quote.blocks
     .map((block) =>
       block.kind === 'forfait'
         ? `${block.quantity} forfait${block.quantity > 1 ? 's' : ''} de ${formatGarments(block.garmentsPerUnit)}`
-        : `${formatGarments(block.quantity)} à l’unité`
+        : nameUnitBlocks
+          ? `${block.quantity} × ${block.name}`
+          : `${formatGarments(block.quantity)} à l’unité`
     )
     .join(' + ');
+};
 
 /** Article de panier correspondant à un bloc de devis. */
 export const buildBlanchisserieItem = (block: BlanchisserieQuoteBlock): ClothingItem => ({
@@ -413,7 +530,8 @@ export const buildBlanchisserieItem = (block: BlanchisserieQuoteBlock): Clothing
   unitPrice: block.unitPrice,
   pricingType: 'unit',
   unitLabel: block.unitLabel,
-  emoji: block.kind === 'forfait' ? '🧺' : '👕',
+  emoji: block.emoji ?? (block.kind === 'forfait' ? '🧺' : '👕'),
+  image: block.image,
   description: block.serviceLabel,
 });
 
@@ -422,9 +540,10 @@ export const buildBlanchisserieItem = (block: BlanchisserieQuoteBlock): Clothing
  * sache tarifer la blanchisserie.
  *
  * Chaque forfait devient un article `unit` dont le prix est celui du forfait
- * (la quantité du panier est le nombre de forfaits), et chaque prestation à
- * l'unité un article au vêtement. La clé `legacyKey` est stable : régénérer la
- * grille met à jour les mêmes lignes au lieu d'en créer de nouvelles.
+ * (la quantité du panier est le nombre de forfaits), chaque lavage à l'unité
+ * un article au vêtement, et chaque vêtement tarifé en repassage son propre
+ * article. La clé `legacyKey` est stable : régénérer la grille met à jour les
+ * mêmes lignes au lieu d'en créer de nouvelles.
  */
 export interface BlanchisserieCatalogEntry {
   legacyKey: string;
@@ -438,13 +557,45 @@ export interface BlanchisserieCatalogEntry {
   description: string;
 }
 
+/**
+ * Résolution d'un vêtement pour les lignes de catalogue du repassage : nom
+ * affiché et unité de vente (`pièce`, `paire`…).
+ */
+export interface IronCatalogGarment {
+  name: string;
+  unitLabel: string;
+}
+
 export const buildBlanchisserieCatalogEntries = (
-  settings: BlanchisserieSettings
+  settings: BlanchisserieSettings,
+  resolveIronGarment?: (garmentId: string) => IronCatalogGarment | undefined
 ): BlanchisserieCatalogEntry[] => {
   const entries: BlanchisserieCatalogEntry[] = [];
   let sortOrder = 500;
 
   for (const service of BLANCHISSERIE_SERVICES) {
+    if (service.id === 'iron_only') {
+      const garmentIds = Object.keys(settings.ironPrices).sort();
+      for (const garmentId of garmentIds) {
+        const unitPrice = settings.ironPrices[garmentId];
+        if (unitPrice <= 0) continue;
+        const garment = resolveIronGarment?.(garmentId);
+        entries.push({
+          legacyKey: itemIdFor(service.id, garmentId),
+          name: `${service.label} — ${garment?.name ?? garmentId}`,
+          unitPrice,
+          unitLabel: garment?.unitLabel ?? 'pièce',
+          serviceCategory: 'blanchisserie',
+          audienceCategory: 'all',
+          pricingType: 'unit',
+          sortOrder,
+          description: service.description,
+        });
+        sortOrder += 10;
+      }
+      continue;
+    }
+
     if (getBlanchisserieMode(settings, service.id) === 'per_garment') {
       const unitPrice = settings.unitPrices[service.id];
       if (unitPrice <= 0) continue;

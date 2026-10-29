@@ -6,15 +6,16 @@ une grille définie à l'avance dans les Paramètres.
 
 ## Les trois prestations
 
-| Prestation | Facturation par défaut |
+| Prestation | Facturation |
 | --- | --- |
 | **Lavage simple** | Forfait : N vêtements pour un prix fixe |
 | **Lavage + repassage** | Forfait : N vêtements pour un prix fixe |
-| **Repassage** | Au vêtement, au prix réglé dans les Paramètres |
+| **Repassage** | Au vêtement, avec un prix par type de vêtement (robe, pantalon, chemise…) |
 
-Chaque prestation peut être basculée « au vêtement » dans les Paramètres (la
-case *Facturer au vêtement*), auquel cas sa colonne de forfait n'est plus
-utilisée.
+Chaque lavage peut être basculé « au vêtement » dans les Paramètres (la case
+*Facturer au vêtement*), auquel cas sa colonne de forfait n'est plus utilisée.
+Le repassage est toujours au vêtement : il n'a pas de colonne de forfait, mais
+un tableau de prix par vêtement (voir ci-dessous).
 
 ## Où se règle la grille
 
@@ -22,11 +23,16 @@ utilisée.
 
 - un tableau de **paliers** : nombre de vêtements × prix de chaque prestation
   au forfait — par exemple 10 / 20 / 30 vêtements ;
-- le **prix du vêtement** pour chacune des trois prestations ; pour le lavage
-  et le lavage + repassage il sert aux vêtements qui dépassent les forfaits,
-  pour le repassage il constitue le tarif ;
+- le **prix du vêtement** pour chacun des deux lavages : il sert aux vêtements
+  qui dépassent les forfaits, ou de tarif si le lavage est basculé à l'unité ;
+- le tableau des **prix du repassage par vêtement** : le propriétaire compose
+  sa liste (vêtements du catalogue, créés ou fournis, avec leurs photos) et
+  indique le prix de chacun — robe, pantalon, chemise… Une ligne sans prix
+  bloque la vente de ce vêtement au comptoir ; un vêtement masqué au catalogue
+  garde son prix avec un badge « masqué ». Si un ancien prix unique existait,
+  un bandeau propose de l'appliquer à tout le catalogue en un clic ;
 - un **aperçu** immédiat (« 20 vêtements — Lavage + repassage = 5 000 FCFA »)
-  avant d'enregistrer.
+  pour les lavages, et le nombre de vêtements tarifés pour le repassage.
 
 Rien n'est prérempli sur un espace réel : sans grille, le comptoir affiche
 « La grille blanchisserie n'est pas encore définie » et propose d'ouvrir les
@@ -36,10 +42,16 @@ Paramètres. Seule la démonstration locale part avec une grille d'exemple.
 
 `calculateBlanchisserieQuote` (`src/lib/blanchisserie.ts`) :
 
-1. pour une prestation **au vêtement** : `nombre de vêtements × prix unitaire` ;
-2. pour une prestation **au forfait** : on prend le plus gros palier possible,
+1. pour un lavage **au vêtement** : `nombre de vêtements × prix unitaire` ;
+2. pour un lavage **au forfait** : on prend le plus gros palier possible,
    puis on recommence sur le reste ; les vêtements qui ne remplissent plus
    aucun palier sont facturés au **prix du vêtement supplémentaire**.
+
+`calculateIroningQuote` (même module) tarife le repassage : le caissier
+sélectionne les vêtements sur des cartes avec photos (comme au pressing),
+chacun est facturé à son prix réglé — 2 chemises à 500 + 1 robe à 800 =
+1 800 FCFA. Un vêtement sans prix bloque le devis (`null`) et le comptoir
+affiche « Non tarifé » avec un renvoi vers les Paramètres.
 
 Exemples avec la grille 10 / 20 / 30 vêtements (3 000 / 5 000 / 6 500 FCFA) et
 un vêtement supplémentaire à 500 FCFA :
@@ -64,7 +76,8 @@ Un devis devient une ou plusieurs lignes de commande, chacune avec
 formule de tarification du serveur :
 
 - `1 × Forfait 20 vêtements — Lavage + repassage` → 5 000 ;
-- `5 × Vêtements supplémentaires — Lavage + repassage` → 2 500.
+- `5 × Vêtements supplémentaires — Lavage + repassage` → 2 500 ;
+- `2 × Repassage — Chemise` → 1 000 (la ligne garde la photo du vêtement).
 
 Les lignes portent aussi le nombre de vêtements couverts (`garments`) et la
 nature du bloc (`pricingBasis`), si bien que :
@@ -88,9 +101,9 @@ nature du bloc (`pricingBasis`), si bien que :
 `buildBlanchisserieCatalogEntries` produit, à partir de la même grille, les
 lignes de `service_catalog_items` nécessaires pour que la RPC `create_order`
 sache tarifer : un article `unit` par forfait (`unit_label = 'forfait'`, prix du
-forfait) et un article au vêtement par prestation à l'unité. Les clés sont
-stables (`bf:wash_iron:20`, `bf:iron_only:unit`) : régénérer la grille met à
-jour les mêmes lignes.
+forfait), un article au vêtement par lavage à l'unité, et un article par
+vêtement tarifé en repassage. Les clés sont stables (`bf:wash_iron:20`,
+`bf:iron_only:c1`) : régénérer la grille met à jour les mêmes lignes.
 
 Limite actuelle, à traiter au branchement des commandes distantes : la grille
 elle-même est enregistrée avec les autres paramètres de la boutique, encore
@@ -102,7 +115,7 @@ déclenchée vers Supabase.
 
 ```bash
 npx tsc --noEmit   # aucune erreur
-npm run test:unit  # 173 tests / 17 fichiers (dont tests/unit/blanchisserie.test.ts : 20 tests)
+npm run test:unit  # 347 tests / 30 fichiers (dont tests/unit/blanchisserie.test.ts : 27 tests)
 npm run build      # build de production OK
 ```
 
@@ -112,7 +125,9 @@ Rendus serveur (harnais Vite SSR) :
   forfait », le repassage « Au vêtement », devis 20 vêtements = 5 000 FCFA,
   aucune mention de kilo ;
 - écran Paramètres : colonnes de prix par prestation, paliers 10/20/30, aperçu
-  « 1 forfait de 20 vêtements » ;
+  « 1 forfait de 20 vêtements », tableau des prix de repassage par vêtement ;
+- comptoir repassage : cartes avec photos des vêtements tarifés, badge « Non
+  tarifé » et blocage avec renvoi vers les Paramètres si un prix manque ;
 - espace réel sans grille : message d'invitation à définir la grille, aucun
   montant affiché.
 

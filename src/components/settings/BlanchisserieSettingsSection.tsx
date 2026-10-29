@@ -9,20 +9,31 @@ import {
   MAX_TIER_GARMENTS,
   MIN_TIER_GARMENTS,
   calculateBlanchisserieQuote,
+  countPricedIronGarments,
   describeBlanchisserieQuote,
   formatGarments,
   getBlanchisserieMode,
   normalizeBlanchisserieSettings,
   validateBlanchisserieSettings,
 } from '../../lib/blanchisserie';
-import type { BlanchisserieServiceId, BlanchisserieSettings } from '../../types';
+import {
+  BASE_GARMENT_IDS,
+  getGarmentById,
+  getGarmentCatalog,
+} from '../../lib/garmentCatalog';
+import type {
+  BlanchisserieServiceId,
+  BlanchisserieSettings,
+  ClothingItem,
+} from '../../types';
 
 /**
  * Réglage de la blanchisserie.
  *
  * Le modèle est posé ici, avant toute commande : des forfaits au NOMBRE DE
  * VÊTEMENTS (20 vêtements = 3 000 FCFA) et, en complément, le prix du vêtement
- * supplémentaire. Le repassage seul se facture au vêtement par défaut.
+ * supplémentaire. Le repassage seul se facture au vêtement, avec un prix par
+ * type de vêtement (robe, pantalon, chemise…).
  */
 export const BlanchisserieSettingsSection: React.FC = () => {
   const { shopSettings, updateShopSettings, showToast } = useApp();
@@ -37,7 +48,7 @@ export const BlanchisserieSettingsSection: React.FC = () => {
   const simulationCount = Math.round(Number(simulation));
   const simulations = useMemo(
     () =>
-      BLANCHISSERIE_SERVICES.map((service) => ({
+      BLANCHISSERIE_SERVICES.filter((service) => service.id !== 'iron_only').map((service) => ({
         service,
         quote:
           Number.isFinite(simulationCount) && simulationCount > 0
@@ -46,6 +57,41 @@ export const BlanchisserieSettingsSection: React.FC = () => {
       })),
     [draft, simulationCount]
   );
+
+  // Lignes de repassage : chaque identifiant est résolu vers son vêtement
+  // effectif (nom et photo après retouches, vêtements masqués compris — le
+  // comptoir ne proposera que les visibles, sans perdre le prix réglé).
+  const ironLines = useMemo(() => {
+    const lines: { id: string; item: ClothingItem; price: number; hidden: boolean }[] = [];
+    for (const [id, price] of Object.entries(draft.ironPrices)) {
+      const item = getGarmentById(shopSettings, id);
+      if (!item) continue;
+      lines.push({
+        id,
+        item,
+        price,
+        hidden: shopSettings.catalogOverrides?.[id]?.hidden === true,
+      });
+    }
+    lines.sort((a, b) => a.item.name.localeCompare(b.item.name, 'fr'));
+    return lines;
+  }, [draft.ironPrices, shopSettings]);
+  const pricedIronCount = useMemo(() => countPricedIronGarments(draft), [draft]);
+
+  // Candidats à l'ajout : vêtements visibles au comptoir, pas encore en ligne.
+  const ironCandidates = useMemo(
+    () =>
+      getGarmentCatalog(shopSettings)
+        .filter((item) => draft.ironPrices[item.id] === undefined)
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+    [draft.ironPrices, shopSettings]
+  );
+  const [ironCandidateId, setIronCandidateId] = useState('');
+  const pickerValue = ironCandidates.some((item) => item.id === ironCandidateId)
+    ? ironCandidateId
+    : '';
+  const showLegacyIronBanner =
+    Object.keys(draft.ironPrices).length === 0 && draft.unitPrices.iron_only > 0;
 
   const patch = (updater: (current: BlanchisserieSettings) => BlanchisserieSettings) => {
     setError(null);
@@ -87,6 +133,47 @@ export const BlanchisserieSettingsSection: React.FC = () => {
     }));
   };
 
+  const setIronPrice = (garmentId: string, rawValue: string) => {
+    patch((current) => ({
+      ...current,
+      ironPrices: {
+        ...current.ironPrices,
+        [garmentId]: Math.max(0, Math.min(MAX_PRICE_XOF, Math.round(Number(rawValue) || 0))),
+      },
+    }));
+  };
+
+  const removeIronLine = (garmentId: string) => {
+    patch((current) => {
+      const ironPrices = { ...current.ironPrices };
+      delete ironPrices[garmentId];
+      return { ...current, ironPrices };
+    });
+  };
+
+  const addIronLine = () => {
+    if (!pickerValue) return;
+    patch((current) => {
+      if (current.ironPrices[pickerValue] !== undefined) return current;
+      return { ...current, ironPrices: { ...current.ironPrices, [pickerValue]: 0 } };
+    });
+    setIronCandidateId('');
+  };
+
+  // Reprise explicite de l'ancien prix unique : le propriétaire choisit de
+  // l'appliquer aux vêtements visibles — rien n'est inventé sans son geste.
+  const applyLegacyIronPriceToCatalog = () => {
+    const legacy = draft.unitPrices.iron_only;
+    if (legacy <= 0) return;
+    patch((current) => {
+      const ironPrices = { ...current.ironPrices };
+      for (const item of getGarmentCatalog(shopSettings)) {
+        if (ironPrices[item.id] === undefined) ironPrices[item.id] = legacy;
+      }
+      return { ...current, ironPrices };
+    });
+  };
+
   const addTier = () => {
     patch((current) => {
       if (current.tiers.length >= MAX_TIERS) return current;
@@ -115,7 +202,11 @@ export const BlanchisserieSettingsSection: React.FC = () => {
   };
 
   const save = () => {
-    const normalized = normalizeBlanchisserieSettings(draft);
+    const knownGarmentIds = [
+      ...BASE_GARMENT_IDS,
+      ...shopSettings.customGarments.map((garment) => garment.id),
+    ];
+    const normalized = normalizeBlanchisserieSettings(draft, knownGarmentIds);
     const validationError = validateBlanchisserieSettings(normalized);
     if (validationError) {
       setError(validationError);
@@ -146,7 +237,8 @@ export const BlanchisserieSettingsSection: React.FC = () => {
         <span>
           Les forfaits portent sur un <strong>nombre de vêtements</strong>, jamais sur un poids.
           Exemple : 20 vêtements pour 3 000 FCFA. Les vêtements qui dépassent le dernier palier
-          sont facturés au prix du vêtement supplémentaire.
+          sont facturés au prix du vêtement supplémentaire. Le repassage, lui, se tarife
+          <strong> par type de vêtement</strong> dans le tableau dédié ci-dessous.
         </span>
       </p>
 
@@ -253,6 +345,26 @@ export const BlanchisserieSettingsSection: React.FC = () => {
         </h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {BLANCHISSERIE_SERVICES.map((service) => {
+            if (service.id === 'iron_only') {
+              return (
+                <div
+                  key={service.id}
+                  className="rounded-lg border border-zinc-200 p-2.5 dark:border-zinc-700"
+                >
+                  <p className="block text-[11.5px] font-bold text-zinc-600 dark:text-zinc-400">
+                    {service.emoji} {service.label}
+                  </p>
+                  <p className="mt-1 text-[15px] font-black tabular-nums text-zinc-900 dark:text-zinc-100">
+                    {pricedIronCount} vêtement{pricedIronCount > 1 ? 's' : ''} tarifé
+                    {pricedIronCount > 1 ? 's' : ''}
+                  </p>
+                  <p className="mt-1 text-[10.5px] leading-snug text-zinc-500 dark:text-zinc-400">
+                    Prix réglés par type de vêtement dans le tableau « Prix du repassage »
+                    ci-dessous. Un vêtement sans prix est bloqué au comptoir.
+                  </p>
+                </div>
+              );
+            }
             const perGarment = getBlanchisserieMode(draft, service.id) === 'per_garment';
             return (
               <div
@@ -298,6 +410,120 @@ export const BlanchisserieSettingsSection: React.FC = () => {
         </div>
       </section>
 
+      {/* Prix du repassage par vêtement */}
+      <section className="space-y-2">
+        <h3 className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
+          Prix du repassage par vêtement
+        </h3>
+        {showLegacyIronBanner && (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[12px] text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+            <span>
+              Votre ancien prix unique ({formatFCFA(draft.unitPrices.iron_only)} par vêtement)
+              peut servir de point de départ :
+            </span>
+            <button
+              type="button"
+              onClick={applyLegacyIronPriceToCatalog}
+              className="rounded-lg bg-amber-600 px-2.5 py-1 text-[12px] font-bold text-white transition-colors hover:bg-amber-700"
+            >
+              Appliquer à tout le catalogue
+            </button>
+          </p>
+        )}
+        {ironLines.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-zinc-300 p-4 text-center text-[12px] text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+            Aucun vêtement tarifé en repassage. Ajoutez ci-dessous les vêtements proposés
+            (robe, pantalon, chemise…), puis indiquez le prix de chacun.
+          </p>
+        ) : (
+          <ul className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+            {ironLines.map((line) => (
+              <li
+                key={line.id}
+                className="flex items-center gap-2.5 rounded-lg border border-zinc-200 p-2 dark:border-zinc-700"
+              >
+                {line.item.image ? (
+                  <img
+                    src={line.item.image}
+                    alt=""
+                    className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                  />
+                ) : (
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center text-xl" aria-hidden="true">
+                    {line.item.emoji}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12.5px] font-semibold text-zinc-900 dark:text-zinc-100">
+                    {line.item.name}
+                  </p>
+                  {line.price <= 0 ? (
+                    <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                      Non tarifé : bloqué au comptoir.
+                    </p>
+                  ) : line.hidden ? (
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Masqué au comptoir — le prix est conservé.
+                    </p>
+                  ) : null}
+                </div>
+                <label className="sr-only" htmlFor={`iron-${line.id}`}>
+                  Prix du repassage pour {line.item.name}
+                </label>
+                <input
+                  id={`iron-${line.id}`}
+                  type="number"
+                  min={0}
+                  max={MAX_PRICE_XOF}
+                  step={50}
+                  value={line.price}
+                  onChange={(event) => setIronPrice(line.id, event.target.value)}
+                  className={`${inputClass} w-28`}
+                />
+                <span className="text-[11.5px] text-zinc-500 dark:text-zinc-400">FCFA</span>
+                <button
+                  type="button"
+                  onClick={() => removeIronLine(line.id)}
+                  aria-label={`Retirer ${line.item.name} du repassage`}
+                  className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {ironCandidates.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label className="sr-only" htmlFor="iron-candidate">
+              Vêtement à ajouter au repassage
+            </label>
+            <select
+              id="iron-candidate"
+              value={pickerValue}
+              onChange={(event) => setIronCandidateId(event.target.value)}
+              className={`${inputClass} flex-1`}
+            >
+              <option value="">Choisir un vêtement…</option>
+              {ironCandidates.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={addIronLine}
+              disabled={!pickerValue}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-[12px] font-semibold text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Ajouter
+            </button>
+          </div>
+        )}
+      </section>
+
       {/* Simulation */}
       <section className="rounded-lg border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-700 dark:bg-zinc-800/40">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -339,6 +565,19 @@ export const BlanchisserieSettingsSection: React.FC = () => {
               )}
             </li>
           ))}
+          <li className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-[12px]">
+            <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+              ♨️ Repassage
+            </span>
+            {pricedIronCount > 0 ? (
+              <span className="text-zinc-600 dark:text-zinc-400">
+                {pricedIronCount} vêtement{pricedIronCount > 1 ? 's' : ''} tarifé
+                {pricedIronCount > 1 ? 's' : ''} — saisie au comptoir
+              </span>
+            ) : (
+              <span className="text-zinc-400 dark:text-zinc-500">non tarifé</span>
+            )}
+          </li>
         </ul>
       </section>
 

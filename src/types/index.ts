@@ -405,7 +405,8 @@ export interface LaundryOrder {
  * La blanchisserie ne se vend plus au kilo ni à la pièce du catalogue : elle
  * propose trois prestations, dont deux au forfait par NOMBRE DE VÊTEMENTS
  * (ex. 20 vêtements = 3 000 FCFA). La grille est définie à l'avance dans les
- * Paramètres ; le repassage seul se facture au vêtement.
+ * Paramètres ; le repassage seul se facture au vêtement, avec un prix par
+ * type de vêtement (robe, pantalon, chemise…).
  */
 export type BlanchisserieServiceId = 'wash_only' | 'wash_iron' | 'iron_only';
 
@@ -421,11 +422,19 @@ export interface BlanchisserieSettings {
   tiers: BlanchisserieTier[];
   /**
    * Prix du vêtement supplémentaire au-delà du forfait, et tarif des
-   * prestations facturées à l'unité (repassage seul).
+   * prestations lavage basculées à l'unité. La clé `iron_only` est un reliquat
+   * historique (ancien prix unique du repassage) : elle n'est plus lue pour
+   * tarifer, mais conservée pour proposer une reprise en un clic.
    */
   unitPrices: Record<BlanchisserieServiceId, number>;
   /** `true` = prestation facturée au vêtement, sans forfait. */
   perGarment: Record<BlanchisserieServiceId, boolean>;
+  /**
+   * Prix du repassage par vêtement : clé = identifiant du vêtement au
+   * catalogue (`c1`, `cg:robe-lin`…), valeur = prix en FCFA. Une ligne à 0
+   * (ou absente) bloque la vente de ce vêtement au comptoir.
+   */
+  ironPrices: Record<string, number>;
 }
 
 /** Type de prestation pressing (« Nettoyage à sec », « Teinture »…). */
