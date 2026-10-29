@@ -12,17 +12,17 @@ import { supabase } from '../../lib/supabase';
 import { syncCustomerProfile } from '../../lib/supabaseCustomer';
 import { CustomerAccountPage } from './CustomerAccountPage';
 import {
-  CustomerNavLink,
-  customerSecondaryButtonClassName,
-  type CustomerNavigate,
-} from './CustomerAuthLayout';
+  AuthLink,
+  authSecondaryButtonClassName,
+  type AuthNavigate,
+} from '../auth/AuthShell';
 import { CustomerLoginPage } from './CustomerLoginPage';
 import { CustomerPasswordResetPage } from './CustomerPasswordResetPage';
 import { CustomerRegisterPage } from './CustomerRegisterPage';
 
 interface CustomerPortalAppProps {
   route: CustomerRoute;
-  onNavigate: CustomerNavigate;
+  onNavigate: AuthNavigate;
 }
 
 export const CustomerPortalApp: React.FC<CustomerPortalAppProps> = ({
@@ -95,20 +95,20 @@ export const CustomerPortalApp: React.FC<CustomerPortalAppProps> = ({
 
   if (route.kind === 'not-found') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f4f4f5] px-4 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
+      <main className="flex min-h-screen items-center justify-center bg-[#F7F5F2] px-4 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
         <section className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 text-center shadow-xl shadow-zinc-950/5 dark:border-zinc-800 dark:bg-zinc-900">
           <ShieldAlert className="mx-auto h-10 w-10 text-amber-600 dark:text-amber-300" aria-hidden="true" />
           <h1 className="mt-4 text-xl font-black">Page client introuvable</h1>
           <p className="mt-2 text-[13.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
             Ce lien ne correspond pas à une page de l’espace client.
           </p>
-          <CustomerNavLink
+          <AuthLink
             href={CUSTOMER_LOGIN_PATH}
             onNavigate={onNavigate}
-            className={`${customerSecondaryButtonClassName} mt-5 w-full`}
+            className={`${authSecondaryButtonClassName} mt-5 w-full`}
           >
             Aller à la connexion
-          </CustomerNavLink>
+          </AuthLink>
         </section>
       </main>
     );
@@ -116,7 +116,7 @@ export const CustomerPortalApp: React.FC<CustomerPortalAppProps> = ({
 
   if (loadingSession) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f4f4f5] px-4 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
+      <main className="flex min-h-screen items-center justify-center bg-[#F7F5F2] px-4 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
         <p className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-[13.5px] font-semibold shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           Vérification de votre session…
@@ -127,19 +127,19 @@ export const CustomerPortalApp: React.FC<CustomerPortalAppProps> = ({
 
   if (authError && route.kind === 'account') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f4f4f5] px-4 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
+      <main className="flex min-h-screen items-center justify-center bg-[#F7F5F2] px-4 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
         <section className="w-full max-w-md rounded-3xl border border-red-200 bg-white p-6 shadow-xl shadow-zinc-950/5 dark:border-red-900 dark:bg-zinc-900">
           <h1 className="text-xl font-black">Session illisible</h1>
           <p className="mt-2 text-[13.5px] leading-relaxed text-red-700 dark:text-red-300">
             {authError}
           </p>
-          <CustomerNavLink
+          <AuthLink
             href={CUSTOMER_LOGIN_PATH}
             onNavigate={onNavigate}
-            className={`${customerSecondaryButtonClassName} mt-5 w-full`}
+            className={`${authSecondaryButtonClassName} mt-5 w-full`}
           >
             Retourner à la connexion
-          </CustomerNavLink>
+          </AuthLink>
         </section>
       </main>
     );

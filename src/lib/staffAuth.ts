@@ -89,40 +89,25 @@ export const validateStaffRegistration = (
   return null;
 };
 
-export interface PasswordStrength {
-  /** 0 (vide/très faible) à 4 (très fort) ; alimente une jauge à 4 segments. */
-  score: number;
-  label: string;
+/**
+ * Indicateur de robustesse partagé (voir `lib/passwordStrength.ts`).
+ * Réexporté ici pour les appelants historiques de l'accès personnel.
+ */
+export { getPasswordStrength, type PasswordStrength } from './passwordStrength';
+
+export interface StaffLoginInput {
+  email: string;
+  password: string;
 }
 
-const PASSWORD_STRENGTH_LABELS = [
-  'Très faible',
-  'Faible',
-  'Moyen',
-  'Fort',
-  'Très fort',
-] as const;
-
 /**
- * Estimation d'affichage de la robustesse d'un mot de passe. Elle guide
- * l'utilisateur pendant la saisie ; la règle contraignante reste la longueur
- * minimale validée ici et côté Supabase Auth.
+ * Contrôle d'affichage de la connexion du personnel. Volontairement séparé de
+ * la validation d'inscription client pour nommer l'intention côté pages.
  */
-export const getPasswordStrength = (password: string): PasswordStrength => {
-  if (!password) return { score: 0, label: PASSWORD_STRENGTH_LABELS[0] };
-
-  let points = 0;
-  if (password.length >= 8) points += 1;
-  if (password.length >= 12) points += 1;
-  if (/[a-zà-ÿ]/.test(password) && /[A-ZÀ-Ÿ]/.test(password)) points += 1;
-  if (/\d/.test(password)) points += 1;
-  if (/[^A-Za-zÀ-ÿ0-9]/.test(password)) points += 1;
-
-  let score = points <= 1 ? 1 : points === 2 ? 2 : points === 3 ? 3 : 4;
-  // Un mot de passe court reste faible, même s'il mélange les caractères.
-  if (password.length < 8) score = Math.min(score, 1);
-
-  return { score, label: PASSWORD_STRENGTH_LABELS[score] };
+export const validateStaffLogin = (input: StaffLoginInput): string | null => {
+  if (!isValidEmail(input.email)) return 'Saisissez une adresse e-mail valide.';
+  if (!input.password) return 'Saisissez votre mot de passe.';
+  return null;
 };
 
 /**

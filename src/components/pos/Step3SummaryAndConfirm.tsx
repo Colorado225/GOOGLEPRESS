@@ -157,7 +157,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               <p className="text-zinc-500 dark:text-zinc-400 text-[12px]">Quartier : {selectedCustomer?.address || 'Abidjan'}</p>
               {(selectedCustomer?.loyaltyDiscountPercent || 0) > 0 && (
                 <span className="inline-block mt-2 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                  🎁 Carte fidélité −{selectedCustomer.loyaltyDiscountPercent}%
+                  🎁 Carte fidélité −{selectedCustomer?.loyaltyDiscountPercent ?? 0}%
                 </span>
               )}
             </div>
@@ -260,7 +260,11 @@ export const Step3SummaryAndConfirm: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-zinc-600 dark:text-zinc-400">{line.serviceType}</TableCell>
                       <TableCell className="text-center font-bold tabular-nums">
-                        {line.quantity} {line.pricingType === 'kilo' ? 'kg' : 'pièce(s)'}
+                        {line.pricingType === 'kilo'
+                          ? `${line.quantity} kg`
+                          : line.unitLabel === 'forfait'
+                            ? `${line.quantity} forfait${line.quantity > 1 ? 's' : ''}`
+                            : `${line.quantity} vêtement${line.quantity > 1 ? 's' : ''}`}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-zinc-600 dark:text-zinc-400">
                         {formatFCFA(line.unitPrice)}
@@ -283,7 +287,7 @@ export const Step3SummaryAndConfirm: React.FC = () => {
               </div>
               {expressFee > 0 && (
                 <div className="flex justify-between text-amber-800 dark:text-amber-200 font-medium">
-                  <span>Supplément express (+50 %)</span>
+                  <span>Type de service express 24h (×2)</span>
                   <span className="tabular-nums">+{formatFCFA(expressFee)}</span>
                 </div>
               )}

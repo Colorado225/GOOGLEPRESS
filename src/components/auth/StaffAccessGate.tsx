@@ -15,14 +15,19 @@ import {
   resolveStaffAccessMode,
 } from '../../lib/staffAccess';
 import {
+  listAccessibleOrganizations,
+  listAccessibleShops,
   listCurrentMemberships,
   type RemoteMembership,
 } from '../../lib/supabaseOrders';
+import { getCustomerProfile } from '../../lib/supabaseCustomer';
+import type { WorkspaceScope } from '../../lib/workspaceScope';
+import { WorkspaceScopeProvider } from '../../context/WorkspaceScopeContext';
+import { AuthPasswordField } from './AuthFields';
 import {
-  PasswordField,
-  customerPrimaryButtonClassName,
-  customerSecondaryButtonClassName,
-} from '../customer/CustomerAuthLayout';
+  authPrimaryButtonClassName,
+  authSecondaryButtonClassName,
+} from './authStyles';
 import {
   StaffAuthAlert,
   StaffAuthHeader,
@@ -58,6 +63,10 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
   const [membershipCheckComplete, setMembershipCheckComplete] = useState(false);
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  // Portée réelle transmise au shell ERP : organisation et agence effectives.
+  // Tant qu'elle n'est pas résolue, l'ERP n'est pas monté — sans quoi il
+  // choisirait la portée de démonstration (données d'exemple).
+  const [workspaceScope, setWorkspaceScope] = useState<WorkspaceScope | null>(null);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -94,6 +103,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
         setMemberships([]);
         setMembershipCheckComplete(false);
         setRecoveryMode(false);
+        setWorkspaceScope(null);
       }
     });
 
@@ -111,8 +121,72 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
     try {
       const remoteMemberships = await listCurrentMemberships(session.user.id);
       setMemberships(remoteMemberships);
+
+      const activeMemberships = getActiveStaffMemberships(remoteMemberships);
+      if (activeMemberships.length === 0) {
+        setWorkspaceScope(null);
+        return;
+      }
+
+      // Le nom de l'enseigne ne conditionne jamais l'accès : si la lecture
+      // échoue, l'ERP s'ouvre avec un libellé neutre, mais la portée reste
+      // « réelle » et donc vide de toute donnée d'exemple.
+      const primary = activeMemberships[0];
+      let organizationName: string | null = null;
+      let shopName: string | null = null;
+      // Le propriétaire initial est rattaché à l'organisation sans agence :
+      // on retient alors la première agence de l'organisation, celle que
+      // l'onboarding vient de créer.
+      let shopId: string | null = primary.shop_id ?? null;
+      try {
+        const [organizations, shops] = await Promise.all([
+          listAccessibleOrganizations(),
+          listAccessibleShops(),
+        ]);
+        organizationName =
+          organizations.find((entry) => entry.id === primary.organization_id)?.name ?? null;
+        const organizationShops = shops.filter(
+          (shop) => shop.organization_id === primary.organization_id
+        );
+        shopId = primary.shop_id ?? organizationShops[0]?.id ?? null;
+        shopName =
+          organizationShops.find((shop) => shop.id === shopId)?.name ??
+          organizationShops[0]?.name ??
+          null;
+      } catch {
+        organizationName = null;
+        shopName = null;
+      }
+
+      // Identité affichée : profil applicatif d'abord, puis métadonnées Auth,
+      // puis la partie locale de l'e-mail. Aucun nom d'exemple en repli.
+      let userName: string | null = null;
+      try {
+        const profile = await getCustomerProfile(session.user.id);
+        userName = profile?.display_name?.trim() || null;
+      } catch {
+        userName = null;
+      }
+      if (!userName) {
+        const metadataName =
+          session.user.user_metadata?.full_name ?? session.user.user_metadata?.name;
+        userName = typeof metadataName === 'string' && metadataName.trim()
+          ? metadataName.trim()
+          : (session.user.email?.split('@')[0] ?? null);
+      }
+
+      setWorkspaceScope({
+        mode: 'live',
+        organizationId: primary.organization_id,
+        shopId,
+        organizationName,
+        shopName,
+        userName,
+        userRoleLabel: formatStaffRole(primary.role),
+      });
     } catch (membershipError) {
       setMemberships([]);
+      setWorkspaceScope(null);
       setError(
         membershipError instanceof Error
           ? membershipError.message
@@ -181,8 +255,14 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
   const authClient = supabase;
   const activeMemberships = getActiveStaffMemberships(memberships);
 
-  if (!recoveryMode && session && membershipCheckComplete && activeMemberships.length > 0) {
-    return <>{children}</>;
+  if (
+    !recoveryMode &&
+    session &&
+    membershipCheckComplete &&
+    activeMemberships.length > 0 &&
+    workspaceScope
+  ) {
+    return <WorkspaceScopeProvider scope={workspaceScope}>{children}</WorkspaceScopeProvider>;
   }
 
   const signOut = async () => {
@@ -231,7 +311,11 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
 
   if (
     loadingSession ||
-    (session && (checkingMemberships || !membershipCheckComplete) && !recoveryMode)
+    (session &&
+      (checkingMemberships ||
+        !membershipCheckComplete ||
+        (activeMemberships.length > 0 && !workspaceScope)) &&
+      !recoveryMode)
   ) {
     return (
       <StaffAuthLoading label="Vérification de la session et des autorisations…" />
@@ -253,7 +337,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
           >
             {error && <StaffAuthAlert tone="error">{error}</StaffAuthAlert>}
             {message && <StaffAuthAlert tone="success">{message}</StaffAuthAlert>}
-            <PasswordField
+            <AuthPasswordField
               id="staff-new-password"
               label="Nouveau mot de passe"
               value={newPassword}
@@ -264,7 +348,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
             <p className="-mt-2 text-[12px] text-zinc-500 dark:text-zinc-400">
               Au moins 8 caractères.
             </p>
-            <PasswordField
+            <AuthPasswordField
               id="staff-confirm-password"
               label="Confirmer le mot de passe"
               value={confirmPassword}
@@ -274,7 +358,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
             />
             <button
               type="submit"
-              className={customerPrimaryButtonClassName}
+              className={authPrimaryButtonClassName}
               disabled={busy}
             >
               {busy ? (
@@ -286,7 +370,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
             </button>
             <button
               type="button"
-              className={customerSecondaryButtonClassName}
+              className={authSecondaryButtonClassName}
               onClick={() => void signOut()}
               disabled={busy}
             >
@@ -336,14 +420,14 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
                   : 'Aucun'}
               </dd>
             </dl>
-            <a href={STAFF_ONBOARDING_PATH} className={customerPrimaryButtonClassName}>
+            <a href={STAFF_ONBOARDING_PATH} className={authPrimaryButtonClassName}>
               <Store className="h-4 w-4" aria-hidden="true" />
               Créer mon pressing
             </a>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
-                className={customerSecondaryButtonClassName}
+                className={authSecondaryButtonClassName}
                 onClick={() => setRefreshTick((value) => value + 1)}
                 disabled={busy || checkingMemberships}
               >
@@ -352,7 +436,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
               </button>
               <button
                 type="button"
-                className={customerSecondaryButtonClassName}
+                className={authSecondaryButtonClassName}
                 onClick={() => void signOut()}
                 disabled={busy}
               >

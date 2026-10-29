@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
-  Customer, LaundryOrder, OrderLine, ClothingItem, CashRegisterData, OrderStatus, ServiceCategory, PickupOption,
+  Customer, LaundryOrder, OrderLine, ClothingItem, CartLineDetails, CashRegisterData, OrderStatus, ServiceCategory, PickupOption,
   Employee, EmployeeStatus, EmployeeFormData, AttendanceRecord,
   InventoryProduct, ProductFormData, StockMovement, StockMovementInput,
   Expense, ExpenseFormData, ExpenseCategory, ActionResult,
-  FulfillmentMethod, LogisticsIssueReason, LogisticsTask, LogisticsTaskScheduleFormData,
+  FulfillmentMethod, GeoPoint, LogisticsIssueReason, LogisticsTask, LogisticsTaskScheduleFormData,
   LogisticsTimeSlot, PaymentMethod, PickupTaskFormData,
   StorageAssignmentInput, StorageLocation, StorageLocationFormData,
   StorageLocationSeriesInput,
@@ -16,6 +16,12 @@ import {
   INITIAL_EXPENSES, INITIAL_EXPENSE_CATEGORIES,
 } from '../data/demoData';
 import { fireOrderCelebration } from '../registry/magicui/confetti';
+import {
+  isLiveWorkspace,
+  scopeStorageKey,
+  type WorkspaceScope,
+} from '../lib/workspaceScope';
+import { useWorkspaceScope } from './WorkspaceScopeContext';
 import { calculateOrderTotals, calculateLineSubtotal } from '../lib/pricing';
 import {
   formatPromised, getPromisedDate, isValidISODate, nowDateTime, nowISODateTime, toISODate, todayISO,
@@ -24,8 +30,17 @@ import { computeMovement } from '../lib/inventory';
 import { normalizeText } from '../lib/utils';
 import {
   LOGISTICS_TASKS_STORAGE_KEY, PAYMENT_METHOD_LABELS, getDefaultDeliveryTimeSlot,
-  isHomeDeliveryOrder, normalizeLogisticsFee,
+  isHomeDeliveryOrder, normalizeLogisticsFee, normalizeStoredLogisticsTask,
 } from '../lib/logistics';
+import {
+  buildDeliveryProof, generateDeliveryCode, normalizeDeliveryProofSettings,
+  validateDeliveryProofDraft, type DeliveryProofDraft,
+} from '../lib/deliveryProof';
+import { normalizeDeliveryGpsSettings, normalizeGeoPoint } from '../lib/geo';
+import {
+  COURIER_POSITIONS_STORAGE_KEY, normalizeCourierPositions, pruneCourierPositions,
+  type CourierPositions,
+} from '../lib/courierPositions';
 import {
   STORAGE_LOCATIONS_STORAGE_KEY, buildStorageLocationSeries,
   calculateStorageOccupancy, formatStorageLocation, getOrderPackageCount,
@@ -35,7 +50,48 @@ import {
 } from '../lib/storage';
 
 import { AppTheme, applyTheme, getInitialTheme, persistTheme } from '../lib/theme';
-import { DEFAULT_SHOP_SETTINGS, SHOP_SETTINGS_STORAGE_KEY } from '../lib/shopSettings';
+import {
+  DEFAULT_SHOP_SETTINGS,
+  SHOP_SETTINGS_STORAGE_KEY,
+  mergeShopSettings,
+  resolveDefaultShopSettings,
+} from '../lib/shopSettings';
+import {
+  loadRemoteShopSettings,
+  saveRemoteShopSettings,
+  type ShopSettingsSyncState,
+} from '../lib/shopSettingsSync';
+import {
+  loadRemoteStorageLocations,
+  saveRemoteStorageLocations,
+  type StorageSyncState,
+} from '../lib/storageLocationsSync';
+import {
+  countOrdersInMonth,
+  guardEmployeeCount,
+  guardMonthlyOrderCount,
+  guardStorageLocationCount,
+  resolveEffectivePlanId,
+} from '../lib/planAccess';
+import {
+  SUBSCRIPTION_STORAGE_KEY,
+  normalizeSubscription,
+  resolveDefaultSubscription,
+  type SubscriptionPlanId,
+  type SubscriptionState,
+} from '../lib/subscription';
+import {
+  fetchRemoteSubscription,
+  requestRemotePlanChange,
+  toSubscriptionState,
+} from '../lib/supabaseSubscription';
+import { isValidLogoDataUrl } from '../lib/shopIdentity';
+import { normalizeBlanchisserieSettings } from '../lib/blanchisserie';
+import { normalizePressingSettings } from '../lib/pressing';
+import {
+  normalizeCatalogOverrides,
+  normalizeCustomGarments,
+} from '../lib/garmentCatalog';
 import { ShopSettings } from '../types';
 import {
   TICKET_COUNTER_STORAGE_KEY as TICKET_COUNTER_KEY,
@@ -52,6 +108,7 @@ export type ScreenId =
   | 'dashboard'
   | 'pos'
   | 'workshop'
+  | 'courier'
   | 'orders'
   | 'clients'
   | 'employees'
@@ -73,9 +130,19 @@ export type WorkshopTab =
 export type StoragePanelView = 'orders' | 'locations';
 
 /** Onglets de l’écran Paramètres. */
-export type SettingsTab = 'shop' | 'logistics' | 'storage' | 'devices' | 'backend' | 'backup';
+export type SettingsTab =
+  | 'shop'
+  | 'services'
+  | 'logistics'
+  | 'storage'
+  | 'devices'
+  | 'backend'
+  | 'backup'
+  | 'subscription';
 
 interface AppContextType {
+  /** Portée courante : démonstration locale amorcée ou organisation réelle vide. */
+  workspace: WorkspaceScope;
   activeScreen: ScreenId;
   setActiveScreen: (screen: ScreenId) => void;
   orders: LaundryOrder[];
@@ -83,10 +150,17 @@ interface AppContextType {
   cashRegister: CashRegisterData;
   activeHandoverOrder: LaundryOrder | null;
   setActiveHandoverOrder: (order: LaundryOrder | null) => void;
-  selectedCustomer: Customer;
+  /** Client actif du POS ; `null` tant qu'aucun client n'existe (espace réel vide). */
+  selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer) => void;
   cartLines: OrderLine[];
-  addCartItem: (item: ClothingItem, serviceType?: string, quantity?: number, weightKg?: number) => void;
+  addCartItem: (
+    item: ClothingItem,
+    serviceType?: string,
+    quantity?: number,
+    weightKg?: number,
+    details?: CartLineDetails
+  ) => void;
   removeCartItem: (lineId: string) => void;
   updateCartItemQty: (lineId: string, delta: number) => void;
   /** Couleur appliquée aux pièces ajoutées au panier (undefined = non précisée). */
@@ -158,7 +232,18 @@ interface AppContextType {
   assignLogisticsTask: (taskId: string, employeeId: string) => ActionResult;
   startLogisticsTask: (taskId: string) => ActionResult;
   completePickupTask: (taskId: string, collectedBags?: number) => ActionResult;
-  completeDeliveryTask: (taskId: string, paymentMethod: PaymentMethod) => ActionResult;
+  completeDeliveryTask: (
+    taskId: string,
+    paymentMethod: PaymentMethod,
+    proof?: DeliveryProofDraft | null
+  ) => ActionResult;
+  /** Jalon « arrivé chez le client », entre le départ et la confirmation. */
+  markLogisticsTaskArrived: (taskId: string) => ActionResult;
+  /** Point de livraison choisi sur la carte (null = point retiré). */
+  setLogisticsTaskDestination: (taskId: string, point: GeoPoint | null) => ActionResult;
+  /** Dernière position connue par tournée (jamais inventée). */
+  courierPositions: CourierPositions;
+  recordCourierPosition: (taskId: string, point: GeoPoint) => ActionResult;
   failLogisticsTask: (taskId: string, reason: LogisticsIssueReason, notes?: string) => ActionResult;
   cancelLogisticsTask: (taskId: string, reason: LogisticsIssueReason, notes?: string) => ActionResult;
   startOrderFromPickupTask: (taskId: string) => boolean;
@@ -170,6 +255,9 @@ interface AppContextType {
   workshopTabRequest: WorkshopTab | null;
   requestWorkshopTab: (tab: WorkshopTab) => void;
   clearWorkshopTabRequest: () => void;
+  /** Onglet réellement affiché dans l'atelier (partagé avec la navigation). */
+  activeWorkshopTab: WorkshopTab;
+  setActiveWorkshopTab: (tab: WorkshopTab) => void;
   /** Demande ponctuelle d’ouverture d’un onglet précis des Paramètres. */
   settingsTabRequest: SettingsTab | null;
   requestSettingsTab: (tab: SettingsTab) => void;
@@ -191,6 +279,26 @@ interface AppContextType {
   toggleTheme: () => void;
   shopSettings: ShopSettings;
   updateShopSettings: (settings: ShopSettings) => void;
+  /** État d'enregistrement des paramètres dans la base (compte réel). */
+  settingsSync: ShopSettingsSyncState;
+  retryShopSettingsSync: () => void;
+  /** État d'enregistrement des emplacements de rangement. */
+  storageSync: StorageSyncState;
+  retryStorageSync: () => void;
+  /**
+   * Abonnement de l'agence. En espace réel, la formule et la date d'essai
+   * viennent de la base (`shop_subscriptions`) ; en démonstration, elles
+   * restent locales.
+   */
+  subscription: SubscriptionState;
+  /** Provenance de l'état affiché, pour rester honnête à l'écran. */
+  subscriptionSource: SubscriptionSource;
+  /** Formule réellement appliquée (essai de 14 jours inclus). */
+  effectivePlanId: SubscriptionPlanId;
+  /** Dépose une demande de formule (le propriétaire seul y a droit). */
+  chooseSubscriptionPlan: (planId: SubscriptionPlanId) => Promise<ActionResult>;
+  /** Relit l'abonnement dans la base (après une demande, par exemple). */
+  refreshSubscription: () => Promise<ActionResult>;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -198,7 +306,7 @@ interface AppContextType {
   // --- Module Personnel ---
   employees: Employee[];
   attendanceRecords: AttendanceRecord[];
-  addEmployee: (data: EmployeeFormData) => Employee;
+  addEmployee: (data: EmployeeFormData) => ActionResult & { employee?: Employee };
   updateEmployee: (id: string, data: EmployeeFormData) => boolean;
   setEmployeeStatus: (id: string, status: EmployeeStatus) => void;
   upsertAttendance: (
@@ -226,9 +334,59 @@ interface AppContextType {
   setExpenseCategoryActive: (id: string, isActive: boolean) => void;
 }
 
+/** Caisse vierge du jour pour un espace réel : aucun montant inventé. */
+const createEmptyCashRegister = (): CashRegisterData => ({
+  date: todayISO(),
+  cashAmount: 0,
+  waveAmount: 0,
+  momoAmount: 0,
+  totalAmount: 0,
+  floatAmount: 0,
+  targetGoal: 0,
+  monthAchieved: 0,
+});
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+/**
+ * Provenance de l'abonnement affiché.
+ *
+ * - `local` : démonstration locale, aucun serveur ;
+ * - `chargement` : lecture de la base en cours ;
+ * - `serveur` : formule et essai lus dans la base ;
+ * - `indisponible` : la base n'a pas répondu, aucune formule payante n'est
+ *   ouverte (on ne peut pas vérifier le droit).
+ */
+export type SubscriptionSource = 'local' | 'chargement' | 'serveur' | 'indisponible';
+
+/**
+ * État d'attente d'un espace réel : Free sans essai, donc sans fonction
+ * payante tant que la base n'a pas répondu. On préfère fermer que d'ouvrir
+ * une formule que rien ne prouve.
+ */
+const unverifiedSubscription = (): SubscriptionState => ({
+  plan: 'free',
+  status: 'essai',
+  renewsOn: null,
+  trialStartedAt: null,
+  trialEndsAt: null,
+  effectivePlan: 'free',
+  requestedPlan: null,
+});
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Portée des données (lib/workspaceScope.ts) :
+  // - démonstration locale explicite → amorçage avec les jeux d'exemple ;
+  // - compte réel rattaché à une organisation → aucune donnée inventée, les
+  //   écrans démarrent vides et se remplissent des seules saisies réelles.
+  const workspace = useWorkspaceScope();
+  const liveWorkspace = isLiveWorkspace(workspace);
+  /** Clé de persistance isolée par organisation en espace réel. */
+  const storageKey = (name: string) => scopeStorageKey(workspace, name);
+  /** Jeu d'exemple en démonstration, liste vide sur un compte réel. */
+  const seedList = <T,>(demoValue: readonly T[]): T[] =>
+    liveWorkspace ? [] : [...demoValue];
+
   const [activeScreen, setActiveScreen] = useState<ScreenId>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   // Thème d'interface clair/sombre (lib/theme.ts) : classe `dark` sur <html>,
@@ -259,27 +417,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Tous les accès passent par lib/localPersistence afin de centraliser la
   // gestion des JSON illisibles et des écritures refusées par le navigateur.
   const [orders, setOrders] = useState<LaundryOrder[]>(() =>
-    loadPersistedState('pressingpro_orders', INITIAL_ORDERS)
+    loadPersistedState(storageKey('pressingpro_orders'), seedList(INITIAL_ORDERS))
   );
 
   const [customers, setCustomers] = useState<Customer[]>(() =>
-    loadPersistedState('pressingpro_customers', INITIAL_CUSTOMERS)
+    loadPersistedState(storageKey('pressingpro_customers'), seedList(INITIAL_CUSTOMERS))
   );
 
+  // Caisse du jour : montants réels uniquement. Aucun objectif ni fond de
+  // caisse d'exemple n'est repris sur un compte réel.
   const [cashRegister, setCashRegister] = useState<CashRegisterData>(() =>
-    loadPersistedState('pressingpro_cash_register', INITIAL_CASH_REGISTER)
+    loadPersistedState(
+      storageKey('pressingpro_cash_register'),
+      liveWorkspace ? createEmptyCashRegister() : INITIAL_CASH_REGISTER
+    )
   );
 
   useEffect(() => {
-    persistState('pressingpro_orders', orders);
+    persistState(storageKey('pressingpro_orders'), orders);
   }, [orders]);
 
   useEffect(() => {
-    persistState('pressingpro_customers', customers);
+    persistState(storageKey('pressingpro_customers'), customers);
   }, [customers]);
 
   useEffect(() => {
-    persistState('pressingpro_cash_register', cashRegister);
+    persistState(storageKey('pressingpro_cash_register'), cashRegister);
   }, [cashRegister]);
 
   // Compteur séquentiel de tickets, persisté dans localStorage.
@@ -290,34 +453,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [nextTicketNumber, setNextTicketNumber] = useState<number>(() => {
     const fallback =
       orders.reduce((max, o) => Math.max(max, parseTicketNumber(o.ticketNumber)), 0) + 1;
-    const saved = parseInt(loadPersistedString(TICKET_COUNTER_KEY) || '', 10);
+    const saved = parseInt(loadPersistedString(storageKey(TICKET_COUNTER_KEY)) || '', 10);
     return Number.isNaN(saved) ? fallback : Math.max(saved, fallback);
   });
 
   useEffect(() => {
-    persistString(TICKET_COUNTER_KEY, String(nextTicketNumber));
+    persistString(storageKey(TICKET_COUNTER_KEY), String(nextTicketNumber));
   }, [nextTicketNumber]);
 
   // --- États des modules Personnel / Stocks / Dépenses ---
   // Même modèle de persistance que le reste de l'application : localStorage
   // du navigateur uniquement, données de démonstration au premier lancement.
   const [employees, setEmployees] = useState<Employee[]>(() =>
-    loadPersistedState('pressingpro_employees', INITIAL_EMPLOYEES)
+    loadPersistedState(storageKey('pressingpro_employees'), seedList(INITIAL_EMPLOYEES))
   );
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(() =>
-    loadPersistedState('pressingpro_attendance', INITIAL_ATTENDANCE)
+    loadPersistedState(storageKey('pressingpro_attendance'), seedList(INITIAL_ATTENDANCE))
   );
   const [products, setProducts] = useState<InventoryProduct[]>(() =>
-    loadPersistedState('pressingpro_inventory_products', INITIAL_PRODUCTS)
+    loadPersistedState(storageKey('pressingpro_inventory_products'), seedList(INITIAL_PRODUCTS))
   );
   const [stockMovements, setStockMovements] = useState<StockMovement[]>(() =>
-    loadPersistedState('pressingpro_stock_movements', INITIAL_STOCK_MOVEMENTS)
+    loadPersistedState(storageKey('pressingpro_stock_movements'), seedList(INITIAL_STOCK_MOVEMENTS))
   );
   const [expenses, setExpenses] = useState<Expense[]>(() =>
-    loadPersistedState('pressingpro_expenses', INITIAL_EXPENSES)
+    loadPersistedState(storageKey('pressingpro_expenses'), seedList(INITIAL_EXPENSES))
   );
+  // Catégories : nomenclature de paramétrage (et non des écritures), donc
+  // conservée dans les deux modes ; la liste reste éditable dans Paramètres.
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>(() =>
-    loadPersistedState('pressingpro_expense_categories', INITIAL_EXPENSE_CATEGORIES)
+    loadPersistedState(storageKey('pressingpro_expense_categories'), [
+      ...INITIAL_EXPENSE_CATEGORIES,
+    ])
   );
 
   // Tournées ramassage/livraison. Une première installation reçoit tous les
@@ -327,11 +494,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // liés à un ticket de démonstration.
   const [logisticsTasks, setLogisticsTasks] = useState<LogisticsTask[]>(() => {
     const saved = loadPersistedState<LogisticsTask[] | null>(
-      LOGISTICS_TASKS_STORAGE_KEY,
+      storageKey(LOGISTICS_TASKS_STORAGE_KEY),
       null
     );
-    if (saved) return saved;
-    if (hasPersistedValue('pressingpro_orders')) {
+    if (saved) return saved.map(normalizeStoredLogisticsTask);
+    // Espace réel : aucune tournée fictive, même sur un poste où la
+    // démonstration a déjà été utilisée.
+    if (liveWorkspace) return [];
+    if (hasPersistedValue(storageKey('pressingpro_orders'))) {
       return INITIAL_LOGISTICS_TASKS.filter((task) => task.kind === 'pickup' && !task.orderId);
     }
     return INITIAL_LOGISTICS_TASKS;
@@ -339,75 +509,394 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Emplacements physiques des commandes terminées. Le plan proposé par
   // défaut est éditable pour correspondre au local réel ; persistance locale.
+  // Plan de rangement : configuration matérielle éditable, conservée dans les
+  // deux modes (elle ne contient aucun dossier client ni aucune commande).
   const [storageLocations, setStorageLocations] = useState<StorageLocation[]>(() =>
     normalizeStorageLocations(
-      loadPersistedState<unknown>(STORAGE_LOCATIONS_STORAGE_KEY, INITIAL_STORAGE_LOCATIONS),
+      loadPersistedState<unknown>(
+        storageKey(STORAGE_LOCATIONS_STORAGE_KEY),
+        INITIAL_STORAGE_LOCATIONS
+      ),
       INITIAL_STORAGE_LOCATIONS
     )
   );
+  // --- Emplacements de rangement : synchronisation avec la base ---------
+  const [storageSync, setStorageSync] = useState<StorageSyncState>(() => ({
+    status: liveWorkspace ? 'loading' : 'idle',
+    error: null,
+    savedAt: null,
+  }));
+  // Dernier état connu du serveur : sert à ne pas renvoyer un plan identique.
+  const storageSnapshotRef = useRef(JSON.stringify(storageLocations));
+  const storageHydratedRef = useRef(!liveWorkspace);
+  const storagePushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushStorageLocations = async (next: readonly StorageLocation[]) => {
+    const shopId = workspace.shopId;
+    const organizationId = workspace.organizationId;
+    if (!liveWorkspace || !shopId || !organizationId) return;
+    setStorageSync((previous) => ({ ...previous, status: 'saving', error: null }));
+    const result = await saveRemoteStorageLocations({
+      shopId,
+      organizationId,
+      locations: next,
+    });
+    if (!result.ok) {
+      setStorageSync({ status: 'error', error: result.error, savedAt: null });
+      return;
+    }
+    storageSnapshotRef.current = JSON.stringify(next);
+    setStorageSync({ status: 'saved', error: null, savedAt: new Date().toISOString() });
+  };
+
+  const retryStorageSync = () => {
+    if (storagePushTimer.current) {
+      clearTimeout(storagePushTimer.current);
+      storagePushTimer.current = null;
+    }
+    void flushStorageLocations(storageLocations);
+  };
+
+  useEffect(() => {
+    const shopId = workspace.shopId;
+    if (!liveWorkspace || !shopId) return;
+    let cancelled = false;
+    setStorageSync({ status: 'loading', error: null, savedAt: null });
+    void (async () => {
+      const result = await loadRemoteStorageLocations(shopId, storageLocations);
+      if (cancelled) return;
+      if (!result.ok) {
+        setStorageSync({ status: 'error', error: result.error, savedAt: null });
+        storageHydratedRef.current = true;
+        return;
+      }
+      storageHydratedRef.current = true;
+      if (result.seeded) {
+        // Base encore vide : le plan local devient celui de l'agence.
+        await flushStorageLocations(result.locations);
+        return;
+      }
+      setStorageLocations(result.locations);
+      storageSnapshotRef.current = JSON.stringify(result.locations);
+      setStorageSync({ status: 'saved', error: null, savedAt: new Date().toISOString() });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveWorkspace, workspace.shopId]);
+
+  useEffect(() => {
+    if (!liveWorkspace || !workspace.shopId || !storageHydratedRef.current) return;
+    const serialized = JSON.stringify(storageLocations);
+    if (serialized === storageSnapshotRef.current) return;
+    if (storagePushTimer.current) clearTimeout(storagePushTimer.current);
+    setStorageSync((previous) => ({ ...previous, status: 'saving', error: null }));
+    storagePushTimer.current = setTimeout(() => {
+      storagePushTimer.current = null;
+      void flushStorageLocations(storageLocations);
+    }, 800);
+    return () => {
+      if (storagePushTimer.current) {
+        clearTimeout(storagePushTimer.current);
+        storagePushTimer.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageLocations, liveWorkspace, workspace.shopId]);
+
+  // --- Abonnement --------------------------------------------------------
+  // En espace réel, la formule et la date de départ de l'essai vivent dans la
+  // base (`public.shop_subscriptions`). Le navigateur ne conserve donc plus
+  // aucune date d'essai : effacer le stockage local ne remet pas le compteur à
+  // zéro. La démonstration locale, elle, reste autonome.
+  const [subscription, setSubscription] = useState<SubscriptionState>(() =>
+    workspace.mode === 'live' ? unverifiedSubscription() : resolveDefaultSubscription(workspace)
+  );
+  const [subscriptionSource, setSubscriptionSource] = useState<SubscriptionSource>(() =>
+    workspace.mode === 'live' ? 'chargement' : 'local'
+  );
+
+  const subscriptionShopId = workspace.mode === 'live' ? workspace.shopId : null;
+
+  useEffect(() => {
+    if (!subscriptionShopId) {
+      setSubscription(resolveDefaultSubscription(workspace));
+      setSubscriptionSource('local');
+      return;
+    }
+    let cancelled = false;
+    setSubscriptionSource('chargement');
+    void (async () => {
+      try {
+        const remote = await fetchRemoteSubscription(subscriptionShopId);
+        if (cancelled) return;
+        setSubscription(toSubscriptionState(remote));
+        setSubscriptionSource('serveur');
+      } catch {
+        if (cancelled) return;
+        // Repli fermé et assumé : sans état serveur, aucune fonction payante
+        // n'est ouverte. L'écran Paramètres l'explique en une phrase.
+        setSubscription(unverifiedSubscription());
+        setSubscriptionSource('indisponible');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscriptionShopId, workspace]);
+
+  // Essai de 14 jours : un compte Free dispose des fonctions Pro jusqu'à
+  // l'échéance, puis retombe sur ses plafonds sans rien perdre. La formule
+  // effective vient du serveur dès qu'elle est lue.
+  const effectivePlanId = resolveEffectivePlanId(subscription);
+
+  const refreshSubscription = async (): Promise<ActionResult> => {
+    if (!subscriptionShopId) return { ok: true };
+    try {
+      const remote = await fetchRemoteSubscription(subscriptionShopId);
+      setSubscription(toSubscriptionState(remote));
+      setSubscriptionSource('serveur');
+      return { ok: true };
+    } catch (error) {
+      setSubscription(unverifiedSubscription());
+      setSubscriptionSource('indisponible');
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Abonnement indisponible.',
+      };
+    }
+  };
+
+  const chooseSubscriptionPlan = async (planId: SubscriptionPlanId): Promise<ActionResult> => {
+    if (!subscriptionShopId) {
+      const next: SubscriptionState = { ...subscription, plan: planId };
+      setSubscription(next);
+      persistString(
+        scopeStorageKey(workspace, SUBSCRIPTION_STORAGE_KEY),
+        JSON.stringify(next)
+      );
+      return { ok: true };
+    }
+    try {
+      // Le client ne fait que déposer une demande : la formule est appliquée
+      // par l'éditeur, côté base.
+      const remote = await requestRemotePlanChange(subscriptionShopId, planId);
+      setSubscription(toSubscriptionState(remote));
+      setSubscriptionSource('serveur');
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Demande de formule impossible.',
+      };
+    }
+  };
+
   const [focusedStorageOrderId, setFocusedStorageOrderId] = useState<string | null>(null);
   const [storagePanelViewRequest, setStoragePanelViewRequest] =
     useState<StoragePanelView | null>(null);
 
   // Paramètres de la boutique (écran Paramètres) : fusionnés aux valeurs par
   // défaut pour rester complets même si une ancienne version est en mémoire.
-  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => {
-    const merged = {
-      ...DEFAULT_SHOP_SETTINGS,
-      ...loadPersistedState<Partial<ShopSettings>>(SHOP_SETTINGS_STORAGE_KEY, {}),
+  // Sur un espace réel, la base porte le nom du pressing effectivement créé :
+  // le nom de l'application n'apparaît jamais comme enseigne.
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(() =>
+    mergeShopSettings(
+      resolveDefaultShopSettings(workspace),
+      loadPersistedState<Partial<ShopSettings>>(storageKey(SHOP_SETTINGS_STORAGE_KEY), {})
+    )
+  );
+
+  // --- Paramètres : enregistrement dans la base (compte réel) ------------
+  // Chaque enregistrement de l'écran Paramètres part vers Supabase. Le
+  // navigateur garde sa copie : hors ligne, l'écran reste utilisable et
+  // l'erreur est affichée, jamais masquée.
+  const [settingsSync, setSettingsSync] = useState<ShopSettingsSyncState>(() => ({
+    status: liveWorkspace ? 'loading' : 'idle',
+    error: null,
+    warning: null,
+    savedAt: null,
+  }));
+  const shopSettingsRef = useRef(shopSettings);
+  shopSettingsRef.current = shopSettings;
+  const settingsPushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Une modification faite avant la fin de la lecture distante ne doit pas
+  // être écrasée par la réponse du serveur.
+  const settingsTouchedRef = useRef(false);
+
+  const flushShopSettings = async (next: ShopSettings) => {
+    const shopId = workspace.shopId;
+    const organizationId = workspace.organizationId;
+    if (!liveWorkspace || !shopId || !organizationId) return;
+    setSettingsSync((previous) => ({
+      status: 'saving',
+      error: null,
+      warning: previous.warning,
+      savedAt: previous.savedAt,
+    }));
+    const result = await saveRemoteShopSettings({ shopId, organizationId, settings: next });
+    if (!result.ok) {
+      setSettingsSync((previous) => ({
+        status: 'error',
+        error: result.error,
+        warning: null,
+        savedAt: previous.savedAt,
+      }));
+      return;
+    }
+    setSettingsSync({
+      status: 'saved',
+      error: null,
+      warning: result.warning ?? null,
+      savedAt: result.updatedAt ?? new Date().toISOString(),
+    });
+  };
+
+  const scheduleShopSettingsPush = (next: ShopSettings) => {
+    if (!liveWorkspace || !workspace.shopId) return;
+    settingsTouchedRef.current = true;
+    if (settingsPushTimer.current) clearTimeout(settingsPushTimer.current);
+    setSettingsSync((previous) => ({
+      status: 'saving',
+      error: null,
+      warning: previous.warning,
+      savedAt: previous.savedAt,
+    }));
+    settingsPushTimer.current = setTimeout(() => {
+      settingsPushTimer.current = null;
+      void flushShopSettings(next);
+    }, 600);
+  };
+
+  useEffect(
+    () => () => {
+      if (settingsPushTimer.current) clearTimeout(settingsPushTimer.current);
+    },
+    []
+  );
+
+  const retryShopSettingsSync = () => {
+    if (settingsPushTimer.current) {
+      clearTimeout(settingsPushTimer.current);
+      settingsPushTimer.current = null;
+    }
+    void flushShopSettings(shopSettingsRef.current);
+  };
+
+  // Lecture initiale : la base fait foi pour un compte réel. Une ligne encore
+  // vide reçoit la configuration courante (issue de l'onboarding).
+  useEffect(() => {
+    const shopId = workspace.shopId;
+    if (!liveWorkspace || !shopId) return;
+    let cancelled = false;
+    setSettingsSync((previous) => ({ ...previous, status: 'loading', error: null }));
+    void (async () => {
+      const base = resolveDefaultShopSettings(workspace);
+      const result = await loadRemoteShopSettings(shopId, base);
+      if (cancelled) return;
+      if (!result.ok) {
+        setSettingsSync({
+          status: 'error',
+          error: result.error,
+          warning: null,
+          savedAt: null,
+        });
+        return;
+      }
+      if (result.hasSnapshot) {
+        if (!settingsTouchedRef.current) setShopSettings(result.settings);
+        setSettingsSync({
+          status: 'saved',
+          error: null,
+          warning: null,
+          savedAt: result.updatedAt,
+        });
+        return;
+      }
+      setSettingsSync({ status: 'saving', error: null, warning: null, savedAt: null });
+      await flushShopSettings(result.settings);
+    })();
+    return () => {
+      cancelled = true;
     };
-    return {
-      ...merged,
-      storageAssignmentRequired: merged.storageAssignmentRequired === true,
-      storageAllowCapacityOverflow: merged.storageAllowCapacityOverflow !== false,
-      storageSuggestionsEnabled: merged.storageSuggestionsEnabled !== false,
-      storageDefaultCapacityPackages:
-        sanitizePackageCount(merged.storageDefaultCapacityPackages) ??
-        DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
-    };
-  });
-  const updateShopSettings = (next: ShopSettings) =>
-    setShopSettings({
+    // `workspace` change d'identité à chaque rendu : on ne dépend que de ce
+    // qui compte pour la synchronisation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveWorkspace, workspace.shopId]);
+
+  const updateShopSettings = (next: ShopSettings) => {
+    const normalized: ShopSettings = {
       ...next,
+      logoDataUrl: isValidLogoDataUrl(next.logoDataUrl) ? next.logoDataUrl : null,
+      blanchisserie: normalizeBlanchisserieSettings(next.blanchisserie),
+      pressing: normalizePressingSettings(next.pressing),
+      customGarments: normalizeCustomGarments(next.customGarments),
+      catalogOverrides: normalizeCatalogOverrides(next.catalogOverrides),
       pickupFee: normalizeLogisticsFee(next.pickupFee),
       deliveryFee: normalizeLogisticsFee(next.deliveryFee),
+      deliveryProof: normalizeDeliveryProofSettings(next.deliveryProof),
+      deliveryGps: normalizeDeliveryGpsSettings(next.deliveryGps),
       storageAssignmentRequired: next.storageAssignmentRequired === true,
       storageAllowCapacityOverflow: next.storageAllowCapacityOverflow === true,
       storageSuggestionsEnabled: next.storageSuggestionsEnabled === true,
       storageDefaultCapacityPackages:
         sanitizePackageCount(next.storageDefaultCapacityPackages) ??
         DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
-    });
+    };
+    setShopSettings(normalized);
+    scheduleShopSettingsPush(normalized);
+  };
+
+  const [courierPositions, setCourierPositions] = useState<CourierPositions>(() =>
+    pruneCourierPositions(
+      normalizeCourierPositions(
+        loadPersistedState<CourierPositions | null>(
+          storageKey(COURIER_POSITIONS_STORAGE_KEY),
+          null
+        )
+      ),
+      new Date()
+    )
+  );
 
   useEffect(() => {
-    persistState(LOGISTICS_TASKS_STORAGE_KEY, logisticsTasks);
+    persistState(storageKey(LOGISTICS_TASKS_STORAGE_KEY), logisticsTasks);
   }, [logisticsTasks]);
   useEffect(() => {
-    persistState(STORAGE_LOCATIONS_STORAGE_KEY, storageLocations);
+    persistState(storageKey(COURIER_POSITIONS_STORAGE_KEY), courierPositions);
+  }, [courierPositions]);
+  useEffect(() => {
+    persistState(storageKey(STORAGE_LOCATIONS_STORAGE_KEY), storageLocations);
   }, [storageLocations]);
   useEffect(() => {
-    persistState('pressingpro_employees', employees);
+    persistState(storageKey('pressingpro_employees'), employees);
   }, [employees]);
   useEffect(() => {
-    persistState('pressingpro_attendance', attendanceRecords);
+    persistState(storageKey('pressingpro_attendance'), attendanceRecords);
   }, [attendanceRecords]);
   useEffect(() => {
-    persistState('pressingpro_inventory_products', products);
+    persistState(storageKey('pressingpro_inventory_products'), products);
   }, [products]);
   useEffect(() => {
-    persistState('pressingpro_stock_movements', stockMovements);
+    persistState(storageKey('pressingpro_stock_movements'), stockMovements);
   }, [stockMovements]);
   useEffect(() => {
-    persistState('pressingpro_expenses', expenses);
+    persistState(storageKey('pressingpro_expenses'), expenses);
   }, [expenses]);
   useEffect(() => {
-    persistState('pressingpro_expense_categories', expenseCategories);
+    persistState(storageKey('pressingpro_expense_categories'), expenseCategories);
   }, [expenseCategories]);
   useEffect(() => {
-    persistState(SHOP_SETTINGS_STORAGE_KEY, shopSettings);
+    persistState(storageKey(SHOP_SETTINGS_STORAGE_KEY), shopSettings);
   }, [shopSettings]);
 
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer>(customers[0] || INITIAL_CUSTOMERS[0]);
+  // Aucun repli fictif : sur un espace réel sans client, la sélection est
+  // vide et le POS invite à créer le premier dossier.
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    customers[0] ?? null
+  );
   const [pickupOption, setPickupOption] = useState<PickupOption>('standard');
 
   // Brouillon logistique du POS : mode de restitution et, si livraison,
@@ -415,7 +904,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orderFulfillmentMethod, setOrderFulfillmentMethod] =
     useState<FulfillmentMethod>('counter_pickup');
   const [deliveryAddress, setDeliveryAddress] = useState<string>(
-    (customers[0] || INITIAL_CUSTOMERS[0]).address || ''
+    customers[0]?.address || ''
   );
   const [deliveryAddressDetails, setDeliveryAddressDetails] = useState<string>('');
   const [deliveryDateISO, setDeliveryDateISOState] = useState<string>(() =>
@@ -427,6 +916,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pendingPickupTaskId, setPendingPickupTaskId] = useState<string | null>(null);
   const [focusedLogisticsTaskId, setFocusedLogisticsTaskId] = useState<string | null>(null);
   const [workshopTabRequest, setWorkshopTabRequest] = useState<WorkshopTab | null>(null);
+  // Onglet courant de l'atelier : la barre latérale le lit pour surligner le
+  // bon sous-onglet, et l'écran Atelier l'écrit quand l'utilisateur navigue.
+  const [activeWorkshopTab, setActiveWorkshopTab] = useState<WorkshopTab>('production');
   const [settingsTabRequest, setSettingsTabRequest] = useState<SettingsTab | null>(null);
 
   const pendingPickupTask = pendingPickupTaskId
@@ -435,6 +927,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const requestWorkshopTab = (tab: WorkshopTab) => {
     setWorkshopTabRequest(tab);
+    // Mémorisé tout de suite : la barre latérale surligne le sous-onglet sans
+    // attendre le montage de l'écran Atelier.
+    setActiveWorkshopTab(tab);
     setActiveScreen('workshop');
   };
   const clearWorkshopTabRequest = () => setWorkshopTabRequest(null);
@@ -466,7 +961,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetLogisticsDraft = (option: PickupOption = pickupOption) => {
     setOrderFulfillmentMethod('counter_pickup');
-    setDeliveryAddress(selectedCustomer.address || '');
+    setDeliveryAddress(selectedCustomer?.address || '');
     setDeliveryAddressDetails('');
     setDeliveryScheduleManual(false);
     setDeliveryDateISOState(toISODate(getPromisedDate(option)));
@@ -477,8 +972,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // L'adresse proposée suit le client sélectionné, sauf pendant la conversion
   // d'un ramassage où l'adresse de collecte fait foi par défaut.
   useEffect(() => {
-    if (!pendingPickupTaskId) setDeliveryAddress(selectedCustomer.address || '');
-  }, [selectedCustomer.id, pendingPickupTaskId]);
+    if (!pendingPickupTaskId) setDeliveryAddress(selectedCustomer?.address || '');
+  }, [selectedCustomer?.id, pendingPickupTaskId]);
 
   // Tant que le créneau n'a pas été choisi manuellement, la livraison suit la
   // date promise par l'option standard/express/différé.
@@ -560,7 +1055,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     item: ClothingItem,
     serviceType = selectedServiceFilter,
     quantity = 1,
-    weightKg?: number
+    weightKg?: number,
+    details?: CartLineDetails
   ) => {
     setCartLines((prev) => {
       const existing = prev.find(
@@ -583,6 +1079,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 ...line,
                 quantity: newQty,
                 weightKg: isKilo ? newQty : undefined,
+                garments:
+                  details?.garments != null
+                    ? (line.garments ?? 0) + details.garments
+                    : line.garments,
                 subtotal: newSubtotal,
               }
             : line
@@ -597,6 +1097,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           quantity: actualQty,
           pricingType: item.pricingType,
           weightKg: isKilo ? actualQty : undefined,
+          garments: details?.garments,
+          pricingBasis: details?.pricingBasis,
+          blanchisserieService: details?.blanchisserieService,
           unitLabel: item.unitLabel,
           unitPrice: item.unitPrice,
           subtotal: calcSubtotal,
@@ -671,8 +1174,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const submitNewOrder = (): LaundryOrder | null => {
+    const monthlyGuard = guardMonthlyOrderCount(
+      countOrdersInMonth(orders),
+      effectivePlanId
+    );
+    if (!monthlyGuard.allowed) {
+      showToast(monthlyGuard.message);
+      return null;
+    }
     if (cartLines.length === 0) {
       showToast('Le panier est vide. Veuillez ajouter au moins un vêtement ou linge.');
+      return null;
+    }
+
+    // Sur un espace réel vide, aucun client fictif n'est pré-sélectionné :
+    // la commande ne peut pas être enregistrée sans dossier client.
+    const customer = selectedCustomer;
+    if (!customer) {
+      showToast('Sélectionnez ou créez un client avant d’enregistrer la commande.');
       return null;
     }
 
@@ -685,7 +1204,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sourcePickupTask.kind !== 'pickup' ||
         sourcePickupTask.status !== 'completed' ||
         sourcePickupTask.orderId ||
-        sourcePickupTask.customerId !== selectedCustomer.id
+        sourcePickupTask.customerId !== customer.id
       ) {
         showToast('Ce ramassage ne peut pas être converti pour le client sélectionné.');
         return null;
@@ -714,7 +1233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { subtotal, expressFee, discountAmount: discount, total, deposit, remaining } =
       calculateOrderTotals(cartLines, {
         pickupOption,
-        loyaltyDiscountPercent: selectedCustomer.loyaltyDiscountPercent,
+        loyaltyDiscountPercent: customer.loyaltyDiscountPercent,
         depositAmount,
         collectionFee,
         deliveryFee,
@@ -730,15 +1249,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           id: genId('log'),
           kind: 'delivery',
           status: 'scheduled',
-          customerId: selectedCustomer.id,
-          customerName: selectedCustomer.name,
-          customerPhone: selectedCustomer.phone,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerPhone: customer.phone,
           address: cleanDeliveryAddress,
           addressDetails: cleanDeliveryDetails || undefined,
           scheduledDate: deliveryDateISO,
           timeSlot: deliveryTimeSlot,
           orderId,
           orderTicketNumber: nextTicketNum,
+          // Code communiqué au client, saisi par le coursier à la remise.
+          deliveryCode: generateDeliveryCode(),
           fee: deliveryFee,
           createdAt: nowIso,
           updatedAt: nowIso,
@@ -749,10 +1270,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: orderId,
       ticketNumber: nextTicketNum,
       serviceCategory: selectedServiceCategory || 'pressing',
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.name,
-      customerPhone: selectedCustomer.phone,
-      customerAddress: selectedCustomer.address,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      customerAddress: customer.address,
       lines: [...cartLines],
       subtotal,
       serviceFees: expressFee,
@@ -821,7 +1342,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Update customer deposits
     setCustomers((prev) =>
       prev.map((c) =>
-        c.id === selectedCustomer.id
+        c.id === customer.id
           ? { ...c, depositsCount: c.depositsCount + 1, balance: c.balance + remaining }
           : c
       )
@@ -962,6 +1483,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createStorageLocation = (
     data: StorageLocationFormData
   ): ActionResult & { location?: StorageLocation } => {
+    const guard = guardStorageLocationCount(storageLocations.length, 1, effectivePlanId);
+    if (!guard.allowed) return { ok: false, error: guard.message };
     const { normalized, error } = validateStorageLocationData(data);
     if (!normalized || error) return { ok: false, error: error ?? 'Emplacement invalide.' };
     const now = nowISODateTime();
@@ -983,6 +1506,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (error || drafts.length === 0) {
       return { ok: false, error: error ?? 'Aucun emplacement à créer.' };
     }
+
+    const guard = guardStorageLocationCount(storageLocations.length, drafts.length, effectivePlanId);
+    if (!guard.allowed) return { ok: false, error: guard.message };
 
     const now = nowISODateTime();
     const locations: StorageLocation[] = drafts.map((draft, index) => ({
@@ -1450,6 +1976,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       issueReason: undefined,
       issueNotes: undefined,
       startedAt: undefined,
+      arrivedAt: undefined,
       completedAt: undefined,
     });
 
@@ -1515,6 +2042,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'en_route',
       assignedEmployeeName: employee.fullName,
       startedAt: nowISODateTime(),
+      arrivedAt: undefined,
       issueReason: undefined,
       issueNotes: undefined,
     });
@@ -1537,9 +2065,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  /**
+   * Jalon « arrivé sur place » : le coursier est chez le client mais la remise
+   * n'est pas encore constatée. Il ne change pas le statut de la tournée — la
+   * livraison reste « en route » jusqu'à la confirmation, avec une preuve.
+   */
+  const markLogisticsTaskArrived = (taskId: string): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status !== 'en_route') {
+      return { ok: false, error: 'Démarrez d’abord la tournée avant de signaler l’arrivée.' };
+    }
+    if (task.arrivedAt) {
+      return { ok: false, error: 'L’arrivée est déjà enregistrée pour cette tournée.' };
+    }
+    patchLogisticsTask(taskId, { arrivedAt: nowISODateTime() });
+    showToast(`📍 Arrivée enregistrée chez ${task.customerName}.`);
+    return { ok: true };
+  };
+
+  /** Point de livraison placé sur la carte, ou retiré (retour au texte seul). */
+  const setLogisticsTaskDestination = (taskId: string, point: GeoPoint | null): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (point) {
+      const normalized = normalizeGeoPoint(point);
+      if (!normalized) {
+        return { ok: false, error: 'Ce point est inutilisable : choisissez-en un autre sur la carte.' };
+      }
+      patchLogisticsTask(taskId, { destination: normalized });
+      showToast('✓ Point de livraison enregistré.');
+      return { ok: true };
+    }
+    patchLogisticsTask(taskId, { destination: undefined });
+    showToast('Point de livraison retiré : l’itinéraire repartira de l’adresse.');
+    return { ok: true };
+  };
+
+  /**
+   * Enregistre une position envoyée par le téléphone du coursier. Refusée hors
+   * tournée en route : une position ne doit pas être collectée pour une course
+   * qui n'a pas commencé.
+   */
+  const recordCourierPosition = (taskId: string, point: GeoPoint): ActionResult => {
+    const task = logisticsTasks.find((t) => t.id === taskId);
+    if (!task) return { ok: false, error: 'Cette tournée est introuvable.' };
+    if (task.status !== 'en_route') {
+      return { ok: false, error: 'La position ne peut être partagée que pendant une tournée en route.' };
+    }
+    const normalized = normalizeGeoPoint(point);
+    if (!normalized) return { ok: false, error: 'Position inutilisable : mesure ignorée.' };
+    setCourierPositions((prev) => ({ ...prev, [taskId]: { ...normalized, taskId } }));
+    return { ok: true };
+  };
+
   const completeDeliveryTask = (
     taskId: string,
-    paymentMethodForBalance: PaymentMethod
+    paymentMethodForBalance: PaymentMethod,
+    proofDraft?: DeliveryProofDraft | null
   ): ActionResult => {
     const task = logisticsTasks.find((t) => t.id === taskId);
     if (!task || task.kind !== 'delivery') return { ok: false, error: 'Cette livraison est introuvable.' };
@@ -1551,6 +2134,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (order.status !== 'ready') {
       return { ok: false, error: 'La commande doit être prête et non encore remise pour être livrée.' };
     }
+
+    // La preuve est contrôlée AVANT de toucher à la commande : une livraison
+    // refusée pour preuve manquante ne doit ni solder le ticket ni créditer la
+    // caisse. Le code n'est exigé que si la tournée en possède un.
+    const proofErrors = validateDeliveryProofDraft(proofDraft, {
+      settings: normalizeDeliveryProofSettings(shopSettings.deliveryProof),
+      expectedCode: task.deliveryCode,
+    });
+    if (proofErrors.length > 0) {
+      return { ok: false, error: proofErrors[0] };
+    }
+
+    const proof = buildDeliveryProof(proofDraft, {
+      capturedAt: nowISODateTime(),
+      capturedByEmployeeId: task.assignedEmployeeId,
+      capturedByEmployeeName: task.assignedEmployeeName,
+    });
 
     const balance = Math.max(0, order.remainingBalance);
     const deliveredAt = nowDateTime();
@@ -1574,6 +2174,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     patchLogisticsTask(taskId, {
       status: 'completed',
       completedAt: nowISODateTime(),
+      // Livrer implique être arrivé : on comble le jalon s'il n'a pas été posé.
+      arrivedAt: task.arrivedAt ?? nowISODateTime(),
+      proof: proof ?? undefined,
       collectedAmount: balance,
       collectedPaymentMethod: balance > 0 ? paymentMethodForBalance : undefined,
     });
@@ -1597,10 +2200,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (activeHandoverOrder?.id === order.id) setActiveHandoverOrder(null);
+    const proofSuffix = proof ? ' · preuve de remise enregistrée' : ' · sans preuve de remise';
     showToast(
       balance > 0
-        ? `✓ ${order.ticketNumber} livrée — ${balance.toLocaleString('fr-FR')} FCFA encaissés via ${PAYMENT_METHOD_LABELS[paymentMethodForBalance]}.`
-        : `✓ ${order.ticketNumber} livrée — commande déjà soldée.`
+        ? `✓ ${order.ticketNumber} livrée — ${balance.toLocaleString('fr-FR')} FCFA encaissés via ${PAYMENT_METHOD_LABELS[paymentMethodForBalance]}${proofSuffix}.`
+        : `✓ ${order.ticketNumber} livrée — commande déjà soldée${proofSuffix}.`
     );
     return { ok: true };
   };
@@ -1689,7 +2293,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!pendingPickupTaskId) return;
     setPendingPickupTaskId(null);
     setOrderFulfillmentMethod('counter_pickup');
-    setDeliveryAddress(selectedCustomer.address || '');
+    setDeliveryAddress(selectedCustomer?.address || '');
     setDeliveryAddressDetails('');
     showToast('Ramassage détaché : la saisie redevient une commande comptoir.');
   };
@@ -1736,12 +2340,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   /* ================= Module Personnel ================= */
 
-  const addEmployee = (data: EmployeeFormData): Employee => {
+  const addEmployee = (
+    data: EmployeeFormData
+  ): ActionResult & { employee?: Employee } => {
+    const guard = guardEmployeeCount(employees.length, effectivePlanId);
+    if (!guard.allowed) return { ok: false, error: guard.message };
     const now = nowISODateTime();
     const employee: Employee = { ...data, id: genId('emp'), createdAt: now, updatedAt: now };
     setEmployees((prev) => [employee, ...prev]);
     showToast(`✓ Employé ajouté : ${employee.fullName}`);
-    return employee;
+    return { ok: true, employee };
   };
 
   const updateEmployee = (id: string, data: EmployeeFormData): boolean => {
@@ -2117,6 +2725,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        workspace,
         activeScreen,
         setActiveScreen,
         orders,
@@ -2190,6 +2799,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startLogisticsTask,
         completePickupTask,
         completeDeliveryTask,
+        markLogisticsTaskArrived,
+        setLogisticsTaskDestination,
+        courierPositions,
+        recordCourierPosition,
         failLogisticsTask,
         cancelLogisticsTask,
         startOrderFromPickupTask,
@@ -2199,6 +2812,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         focusLogisticsTask,
         workshopTabRequest,
         requestWorkshopTab,
+        activeWorkshopTab,
+        setActiveWorkshopTab,
         clearWorkshopTabRequest,
         settingsTabRequest,
         requestSettingsTab,
@@ -2220,6 +2835,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleTheme,
         shopSettings,
         updateShopSettings,
+        settingsSync,
+        retryShopSettingsSync,
+        storageSync,
+        retryStorageSync,
+        subscription,
+        subscriptionSource,
+        effectivePlanId,
+        chooseSubscriptionPlan,
+        refreshSubscription,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,

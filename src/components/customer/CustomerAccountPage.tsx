@@ -66,11 +66,11 @@ import {
   type RemoteTrackingRealtimeStatus,
 } from '../../lib/supabaseOrders';
 import {
-  CustomerFormAlerts,
-  customerInputClassName,
-  customerSecondaryButtonClassName,
-  type CustomerNavigate,
-} from './CustomerAuthLayout';
+  AuthAlert,
+  authInputClassName,
+  authSecondaryButtonClassName,
+  type AuthNavigate,
+} from '../auth/AuthShell';
 import type { LogisticsTaskStatus, LogisticsTimeSlot, OrderStatus } from '../../types';
 
 const ORDER_BADGE_VARIANTS: Record<OrderStatus, BadgeVariant> = {
@@ -144,7 +144,7 @@ const formatTaskSchedule = (task: RemoteLogisticsTask): string =>
 
 interface CustomerAccountPageProps {
   session: Session;
-  onNavigate: CustomerNavigate;
+  onNavigate: AuthNavigate;
 }
 
 export const CustomerAccountPage: React.FC<CustomerAccountPageProps> = ({
@@ -412,7 +412,7 @@ export const CustomerAccountPage: React.FC<CustomerAccountPageProps> = ({
                 setEventsRefreshKey((key) => key + 1);
               }}
               disabled={loading}
-              className={customerSecondaryButtonClassName}
+              className={authSecondaryButtonClassName}
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -425,7 +425,7 @@ export const CustomerAccountPage: React.FC<CustomerAccountPageProps> = ({
               type="button"
               onClick={() => void signOut()}
               disabled={signingOut}
-              className={customerSecondaryButtonClassName}
+              className={authSecondaryButtonClassName}
             >
               {signingOut ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -474,7 +474,8 @@ export const CustomerAccountPage: React.FC<CustomerAccountPageProps> = ({
           </div>
         </section>
 
-        <CustomerFormAlerts error={error} message={message} />
+        {error ? <AuthAlert tone="error">{error}</AuthAlert> : null}
+        {message ? <AuthAlert tone="success">{message}</AuthAlert> : null}
 
         {loading && !profile && links.length === 0 ? (
           <p className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white p-5 text-[13.5px] font-semibold text-zinc-600 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
@@ -508,7 +509,7 @@ export const CustomerAccountPage: React.FC<CustomerAccountPageProps> = ({
                       onChange={(event) => setProfileName(event.target.value)}
                       autoComplete="name"
                       disabled={savingProfile}
-                      className={customerInputClassName}
+                      className={authInputClassName}
                     />
                   </div>
                   <div>
@@ -526,13 +527,13 @@ export const CustomerAccountPage: React.FC<CustomerAccountPageProps> = ({
                       autoComplete="tel"
                       inputMode="tel"
                       disabled={savingProfile}
-                      className={customerInputClassName}
+                      className={authInputClassName}
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={savingProfile}
-                    className={`${customerSecondaryButtonClassName} w-full`}
+                    className={`${authSecondaryButtonClassName} w-full`}
                   >
                     {savingProfile ? (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -706,7 +707,7 @@ export const CustomerAccountPage: React.FC<CustomerAccountPageProps> = ({
                               type="button"
                               onClick={() => setSelectedOrderId(order.id)}
                               aria-pressed={selected}
-                              className={`${customerSecondaryButtonClassName} mt-4`}
+                              className={`${authSecondaryButtonClassName} mt-4`}
                             >
                               <History className="h-4 w-4" aria-hidden="true" />
                               Voir l’historique

@@ -138,20 +138,20 @@ export const LegalPage: React.FC<LegalPageProps> = ({ kind, onNavigate }) => {
   }, [content.title]);
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC] px-4 py-8 text-[#171923] dark:bg-zinc-950 dark:text-zinc-50">
+    <main className="min-h-screen bg-[#F7F5F2] px-4 py-8 text-[#171923] dark:bg-zinc-950 dark:text-white">
       <div className="mx-auto w-full max-w-3xl">
         <StaffAuthLink
           path={STAFF_REGISTER_PATH}
           onNavigate={onNavigate}
-          className="inline-flex items-center gap-2 text-[13px] font-bold text-[#C2410C] underline-offset-2 transition hover:underline focus:outline-none focus:ring-4 focus:ring-orange-600/20 dark:text-orange-300"
+          className="inline-flex items-center gap-2 text-[13px] font-bold text-[#1D4ED8] underline-offset-2 transition hover:underline focus:outline-none focus:ring-4 focus:ring-[#1D4ED8]/20 dark:text-blue-300"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Retour à l’inscription
         </StaffAuthLink>
 
-        <article className="mt-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-zinc-800 dark:bg-zinc-900 sm:p-10">
+        <article className="mt-4 rounded-3xl border border-[#E4DFD6] bg-white p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.4)] dark:border-white/10 dark:bg-[#0B101B] sm:p-10">
           <header>
-            <p className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.16em] text-[#C2410C] dark:text-orange-300">
+            <p className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.16em] text-[#1D4ED8] dark:text-blue-300">
               {kind === 'terms' ? (
                 <FileText className="h-4 w-4" aria-hidden="true" />
               ) : (
@@ -159,10 +159,10 @@ export const LegalPage: React.FC<LegalPageProps> = ({ kind, onNavigate }) => {
               )}
               PressingPro CI
             </p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-[#24113D] dark:text-zinc-50">
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-[#111827] dark:text-white">
               {content.title}
             </h1>
-            <p className="mt-3 text-[14px] leading-relaxed text-[#64748B] dark:text-zinc-400">
+            <p className="mt-3 text-[14px] leading-relaxed text-[#5C6472] dark:text-zinc-400">
               {content.intro}
             </p>
             <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium leading-relaxed text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -175,13 +175,13 @@ export const LegalPage: React.FC<LegalPageProps> = ({ kind, onNavigate }) => {
 
           {content.sections.map((section) => (
             <section key={section.title} className="mt-8">
-              <h2 className="text-[16px] font-black text-[#24113D] dark:text-zinc-50">
+              <h2 className="text-[16px] font-black text-[#111827] dark:text-white">
                 {section.title}
               </h2>
               {section.paragraphs.map((paragraph) => (
                 <p
                   key={paragraph}
-                  className="mt-2.5 text-[14px] leading-relaxed text-slate-700 dark:text-zinc-300"
+                  className="mt-2.5 text-[14px] leading-relaxed text-[#374151] dark:text-zinc-300"
                 >
                   {paragraph}
                 </p>
@@ -189,13 +189,13 @@ export const LegalPage: React.FC<LegalPageProps> = ({ kind, onNavigate }) => {
             </section>
           ))}
 
-          <footer className="mt-10 border-t border-slate-200 pt-5 dark:border-zinc-800">
-            <p className="text-[13px] text-[#64748B] dark:text-zinc-400">
+          <footer className="mt-10 border-t border-[#E4DFD6] pt-5 dark:border-white/10">
+            <p className="text-[13px] text-[#5C6472] dark:text-zinc-400">
               Voir aussi :{' '}
               <StaffAuthLink
                 path={otherPath}
                 onNavigate={onNavigate}
-                className="font-bold text-[#C2410C] underline underline-offset-2 transition hover:text-[#9A3412] focus:outline-none focus:ring-4 focus:ring-orange-600/20 dark:text-orange-300"
+                className="font-bold text-[#1D4ED8] underline underline-offset-2 transition hover:text-[#1E40AF] focus:outline-none focus:ring-4 focus:ring-[#1D4ED8]/20 dark:text-blue-300"
               >
                 {otherLabel}
               </StaffAuthLink>

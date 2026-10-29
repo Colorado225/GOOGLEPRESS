@@ -2189,6 +2189,8 @@ export type Database = {
           "messaging_business_hours": Json;
           "messaging_out_of_hours_message": string | null;
           "show_storage_code_to_customers": boolean;
+          "settings": Json;
+          "settings_updated_at": string;
           "created_at": string;
           "updated_at": string;
         };
@@ -2208,6 +2210,8 @@ export type Database = {
           "messaging_business_hours"?: Json;
           "messaging_out_of_hours_message"?: string | null;
           "show_storage_code_to_customers"?: boolean;
+          "settings"?: Json;
+          "settings_updated_at"?: string;
           "created_at"?: string;
           "updated_at"?: string;
         };
@@ -2227,6 +2231,8 @@ export type Database = {
           "messaging_business_hours"?: Json;
           "messaging_out_of_hours_message"?: string | null;
           "show_storage_code_to_customers"?: boolean;
+          "settings"?: Json;
+          "settings_updated_at"?: string;
           "created_at"?: string;
           "updated_at"?: string;
         };
@@ -2554,6 +2560,19 @@ export type Database = {
         Args: {
           "p_shop_id": string;
           "p_business_date": string;
+        };
+        Returns: Json;
+      };
+      "get_shop_subscription_state": {
+        Args: {
+          "p_shop_id": string;
+        };
+        Returns: Json;
+      };
+      "request_subscription_plan": {
+        Args: {
+          "p_shop_id": string;
+          "p_plan": string;
         };
         Returns: Json;
       };

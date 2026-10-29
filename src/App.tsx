@@ -52,6 +52,11 @@ const WorkshopPage = lazy(() =>
     default: module.WorkshopPage,
   }))
 );
+const CourierPage = lazy(() =>
+  import('./components/courier/CourierPage').then((module) => ({
+    default: module.CourierPage,
+  }))
+);
 const OrdersPage = lazy(() =>
   import('./components/orders/OrdersPage').then((module) => ({
     default: module.OrdersPage,
@@ -214,6 +219,7 @@ const MainLayout: React.FC = () => {
                   {activeScreen === 'dashboard' && <DashboardPage />}
                   {activeScreen === 'pos' && <PosPage />}
                   {activeScreen === 'workshop' && <WorkshopPage />}
+                  {activeScreen === 'courier' && <CourierPage />}
                   {activeScreen === 'orders' && <OrdersPage />}
                   {activeScreen === 'clients' && <ClientsPage />}
                   {activeScreen === 'employees' && <EmployeesPage />}

@@ -11,6 +11,8 @@ import type {
   PickupOption,
 } from '../types';
 import { addDaysToISO, formatDateTime, formatISODateFr, todayISO } from './dates';
+import { isDeliveryCode, normalizeDeliveryProof } from './deliveryProof';
+import { normalizeGeoPoint } from './geo';
 
 /**
  * Règles et libellés du service ramassage & livraison.
@@ -146,3 +148,17 @@ export const sortCourierCandidates = (employees: Employee[]): Employee[] =>
       if (aIsCourier !== bIsCourier) return aIsCourier - bIsCourier;
       return a.fullName.localeCompare(b.fullName, 'fr');
     });
+
+/**
+ * Relit une tournée venue du stockage local.
+ *
+ * Les preuves enregistrées avant l'ajout de cette fonctionnalité n'existent
+ * pas ; celles qui existent peuvent être incomplètes. On conserve tout ce qui
+ * est exploitable et on ignore le reste, sans jamais fabriquer de preuve.
+ */
+export const normalizeStoredLogisticsTask = (task: LogisticsTask): LogisticsTask => ({
+  ...task,
+  deliveryCode: isDeliveryCode(task.deliveryCode) ? task.deliveryCode : undefined,
+  proof: normalizeDeliveryProof(task.proof),
+  destination: normalizeGeoPoint(task.destination),
+});

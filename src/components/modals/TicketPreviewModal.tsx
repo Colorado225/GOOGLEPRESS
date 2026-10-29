@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ReceiptTicket, ReceiptVariant } from '../receipt/ReceiptTicket';
 import { printDocument } from '../../lib/print';
+import { resolveShopDisplayName } from '../../lib/shopIdentity';
 import { formatFCFA } from '../../data/demoData';
 import { X, Printer, Copy, ReceiptText, User, WashingMachine } from 'lucide-react';
 
@@ -11,7 +12,8 @@ import { X, Printer, Copy, ReceiptText, User, WashingMachine } from 'lucide-reac
  * (production, sans prix). L'impression n'imprime que le ticket.
  */
 export const TicketPreviewModal: React.FC = () => {
-  const { previewTicket, setPreviewTicket, showToast, customers, shopSettings } = useApp();
+  const { previewTicket, setPreviewTicket, showToast, customers, shopSettings, workspace } =
+    useApp();
   const [variant, setVariant] = useState<ReceiptVariant>('client');
 
   const order = previewTicket;
@@ -39,7 +41,7 @@ export const TicketPreviewModal: React.FC = () => {
       order.remainingBalance > 0
         ? ` Reste à payer : ${formatFCFA(order.remainingBalance)}.`
         : ' Commande soldée.';
-    const message = `${shopSettings.name} — Bonjour ${order.customerName}, votre ticket ${order.ticketNumber} est enregistré. Retrait promis : ${order.promisedAt}.${balanceText} Merci.`;
+    const message = `${resolveShopDisplayName(shopSettings, workspace)} — Bonjour ${order.customerName}, votre ticket ${order.ticketNumber} est enregistré. Retrait promis : ${order.promisedAt}.${balanceText} Merci.`;
 
     try {
       if (navigator.clipboard?.writeText) {

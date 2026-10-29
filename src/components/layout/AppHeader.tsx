@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Search, Calendar, ChevronDown, Plus, Sparkles, Keyboard, PanelLeft } from 'lucide-react';
 import { formatShortDate } from '../../lib/dates';
 import { PressingAlertsButton } from './PressingAlertsButton';
+import { getWorkspaceLabel } from '../../lib/workspaceScope';
 
 interface AppHeaderProps {
   title: string;
@@ -27,7 +28,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   secondaryAction,
   onSearch,
 }) => {
-  const { setActiveScreen, showToast, toggleSidebar, isSidebarCollapsed, setShortcutHelpOpen } = useApp();
+  const {
+    setActiveScreen,
+    showToast,
+    toggleSidebar,
+    isSidebarCollapsed,
+    setShortcutHelpOpen,
+    workspace,
+  } = useApp();
+  const workspaceLabel = getWorkspaceLabel(workspace);
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,8 +62,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">{title}</h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-semibold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-md">
-                Abidjan Cocody
+              <span
+                className="hidden sm:inline-block max-w-[220px] truncate px-2 py-0.5 text-[11px] font-semibold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-md"
+                title={workspaceLabel}
+              >
+                {workspaceLabel}
               </span>
             </div>
             <p className="text-[13px] text-zinc-500 dark:text-zinc-400 font-normal mt-0.5">{subtitle}</p>

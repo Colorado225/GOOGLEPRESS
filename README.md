@@ -23,7 +23,10 @@ clôture journalière Z.
   configurable par le propriétaire : codes libres, duplication, séries
   numérotées type B-01 → B-12, capacités et règles de travail), onglet **Tournées** pour les
   ramassages/livraisons (programmation, coursier, départ,
-  échec/reprogrammation, encaissement du solde à la livraison), remise au
+  échec/reprogrammation, encaissement du solde à la livraison), écran
+  **Ma tournée** plein écran pour le coursier sur téléphone (`/tournee` :
+  arrêts du jour dans l'ordre, Démarrer / Arrivé / Confirmer, itinéraire,
+  appel, fin de tournée), remise au
   comptoir et clôture de caisse Z. Un onglet séparé **Suivi distant** lit les
   commandes déjà présentes dans Supabase, s’abonne à Realtime et fait passer
   leurs étapes par une RPC qui journalise l’historique ; il ne remplace pas
@@ -35,6 +38,9 @@ clôture journalière Z.
   responsable, caisse, atelier ou coursier). Il n’y a ni inscription libre du
   personnel ni compte par défaut. La démonstration locale reste réservée au
   développement ou au mode explicite `VITE_ALLOW_LOCAL_DEMO=true`.
+  Une fois connecté, le bouton **Déconnexion** de l’en-tête ferme la session
+  (avec confirmation) sans rien effacer des données du pressing ; il n’apparaît
+  pas en démonstration locale, où aucun compte n’existe.
 - **Espace client distant** — pages séparées `/client/connexion`,
   `/client/inscription`, `/client/nouveau-mot-de-passe` et `/client`, reliées
   à Supabase Auth. Après liaison vérifiée par le pressing, la cliente voit ses
@@ -174,8 +180,14 @@ src/
 Tant que la bascule métier complète n’est pas livrée, les écrans historiques
 stockent leurs données dans le **localStorage** du navigateur, sous des clés
 `pressingpro_*` : commandes, clients, caisse, tournées, personnel, stocks,
-dépenses, emplacements, paramètres, compteur de tickets et préférences de
-l’appareil. La liste exacte reprise par la sauvegarde fait foi dans
+dépenses, emplacements, compteur de tickets et préférences de l’appareil.
+Les **paramètres de l’application** y sont aussi conservés, mais ils sont en
+plus enregistrés dans `public.shop_settings` dès qu’un compte réel est ouvert :
+ils suivent alors les appareils du pressing (voir
+[`docs/PARAMETRES-EN-BASE.md`](docs/PARAMETRES-EN-BASE.md)). Les
+**emplacements de rangement** sont eux aussi enregistrés dans
+`public.storage_locations` sur un compte réel (voir
+[`docs/CASIERS-EN-BASE.md`](docs/CASIERS-EN-BASE.md)). La liste exacte reprise par la sauvegarde fait foi dans
 `src/lib/backup.ts` (`BACKUP_KEYS`). Les exceptions sont Atelier → Suivi
 distant et l’espace `/client`, qui ne lisent que des données déjà présentes
 dans Supabase et autorisées par la RLS ; l’espace client ne charge pas les
@@ -230,7 +242,7 @@ simple et le comportement lisible) :
 ## Thème clair / sombre
 
 L'interface existe en thème clair et en thème sombre : bouton soleil/lune
-dans l'en-tête, raccourci **Alt+T**, ou Paramètres → carte « Apparence ».
+dans l'en-tête ou raccourci **Alt+T**.
 Au premier lancement, la préférence du système (`prefers-color-scheme`) est
 suivie ; le choix est ensuite mémorisé dans ce navigateur
 (`pressingpro_theme`) et appliqué sans clignotement au chargement.
@@ -273,9 +285,35 @@ preuves de l’intervention dans
 [`docs/VALIDATION-TECHNIQUE.md`](docs/VALIDATION-TECHNIQUE.md) ; le chantier
 d’accès du personnel est détaillé dans
 [`docs/ACCES-PERSONNEL-ONBOARDING.md`](docs/ACCES-PERSONNEL-ONBOARDING.md),
-la refonte visuelle des pages d’accès dans
-[`docs/PAGES-AUTH-DESIGN.md`](docs/PAGES-AUTH-DESIGN.md) et la carte des
+la reprise des pages de connexion et d’inscription dans
+[`docs/PAGES-AUTH-DESIGN.md`](docs/PAGES-AUTH-DESIGN.md), le principe
+« aucune donnée de démonstration sur un compte réel » dans
+[`docs/DONNEES-DEMO-ET-ESPACE-REEL.md`](docs/DONNEES-DEMO-ET-ESPACE-REEL.md),
+la barre latérale personnalisable et la carte d'abonnement dans
+[`docs/BARRE-LATERALE.md`](docs/BARRE-LATERALE.md), les formules Free / Pro /
+Business et la stratégie commerciale dans
+[`docs/ABONNEMENTS.md`](docs/ABONNEMENTS.md), le nom et le logo propres à
+chaque pressing dans
+[`docs/IDENTITE-ETABLISSEMENT.md`](docs/IDENTITE-ETABLISSEMENT.md), la
+paramètres enregistrés dans la base dans
+[`docs/PARAMETRES-EN-BASE.md`](docs/PARAMETRES-EN-BASE.md), la
+blanchisserie au forfait par nombre de vêtements dans
+[`docs/BLANCHISSERIE-FORFAITS.md`](docs/BLANCHISSERIE-FORFAITS.md), les
+prestations du pressing et le type de service express dans
+[`docs/PRESTATIONS-PRESSING.md`](docs/PRESTATIONS-PRESSING.md), le catalogue de
+vêtements créé, modifié ou masqué depuis les Paramètres dans
+[`docs/CATALOGUE-VETEMENTS.md`](docs/CATALOGUE-VETEMENTS.md), la carte des
 routes par contexte (client, personnel, ERP) dans
-[`docs/ROUTES.md`](docs/ROUTES.md).
+[`docs/ROUTES.md`](docs/ROUTES.md), et la note de conception du suivi GPS des
+tournées et de la preuve de remise dans
+[`docs/SUIVI-GPS-LIVRAISON.md`](docs/SUIVI-GPS-LIVRAISON.md), dont la phase 0
+(preuve de remise, jalons, itinéraire) est documentée dans
+[`docs/PREUVE-DE-REMISE.md`](docs/PREUVE-DE-REMISE.md) et la phase 1 (carte
+Leaflet/OpenStreetMap, point de livraison, partage de position, heure
+d'arrivée, écran coursier `/tournee`) dans
+[`docs/CARTE-ET-SUIVI-GPS.md`](docs/CARTE-ET-SUIVI-GPS.md). Le reste à faire
+(point de livraison mémorisé par client, zones tarifaires, lien de suivi à
+jeton, positions partagées) est proposé dans
+[`docs/SUIVI-GPS-SUITE.md`](docs/SUIVI-GPS-SUITE.md).
 Prochaine étape structurante : créer le premier tenant Supabase réel, puis
 brancher le POS domaine par domaine.

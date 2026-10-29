@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, ClipboardList, History, Info, PackageCheck, Plus, Search, Truck } from 'lucide-react';
+import { CalendarDays, ClipboardList, History, Info, List, Map as MapIcon, PackageCheck, Plus, Search, Truck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Tabs } from '../common/Tabs';
 import { SegmentedControl } from '../common/SegmentedControl';
@@ -18,6 +18,8 @@ import type { LogisticsTask, LogisticsTaskKind, LogisticsTaskStatus } from '../.
 import { LogisticsTaskCard } from './LogisticsTaskCard';
 import { LogisticsTaskFormModal } from './LogisticsTaskFormModal';
 import { LogisticsActionModal, type LogisticsActionRequest } from './LogisticsActionModal';
+import { TourMapPanel } from './TourMapPanel';
+import { PlanLockPanel, usePlanFeature } from '../subscription/PlanLockPanel';
 
 type LogisticsView = 'day' | 'action' | 'history';
 type KindFilter = 'all' | LogisticsTaskKind;
@@ -32,11 +34,14 @@ export const LogisticsPanel: React.FC = () => {
     logisticsTasks,
     orders,
     employees,
+    shopSettings,
+    setActiveScreen,
     focusedLogisticsTaskId,
     setFocusedLogisticsTaskId,
   } = useApp();
 
   const [view, setView] = useState<LogisticsView>('day');
+  const canUseMap = usePlanFeature('deliveryTracking');
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [searchTerm, setSearchTerm] = useState('');
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
@@ -45,6 +50,7 @@ export const LogisticsPanel: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<LogisticsTask | null>(null);
   const [actionRequest, setActionRequest] = useState<LogisticsActionRequest | null>(null);
+  const [displayMode, setDisplayMode] = useState<'list' | 'map'>('list');
   const handledFocusRef = useRef<string | null>(null);
 
   const ordersById = useMemo(() => new Map(orders.map((order) => [order.id, order])), [orders]);
@@ -253,14 +259,25 @@ export const LogisticsPanel: React.FC = () => {
             prête avec encaissement du solde sur place si nécessaire.
           </p>
         </div>
-        {newPickupButton}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveScreen('courier')}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-[13px] font-bold text-zinc-700 shadow-2xs transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100"
+          >
+            <Truck className="h-4 w-4" aria-hidden="true" />
+            Ma tournée
+          </button>
+          {newPickupButton}
+        </div>
       </div>
 
       <p className="flex items-start gap-2 rounded-lg border border-blue-100 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/70 px-3 py-2 text-[11.5px] leading-relaxed text-zinc-600 dark:text-zinc-400">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />
         <span>
-          Tournées conservées <strong>uniquement dans ce navigateur</strong> pour le moment. Il n’y a ni
-          réservation en ligne, ni suivi GPS, ni synchronisation entre appareils.
+          Tournées et positions conservées <strong>uniquement dans ce navigateur</strong> pour le
+          moment. La carte et le partage de position fonctionnent tant que la page reste ouverte ;
+          il n’y a ni réservation en ligne ni synchronisation entre appareils.
         </span>
       </p>
 
@@ -414,20 +431,64 @@ export const LogisticsPanel: React.FC = () => {
         </div>
       </div>
 
-      {renderTasks()}
-
-      {filteredTasks.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs">
-          <TablePaginationFooter
-            page={page}
-            pageCount={pageCount}
-            onPageChange={setPage}
-            rangeStart={rangeStart}
-            rangeEnd={rangeEnd}
-            total={filteredTasks.length}
-            label="tournée(s)"
-          />
+      {shopSettings.deliveryGps.enabled && (
+        <div className="flex items-center justify-end gap-1.5" role="group" aria-label="Affichage des tournées">
+          <button
+            type="button"
+            onClick={() => setDisplayMode('list')}
+            aria-pressed={displayMode === 'list'}
+            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
+              displayMode === 'list'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950'
+                : 'border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
+            }`}
+          >
+            <List className="h-3.5 w-3.5" aria-hidden="true" /> Liste
+          </button>
+          <button
+            type="button"
+            onClick={() => setDisplayMode('map')}
+            aria-pressed={displayMode === 'map'}
+            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[12px] font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-100 ${
+              displayMode === 'map'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950'
+                : 'border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
+            }`}
+          >
+            <MapIcon className="h-3.5 w-3.5" aria-hidden="true" /> Carte
+            {!canUseMap && (
+              <span className="ml-0.5 rounded bg-amber-100 px-1 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                Pro
+              </span>
+            )}
+          </button>
         </div>
+      )}
+
+      {displayMode === 'map' ? (
+        canUseMap ? (
+          <TourMapPanel tasks={filteredTasks} />
+        ) : (
+          <PlanLockPanel feature="deliveryTracking" />
+        )
+      ) : (
+        <>
+          {renderTasks()}
+
+          {filteredTasks.length > 0 && (
+            <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xs">
+              <TablePaginationFooter
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                total={filteredTasks.length}
+                label="tournée(s)"
+              />
+            </div>
+          )}
+        </>
       )}
 
       {(createOpen || editingTask) && (

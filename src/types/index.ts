@@ -49,6 +49,62 @@ export type LogisticsIssueReason =
  * déjà promise. Une livraison est toujours rattachée à une commande ; un
  * ramassage ne l'est qu'après comptage et conversion au POS.
  */
+/** Coordonnées géographiques d'un point de tournée. */
+export interface GeoPoint {
+  lat: number;
+  lng: number;
+  /** Précision annoncée par l'appareil, en mètres (absente si saisie manuelle). */
+  accuracyM?: number;
+  /** `device` = GPS du téléphone, `manual` = point placé sur la carte. */
+  source: 'device' | 'manual';
+  /** Horodatage de la mesure (ISO). */
+  recordedAt: string;
+}
+
+/** Réglages du suivi GPS des tournées (phase 1). */
+export interface DeliveryGpsSettings {
+  /** Affiche la carte et les positions. */
+  enabled: boolean;
+  /** Autorise l'envoi de la position du téléphone pendant une tournée. */
+  trackPositions: boolean;
+  avgSpeedKmh: number;
+  detourFactor: number;
+  /** Au-delà, la position est dite « non actualisée » et aucune heure n'est annoncée. */
+  maxAgeSeconds: number;
+}
+
+/**
+ * Preuve de remise enregistrée à la confirmation d'une livraison.
+ *
+ * Elle est volontairement **immuable** : une fois attachée à une tournée
+ * terminée, elle n'est plus modifiée. En cas de litige, la fiche de remise
+ * affiche exactement ce qui a été capturé, ou dit clairement qu'aucune preuve
+ * n'a été enregistrée.
+ */
+export interface DeliveryProof {
+  /** Photo du linge remis (data URL image, ≤ 350 000 caractères). */
+  photoDataUrl?: string;
+  /** Signature du réceptionnaire (data URL image, ≤ 40 000 caractères). */
+  signatureDataUrl?: string;
+  /** Code à 4 chiffres effectivement saisi par le coursier. */
+  codeEntered?: string;
+  /** Nom de la personne qui a réceptionné le linge. */
+  receiverName?: string;
+  /** Précision libre du coursier (absence de code, remise à un voisin…). */
+  note?: string;
+  /** Horodatage de la capture (ISO). */
+  capturedAt: string;
+  capturedByEmployeeId?: string;
+  capturedByEmployeeName?: string;
+}
+
+/** Exigences du propriétaire avant de valider une livraison. */
+export interface DeliveryProofSettings {
+  requirePhoto: boolean;
+  requireSignature: boolean;
+  requireCode: boolean;
+}
+
 export interface LogisticsTask {
   id: string;
   kind: LogisticsTaskKind;
@@ -73,6 +129,17 @@ export interface LogisticsTask {
   issueNotes?: string;
   startedAt?: string; // ISO datetime
   completedAt?: string; // ISO datetime
+  /**
+   * Code de remise à 4 chiffres communiqué au client, contrôlé par le coursier.
+   * Généré pour les livraisons créées après l'ajout de la preuve de remise.
+   */
+  deliveryCode?: string;
+  /** Jalon « arrivé sur place », horodaté (ISO datetime). */
+  arrivedAt?: string;
+  /** Preuve de remise, enregistrée à la confirmation de la livraison. */
+  proof?: DeliveryProof;
+  /** Point géographique de la livraison, choisi sur la carte. */
+  destination?: GeoPoint;
   /** Solde réellement encaissé par le coursier lors d'une livraison. */
   collectedAmount?: number;
   collectedPaymentMethod?: PaymentMethod;
@@ -187,12 +254,28 @@ export interface OrderLine {
   unitPrice: number;
   pricingType?: PricingType;
   weightKg?: number;
+  /** Prestation de blanchisserie facturée (forfait ou à l'unité). */
+  blanchisserieService?: BlanchisserieServiceId;
+  /** Nombre de vêtements couverts par la ligne (forfait ou complément). */
+  garments?: number;
+  /** Nature de la ligne blanchisserie : bloc de forfait ou vêtements à l'unité. */
+  pricingBasis?: 'forfait' | 'per_garment';
   unitLabel?: string;
   subtotal: number;
   serviceType: string;
   /** Couleur de la pièce (identification et tri) — voir GARMENT_COLORS. Absente = non précisée. */
   color?: string;
   notes?: string;
+}
+
+/** Précisions portées par une ligne ajoutée au panier depuis le comptoir. */
+export interface CartLineDetails {
+  /** Nombre de vêtements couverts par la ligne (forfait ou complément). */
+  garments?: number;
+  /** Bloc de forfait ou vêtements facturés à l'unité. */
+  pricingBasis?: 'forfait' | 'per_garment';
+  /** Prestation de blanchisserie concernée. */
+  blanchisserieService?: BlanchisserieServiceId;
 }
 
 export interface GarmentColor {
@@ -316,8 +399,93 @@ export interface LaundryOrder {
  * (clé pressingpro_shop_settings). L'identité alimente le ticket thermique,
  * la barre latérale et l'en-tête imprimé des rapports.
  */
+/**
+ * Prestations de blanchisserie.
+ *
+ * La blanchisserie ne se vend plus au kilo ni à la pièce du catalogue : elle
+ * propose trois prestations, dont deux au forfait par NOMBRE DE VÊTEMENTS
+ * (ex. 20 vêtements = 3 000 FCFA). La grille est définie à l'avance dans les
+ * Paramètres ; le repassage seul se facture au vêtement.
+ */
+export type BlanchisserieServiceId = 'wash_only' | 'wash_iron' | 'iron_only';
+
+/** Un palier de forfait : N vêtements et le prix de chaque prestation. */
+export interface BlanchisserieTier {
+  id: string;
+  garments: number;
+  prices: Record<BlanchisserieServiceId, number>;
+}
+
+export interface BlanchisserieSettings {
+  /** Paliers de forfaits (nombre de vêtements croissant). */
+  tiers: BlanchisserieTier[];
+  /**
+   * Prix du vêtement supplémentaire au-delà du forfait, et tarif des
+   * prestations facturées à l'unité (repassage seul).
+   */
+  unitPrices: Record<BlanchisserieServiceId, number>;
+  /** `true` = prestation facturée au vêtement, sans forfait. */
+  perGarment: Record<BlanchisserieServiceId, boolean>;
+}
+
+/** Type de prestation pressing (« Nettoyage à sec », « Teinture »…). */
+export interface PressingServiceType {
+  id: string;
+  label: string;
+}
+
+/**
+ * Réglages du pressing : liste des prestations et prix de chaque vêtement
+ * pour chaque prestation (`prix[articleId:prestationId]`).
+ *
+ * « Express 24h » n'est pas une prestation : c'est un type de service
+ * (normal / express) qui double le montant des prestations.
+ */
+export interface PressingSettings {
+  services: PressingServiceType[];
+  prices: Record<string, number>;
+}
+
+/**
+ * Vêtement ajouté par le pressing depuis les Paramètres.
+ *
+ * Il rejoint le catalogue du comptoir avec sa photo (data URL) et son prix de
+ * base ; ses prix par prestation se règlent dans la même grille que les
+ * vêtements fournis.
+ */
+export interface CustomGarment {
+  id: string;
+  name: string;
+  category: 'all' | 'men' | 'women' | 'home' | 'pro';
+  unitPrice: number;
+  unitLabel: string;
+  emoji: string;
+  /** Photo descriptive (data URL), ou `null` si aucune image n'a été fournie. */
+  imageDataUrl: string | null;
+  description?: string;
+}
+
+/**
+ * Retouche d'un vêtement du catalogue fourni.
+ *
+ * Chaque champ absent laisse la valeur d'origine ; `imageDataUrl: null`
+ * retire la photo fournie. `hidden: true` masque le vêtement au comptoir sans
+ * le supprimer (les commandes déjà enregistrées gardent leur libellé).
+ */
+export interface GarmentOverride {
+  name?: string;
+  category?: CustomGarment['category'];
+  unitPrice?: number;
+  unitLabel?: string;
+  description?: string;
+  imageDataUrl?: string | null;
+  hidden?: boolean;
+}
+
 export interface ShopSettings {
   name: string;
+  /** Logo de l'établissement en data URL (PNG/WebP 256 px), `null` = aucun. */
+  logoDataUrl: string | null;
   tagline: string;
   address: string;
   phone: string;
@@ -327,11 +495,23 @@ export interface ShopSettings {
   /** Forfaits appliqués aux NOUVEAUX ramassages / livraisons (0 = offert). */
   pickupFee: number;
   deliveryFee: number;
+  /** Ce qui doit être fourni pour confirmer une livraison (photo, signature, code). */
+  deliveryProof: DeliveryProofSettings;
+  /** Suivi GPS des tournées : carte, positions, heure d'arrivée. */
+  deliveryGps: DeliveryGpsSettings;
   /** Règles du propriétaire pour le rangement des commandes terminées. */
   storageAssignmentRequired: boolean;
   storageAllowCapacityOverflow: boolean;
   storageSuggestionsEnabled: boolean;
   storageDefaultCapacityPackages: number;
+  /** Grille des prestations de blanchisserie (forfaits au nombre de vêtements). */
+  blanchisserie: BlanchisserieSettings;
+  /** Prestations du pressing et prix par vêtement. */
+  pressing: PressingSettings;
+  /** Vêtements créés par le pressing, affichés dans le catalogue. */
+  customGarments: CustomGarment[];
+  /** Modifications et masquages des vêtements fournis (`c1`…), par identifiant. */
+  catalogOverrides: Record<string, GarmentOverride>;
 }
 
 export interface CashRegisterData {

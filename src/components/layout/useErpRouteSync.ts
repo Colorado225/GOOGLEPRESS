@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useApp, type ScreenId } from '../../context/AppContext';
 import {
-  ERP_NOT_FOUND_TITLE,
   erpPathForScreen,
+  getErpNotFoundTitle,
   getErpScreenTitle,
   parseErpRoute,
 } from '../../lib/routes';
+import { resolveShopDisplayName } from '../../lib/shopIdentity';
 
 export interface ErpRouteSync {
   /** Chemin demandé qui ne correspond à aucun écran (afficher « Page introuvable »). */
@@ -29,7 +30,8 @@ export interface ErpRouteSync {
  * Le titre du document suit l'écran affiché.
  */
 export const useErpRouteSync = (): ErpRouteSync => {
-  const { activeScreen, setActiveScreen } = useApp();
+  const { activeScreen, setActiveScreen, shopSettings, workspace } = useApp();
+  const brandName = resolveShopDisplayName(shopSettings, workspace);
   const [unknownPath, setUnknownPath] = useState<string | null>(() =>
     parseErpRoute(window.location.pathname) === null
       ? window.location.pathname
@@ -63,6 +65,10 @@ export const useErpRouteSync = (): ErpRouteSync => {
     // réécrire l'adresse demandée (notamment une route inconnue).
     if (skipFirstPush.current) {
       skipFirstPush.current = false;
+      // L'écran initial correspond déjà à l'URL (accueil, lien profond) :
+      // `setActiveScreen` n'a donc rien changé et le marqueur resterait
+      // armé, bloquant toute réécriture d'adresse ensuite. On le libère.
+      if (pendingFromUrl.current === activeScreen) pendingFromUrl.current = null;
       return;
     }
     if (pendingFromUrl.current !== null) {
@@ -78,9 +84,9 @@ export const useErpRouteSync = (): ErpRouteSync => {
 
   useEffect(() => {
     document.title = unknownPath
-      ? ERP_NOT_FOUND_TITLE
-      : getErpScreenTitle(activeScreen);
-  }, [activeScreen, unknownPath]);
+      ? getErpNotFoundTitle(brandName)
+      : getErpScreenTitle(activeScreen, brandName);
+  }, [activeScreen, unknownPath, brandName]);
 
   const goToScreen = (screen: ScreenId) => {
     setUnknownPath(null);

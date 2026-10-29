@@ -1,85 +1,79 @@
 import React from 'react';
-import { AlertTriangle, CheckCircle2, Loader2, LogIn, Mail, ShieldCheck, UserPlus } from 'lucide-react';
-import { staffPrimaryButtonClassName } from './StaffAuthLayout';
+import { Loader2, Lock, ShieldCheck } from 'lucide-react';
+import { AuthAlert } from './AuthAlert';
 
 /**
- * Habillage commun des pages d'accès du personnel (connexion, inscription,
- * onboarding) et des écrans de la garde `StaffAccessGate`. Une seule source
- * visuelle pour éviter que les copies ne divergent.
+ * Habillage partagé du personnel connecté (garde `StaffAccessGate`, onboarding)
+ * et des écrans de vérification d'accès.
  *
- * La composition deux panneaux des pages de connexion/inscription vit dans
- * `StaffAuthLayout.tsx` (chargée en lazy uniquement par ces pages) ; ce
- * module ne contient que le socle partagé avec la garde et l'onboarding.
+ * Les pages publiques de connexion et d'inscription utilisent la composition
+ * complète `AuthShell` ; ce module fournit les mêmes jetons (couleurs, focus,
+ * densité) à un panneau simple centré, pour que l'ensemble de l'accès
+ * personnel garde une seule apparence.
  */
 
 export const staffShellClassName =
-  'flex min-h-screen items-center justify-center bg-[#F8FAFC] px-4 py-8 text-[#171923] dark:bg-zinc-950 dark:text-zinc-50';
+  'flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F7F5F2] px-4 py-8 text-[#111827] dark:bg-[#07090F] dark:text-zinc-100';
 
 export const staffPanelClassName =
-  'w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-zinc-800 dark:bg-zinc-900';
+  'w-full max-w-md rounded-3xl border border-[#E4DFD6] bg-white p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.4)] dark:border-white/10 dark:bg-[#0B101B]';
 
 export const staffWidePanelClassName =
-  'w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-950/5 dark:border-zinc-800 dark:bg-zinc-900';
+  'w-full max-w-xl rounded-3xl border border-[#E4DFD6] bg-white p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.4)] dark:border-white/10 dark:bg-[#0B101B]';
 
 export const staffLabelClassName =
-  'mb-1.5 block text-[12px] font-black uppercase tracking-wide text-slate-600 dark:text-zinc-300';
+  'text-[12px] font-bold uppercase tracking-[0.08em] text-[#5C6472] dark:text-zinc-400';
+
+export const staffInputClassName =
+  'h-11 w-full rounded-xl border border-[#DFDACF] bg-white px-3.5 text-[14px] text-[#111827] shadow-[0_1px_2px_rgba(17,24,39,0.04)] outline-none transition placeholder:text-[#8B93A1] focus:border-[#1D4ED8] focus:ring-4 focus:ring-[#1D4ED8]/15 disabled:cursor-not-allowed disabled:bg-[#F4F1EB] disabled:text-[#6B7280] dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-blue-400 dark:focus:ring-blue-400/20 dark:disabled:bg-white/[0.02]';
+
+export const staffPrimaryButtonClassName =
+  'inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1D4ED8] px-4 text-[14px] font-bold text-white shadow-[0_12px_24px_-14px_rgba(29,78,216,0.9)] transition hover:bg-[#1E40AF] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1D4ED8]/30 disabled:cursor-not-allowed disabled:bg-[#1D4ED8]/45 disabled:shadow-none dark:bg-blue-600 dark:hover:bg-blue-500 dark:disabled:bg-blue-600/45';
+
+export const staffSecondaryButtonClassName =
+  'inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#DFDACF] bg-white px-4 text-[13.5px] font-bold text-[#111827] transition hover:bg-[#F7F4EE] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#111827]/10 disabled:cursor-not-allowed disabled:opacity-55 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:bg-white/[0.08]';
 
 export const StaffAuthHeader: React.FC<{ title: string; description: string }> = ({
   title,
   description,
 }) => (
   <header>
-    <p className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.16em] text-[#C2410C] dark:text-orange-300">
-      <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+    <p className="inline-flex items-center gap-2 text-[10.5px] font-black uppercase tracking-[0.16em] text-[#6B7280] dark:text-zinc-400">
+      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" />
       Accès personnel
     </p>
-    <h1 className="mt-3 text-2xl font-black tracking-tight text-[#24113D] dark:text-zinc-50">
+    <h1 className="mt-2.5 text-[24px] font-black leading-tight tracking-tight text-[#111827] dark:text-white">
       {title}
     </h1>
-    <p className="mt-2 text-[13.5px] leading-relaxed text-[#64748B] dark:text-zinc-400">
+    <p className="mt-2 text-[13px] leading-relaxed text-[#5C6472] dark:text-zinc-400">
       {description}
     </p>
   </header>
 );
 
 export const StaffAuthAlert: React.FC<{
-  tone: 'error' | 'success' | 'warning';
+  tone: 'error' | 'success' | 'warning' | 'info';
   children: React.ReactNode;
   className?: string;
-}> = ({ tone, children, className }) => {
-  const classes =
-    tone === 'error'
-      ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'
-      : tone === 'warning'
-        ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200'
-        : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300';
-  const Icon = tone === 'success' ? CheckCircle2 : AlertTriangle;
-  return (
-    <p
-      role={tone === 'error' ? 'alert' : 'status'}
-      className={`flex gap-2 rounded-2xl border px-3.5 py-3 text-[13px] font-medium ${classes}${className ? ' ' + className : ''}`}
-    >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span>{children}</span>
-    </p>
-  );
-};
+}> = ({ tone, children, className }) => (
+  <AuthAlert tone={tone} className={className}>
+    {children}
+  </AuthAlert>
+);
 
 export const StaffAuthLoading: React.FC<{ label: string }> = ({ label }) => (
   <main className={staffShellClassName}>
-    <p
-      className={`${staffPanelClassName} flex items-center justify-center gap-2 text-center text-[13.5px] font-semibold`}
-    >
-      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      {label}
-    </p>
+    <div className="flex items-center gap-2.5 rounded-2xl border border-[#E4DFD6] bg-white px-5 py-3.5 text-[12.5px] font-semibold text-[#5C6472] shadow-sm dark:border-white/10 dark:bg-[#0B101B] dark:text-zinc-300">
+      <Loader2 className="h-4 w-4 animate-spin text-[#1D4ED8] dark:text-blue-400" aria-hidden="true" />
+      <span role="status">{label}</span>
+    </div>
   </main>
 );
 
 /** Lien de navigation interne des pages publiques (reste un vrai lien <a>). */
 export const StaffAuthLink: React.FC<{
   path: string;
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string, options?: { replace?: boolean }) => void;
   className?: string;
   children: React.ReactNode;
 }> = ({ path, onNavigate, className, children }) => (
@@ -94,66 +88,19 @@ export const StaffAuthLink: React.FC<{
     {children}
   </a>
 );
-/** Bouton CTA principal (connexion / inscription / envoie de lien) */
-export const StaffAuthCTAButton: React.FC<{
-  type: 'login' | 'send' | 'register';
-  busy: boolean;
-  onLogin: () => void;
-  onSend: () => void;
-  onRegister: () => void;
-}> = ({ type, busy, onLogin, onSend, onRegister }) => {
-  if (busy) {
-    return (
-      <button type="submit" className={staffPrimaryButtonClassName} disabled>
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-      </button>
-    );
-  }
 
-  return (
-    <button
-      type="submit"
-      className={staffPrimaryButtonClassName}
-      onClick={(e) => {
-        e.preventDefault();
-        if (type === 'login') onLogin();
-        else if (type === 'send') onSend();
-        else if (type === 'register') onRegister();
-      }}
-    >
-      {type === 'login' ? (
-        <>
-          <LogIn className="h-4 w-4" aria-hidden="true" />
-          Se connecter
-        </>
-      ) : type === 'send' ? (
-        <>
-          <Mail className="h-4 w-4" aria-hidden="true" />
-          Envoyer le lien
-        </>
-      ) : (
-        <>
-          <UserPlus className="h-4 w-4" aria-hidden="true" />
-          Créer mon compte
-        </>
-      )}
-    </button>
-  );
-};
+/** Rappel de sécurité des écrans du personnel. */
+export const StaffSecurityNote: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-[#6B665D] dark:text-zinc-400">
+    <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+    {children}
+  </p>
+);
 
-/** Textes CTA et messages publicitaires optimisés pour la diffusion du ERP. */
-export const StaffAuthCTATexts = {
-  login: 'Se connecter pour accéder à votre tableau de bord',
-  sendLink: 'Envoyer un lien de connexion sur votre adresse e-mail',
-  register: 'Créer votre compte propriétaire PressingPro CI',
-  forgotPassword: 'Entrez votre e-mail pour recevoir un lien de réinitialisation',
-  successLogin: 'Connexion réussie – Démarrez votre gestion de pressing',
-  successRegister: 'Votre compte est créé – Prêt à gérer vos premières commandes',
-  getStarted: 'Démarrez maintenant – Configurez votre pressing en 3 étapes',
-  feature1: 'Réception tickets sans ressaisie',
-  feature2: 'Atelier synchronisé : chaque étape tracée et horodatée',
-  feature3: 'Caisse claire : espèces, Wave, Orange Money, MTN MoMo',
-  trialPrompt: 'Essayez gratuitement pendant 14 jours – Aucune carte requise',
-};
-
-/** Lien de navigation interne des pages publiques (reste un vrai lien <a>). */
+/** Mention « session protégée » des écrans de garde. */
+export const StaffSessionNote: React.FC = () => (
+  <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-[#6B665D] dark:text-zinc-400">
+    <Lock className="h-3 w-3" aria-hidden="true" />
+    Session vérifiée côté serveur
+  </p>
+);

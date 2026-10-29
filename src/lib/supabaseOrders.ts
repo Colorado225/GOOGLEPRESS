@@ -107,6 +107,29 @@ const normalizeRemoteLogisticsTask = (
   return { ...row, kind: row.kind, status: row.status };
 };
 
+export type RemoteOrganization = Pick<
+  Tables<'organizations'>,
+  'id' | 'name' | 'slug' | 'status'
+>;
+
+/**
+ * Organisations visibles par la session courante (RLS : rattachement actif,
+ * client lié ou administration plateforme). Sert uniquement à afficher le nom
+ * réel de l'enseigne dans la navigation.
+ */
+export async function listAccessibleOrganizations(
+  client?: Client | null
+): Promise<RemoteOrganization[]> {
+  const resolved = requireSupabaseClient(client);
+  const { data, error } = await resolved
+    .from('organizations')
+    .select('id, name, slug, status')
+    .order('name', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function listAccessibleShops(client?: Client | null): Promise<RemoteShop[]> {
   const resolved = requireSupabaseClient(client);
   const { data, error } = await resolved

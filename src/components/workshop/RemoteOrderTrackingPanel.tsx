@@ -69,6 +69,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { normalizeText } from '../../lib/utils';
 import type { LogisticsTaskStatus, LogisticsTimeSlot, OrderStatus } from '../../types';
+import { PlanLockPanel, usePlanFeature } from '../subscription/PlanLockPanel';
 
 const ORDER_BADGE_VARIANTS: Record<OrderStatus, BadgeVariant> = {
   received: 'secondary',
@@ -148,7 +149,7 @@ const formatLogisticsTaskSchedule = (task: RemoteLogisticsTask): string =>
     ? formatLogisticsSchedule(task.scheduled_date, task.time_slot)
     : `${task.scheduled_date} • Créneau non renseigné`;
 
-export const RemoteOrderTrackingPanel: React.FC = () => {
+const RemoteOrderTrackingPanelInner: React.FC = () => {
   const { requestSettingsTab, showToast } = useApp();
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(Boolean(supabase));
@@ -1001,4 +1002,22 @@ export const RemoteOrderTrackingPanel: React.FC = () => {
       ) : null}
     </section>
   );
+};
+
+/**
+ * Suivi distant : réservé à la formule Pro.
+ *
+ * Le panneau entier est remplacé par un verrou explicite plutôt que de laisser
+ * un écran à moitié fonctionnel.
+ */
+export const RemoteOrderTrackingPanel: React.FC = () => {
+  const allowed = usePlanFeature('customerPortal');
+  if (!allowed) {
+    return (
+      <div className="max-w-2xl">
+        <PlanLockPanel feature="customerPortal" />
+      </div>
+    );
+  }
+  return <RemoteOrderTrackingPanelInner />;
 };

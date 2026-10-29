@@ -27,31 +27,20 @@ import imgCostume from '../assets/images/articles/costume.webp';
 import imgManteau from '../assets/images/articles/manteau.webp';
 import imgJupeLongue from '../assets/images/articles/jupe-longue.webp';
 import imgPull from '../assets/images/articles/pull.webp';
-import imgBlouseUniforme from '../assets/images/articles/blouse-uniforme.webp';
 import imgGilet from '../assets/images/articles/gilet.webp';
 import imgTeeShirt from '../assets/images/articles/tee-shirt.webp';
 import imgJean from '../assets/images/articles/jean.webp';
 import imgHoodie from '../assets/images/articles/hoodie.webp';
 import imgShortColore from '../assets/images/articles/short-colore.webp';
-import imgChaussettesPhoto from '../assets/images/articles/chaussettes-photo.webp';
 import imgFoulard from '../assets/images/articles/foulard.webp';
-import imgDraps from '../assets/images/articles/draps.webp';
-import imgServiettes from '../assets/images/articles/serviettes.webp';
-import imgTaieOreiller from '../assets/images/articles/taie-oreiller.webp';
-import imgNappe from '../assets/images/articles/nappe.webp';
 import imgTailleur from '../assets/images/articles/tailleur.webp';
 import imgSalopette from '../assets/images/articles/salopette.webp';
 import imgMarcel from '../assets/images/articles/marcel.webp';
 import imgVesteCuir from '../assets/images/articles/veste-cuir.webp';
 import imgDoudoune from '../assets/images/articles/doudoune.webp';
 import imgBaskets from '../assets/images/articles/baskets.webp';
-import imgPyjama from '../assets/images/articles/pyjama.webp';
-import imgPeignoir from '../assets/images/articles/peignoir.webp';
 import imgBoubou from '../assets/images/articles/boubou.webp';
 import imgRetouche from '../assets/images/articles/retouche.webp';
-import imgLingeKilo from '../assets/images/articles/linge-kilo.webp';
-import imgCouette from '../assets/images/articles/couette.webp';
-import imgRideaux from '../assets/images/articles/rideaux.webp';
 
 export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   // --- PRESSING (Bleu) ---
@@ -77,18 +66,6 @@ export const INITIAL_CLOTHING_ITEMS: ClothingItem[] = [
   { id: 'c20', name: 'Doudoune & Veste matelassée', category: 'all', serviceCategory: 'pressing', unitPrice: 5000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧥', image: imgDoudoune, description: 'Matelassée, garnissage plume ou synthétique' },
   { id: 'c21', name: 'Baskets & Chaussures', category: 'all', serviceCategory: 'pressing', unitPrice: 3000, pricingType: 'unit', unitLabel: 'paire', emoji: '👟', image: imgBaskets, description: 'Nettoyage baskets et chaussures de ville' },
 
-  // --- BLANCHISSERIE (Vert turquoise) ---
-  { id: 'b1', name: 'Draps & Housses', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛏️', image: imgDraps, description: '1 ou 2 places, grand format' },
-  { id: 'b2', name: 'Serviettes de bain', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 1200, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧖', image: imgServiettes, description: 'Éponge épaisse, désinfection' },
-  { id: 'b3', name: 'Taies d’oreiller', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 800, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛌', image: imgTaieOreiller, description: 'Coton blanc, satin de coton' },
-  { id: 'b4', name: 'Nappes & Serviettes table', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🍽️', image: imgNappe, description: 'Restauration, amidonnage' },
-  { id: 'b5', name: 'Uniformes pro / Médical', category: 'pro', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🦺', image: imgBlouseUniforme, description: 'Blouse, tenue cuisine/sécurité' },
-  { id: 'b6', name: 'Linge au kilo (au poids)', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 1000, pricingType: 'kilo', unitLabel: 'kg', emoji: '⚖️', image: imgLingeKilo, description: 'Pesée au comptoir • 1 000 FCFA/kg' },
-  { id: 'b7', name: 'Couette & Édredon', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 5000, pricingType: 'unit', unitLabel: 'pièce', emoji: '🛋️', image: imgCouette, description: 'Duvet plume ou synthétique' },
-  { id: 'b8', name: 'Rideaux & Voilages', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 3000, pricingType: 'unit', unitLabel: 'panneau', emoji: '🪟', image: imgRideaux, description: 'Lavage & défroissage vapeur' },
-  { id: 'b9', name: 'Chaussettes & petit linge', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 500, pricingType: 'unit', unitLabel: 'pièce', emoji: '🧦', image: imgChaussettesPhoto, description: 'Chaussettes, sous-vêtements, petit linge' },
-  { id: 'b10', name: 'Pyjama (ensemble)', category: 'all', serviceCategory: 'blanchisserie', unitPrice: 2000, pricingType: 'unit', unitLabel: 'ensemble', emoji: '🌙', image: imgPyjama, description: 'Haut + bas assortis' },
-  { id: 'b11', name: 'Peignoir & Robe de chambre', category: 'home', serviceCategory: 'blanchisserie', unitPrice: 2500, pricingType: 'unit', unitLabel: 'pièce', emoji: '👘', image: imgPeignoir, description: 'Peignoir de bain, kimono, robe de chambre' },
 ];
 
 export const INITIAL_CUSTOMERS: Customer[] = [
@@ -305,7 +282,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '05 66 20 91 34',
     customerAddress: 'Plateau',
     lines: [
-      { id: 'l3', clothingItemId: 'c4', name: 'Costume 3 pièces', quantity: 1, unitPrice: 5000, subtotal: 5000, serviceType: 'Pressing à sec', color: 'Noir' },
+      { id: 'l3', clothingItemId: 'c4', name: 'Costume 3 pièces', quantity: 1, unitPrice: 5000, subtotal: 5000, serviceType: 'Nettoyage à sec', color: 'Noir' },
     ],
     subtotal: 5000,
     serviceFees: 0,
@@ -394,7 +371,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '07 77 12 34 56',
     customerAddress: 'Cocody',
     lines: [
-      { id: 'l7', clothingItemId: 'c4', name: 'Costume 2 pièces', quantity: 2, unitPrice: 5000, subtotal: 10000, serviceType: 'Pressing à sec' },
+      { id: 'l7', clothingItemId: 'c4', name: 'Costume 2 pièces', quantity: 2, unitPrice: 5000, subtotal: 10000, serviceType: 'Nettoyage à sec' },
     ],
     subtotal: 10000,
     serviceFees: 0,
@@ -444,7 +421,7 @@ export const INITIAL_ORDERS: LaundryOrder[] = [
     customerPhone: '01 44 55 66 77',
     customerAddress: 'Cocody, Danga',
     lines: [
-      { id: 'l10', clothingItemId: 'c4', name: 'Costumes', quantity: 3, unitPrice: 5000, subtotal: 15000, serviceType: 'Pressing à sec' },
+      { id: 'l10', clothingItemId: 'c4', name: 'Costumes', quantity: 3, unitPrice: 5000, subtotal: 15000, serviceType: 'Nettoyage à sec' },
     ],
     subtotal: 15000,
     serviceFees: 0,

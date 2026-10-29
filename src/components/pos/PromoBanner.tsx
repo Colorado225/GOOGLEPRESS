@@ -3,8 +3,15 @@ import { Sparkles, ShieldCheck } from 'lucide-react';
 // Import statique : Vite embarque le fichier dans le build de production
 // (l'ancien chemin texte "/src/assets/..." produisait une image cassée en prod).
 import bannerImage from '../../assets/images/dry_clean_rack_banner_1793109060337.jpg';
+import { getBrandInitials } from '../../lib/shopIdentity';
 
-export const PromoBanner: React.FC = () => {
+interface PromoBannerProps {
+  /** Nom réel du pressing (jamais le nom du logiciel). */
+  brandName: string;
+  logoDataUrl?: string | null;
+}
+
+export const PromoBanner: React.FC<PromoBannerProps> = ({ brandName, logoDataUrl }) => {
   return (
     <div className="relative overflow-hidden rounded-xl border border-zinc-200/90 dark:border-zinc-700/90 shadow-2xs bg-zinc-950 text-white min-h-[110px] flex items-center">
       {/* Background Image */}
@@ -19,18 +26,29 @@ export const PromoBanner: React.FC = () => {
       <div className="relative z-10 px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-5 h-5 rounded-md bg-blue-600 flex items-center justify-center font-black text-xs text-white">
-              P
-            </span>
+            {logoDataUrl ? (
+              <span className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-md bg-white/90">
+                <img
+                  src={logoDataUrl}
+                  alt=""
+                  aria-hidden="true"
+                  className="h-full w-full object-contain p-px"
+                />
+              </span>
+            ) : (
+              <span className="w-5 h-5 rounded-md bg-blue-600 flex items-center justify-center font-black text-[9px] text-white">
+                {getBrandInitials(brandName)}
+              </span>
+            )}
             <span className="text-[12px] font-bold text-blue-400 tracking-wide uppercase">
-              PressingPro CI • Qualité Supérieure
+              {brandName} • Qualité Supérieure
             </span>
           </div>
           <p className="text-[15px] font-bold tracking-tight text-white">
             « Un vêtement bien entretenu, c'est une meilleure image ! »
           </p>
           <p className="text-[11.5px] text-zinc-300 mt-0.5">
-            Détachage expert fibres délicates, bazin riche & costumes d'affaires • Cocody & Plateau
+            Détachage expert fibres délicates, bazin riche & costumes d’affaires
           </p>
         </div>
 

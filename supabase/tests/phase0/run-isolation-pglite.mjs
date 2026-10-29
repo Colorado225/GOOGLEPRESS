@@ -107,8 +107,8 @@ try {
       join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'public' and c.relkind = 'r'
     `);
-    assert.equal(result.rows[0].total, 38);
-    assert.equal(result.rows[0].protected, 38);
+    assert.equal(result.rows[0].total, 39);
+    assert.equal(result.rows[0].protected, 39);
   });
 
   await check('chaque propriétaire ne voit que ses agences', async () => {
@@ -1219,6 +1219,413 @@ try {
       db.query("select public.create_my_organization('Anon Fictif', 'Anon Agence')")
     );
   }, /permission denied/i);
+
+  await check('le propriétaire enregistre l’instantané des paramètres et l’horodatage serveur est posé', async () => {
+    const before = await db.query(
+      `select settings, settings_updated_at
+         from public.shop_settings
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.deepEqual(before.rows[0].settings, {});
+
+    const updated = await queryAs(
+      users.ownerA,
+      `update public.shop_settings
+          set settings = '{"name":"Alpha Cocody","pickupFee":1500}'::jsonb,
+              pickup_fee_xof = 1500
+        where shop_id = '20000000-0000-4000-8000-000000000001'
+        returning settings, pickup_fee_xof::int as pickup_fee, settings_updated_at`
+    );
+    assert.equal(updated.rows.length, 1);
+    assert.equal(updated.rows[0].settings.name, 'Alpha Cocody');
+    assert.equal(updated.rows[0].pickup_fee, 1500);
+    assert.ok(
+      new Date(updated.rows[0].settings_updated_at).getTime() >=
+        new Date(before.rows[0].settings_updated_at).getTime()
+    );
+  });
+
+  await check('un caissier ne peut pas enregistrer les paramètres de l’agence', async () => {
+    const attempted = await queryAs(
+      users.cashierA1,
+      `update public.shop_settings
+          set settings = '{"name":"Caisse pirate"}'::jsonb
+        where shop_id = '20000000-0000-4000-8000-000000000001'
+        returning shop_id`
+    );
+    assert.equal(attempted.rows.length, 0);
+
+    const unchanged = await db.query(
+      `select settings from public.shop_settings
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(unchanged.rows[0].settings.name, 'Alpha Cocody');
+  });
+
+  await check('le propriétaire crée un casier, toute l’agence le lit', async () => {
+    const inserted = await queryAs(
+      users.ownerA,
+      `insert into public.storage_locations
+         (organization_id, shop_id, legacy_id, code, label, zone, capacity_packages, is_active)
+       values
+         ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
+          'loc-c01', 'C-01', 'Portant C-01', 'hanging', 20, true)
+       returning id, code, label`
+    );
+    assert.equal(inserted.rows.length, 1);
+    assert.equal(inserted.rows[0].code, 'C-01');
+
+    const readByCashier = await queryAs(
+      users.cashierA1,
+      `select code from public.storage_locations
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    // A-01 vient des fixtures : le caissier voit tout le plan de l’agence.
+    assert.deepEqual(idsOf(readByCashier.rows, 'code'), ['A-01', 'C-01']);
+  });
+
+  await check('un caissier ne peut pas modifier un casier', async () => {
+    const attempted = await queryAs(
+      users.cashierA1,
+      `update public.storage_locations
+          set label = 'Caisse pirate'
+        where code = 'C-01'
+          and shop_id = '20000000-0000-4000-8000-000000000001'
+        returning id`
+    );
+    assert.equal(attempted.rows.length, 0);
+
+    const unchanged = await db.query(
+      `select label from public.storage_locations
+        where code = 'C-01'
+          and shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(unchanged.rows[0].label, 'Portant C-01');
+  });
+
+  await expectFailure('les colonnes d’identité des paramètres ne sont pas modifiables', async () => {
+    // Ce qui oblige le client à ne pas utiliser `upsert` : PostgREST le traduit
+    // en `on conflict do update set` sur toutes les colonnes envoyées.
+    await queryAs(
+      users.ownerA,
+      `update public.shop_settings
+          set shop_id = shop_id
+        where shop_id = '20000000-0000-4000-8000-000000000001'
+        returning shop_id`
+    );
+  }, /permission denied/i);
+
+  await expectFailure('un caissier ne peut pas créer de casier', async () => {
+    await queryAs(
+      users.cashierA1,
+      `insert into public.storage_locations
+         (organization_id, shop_id, code, label, zone, capacity_packages)
+       values
+         ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
+          'B-99', 'Casier pirate', 'other', 5)`
+    );
+  }, /row-level security|politique/i);
+
+  await check('les casiers d’une autre agence restent invisibles', async () => {
+    const otherShop = await queryAs(
+      users.ownerB,
+      `select id from public.storage_locations
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(otherShop.rows.length, 0);
+  });
+
+  await expectFailure('un casier ne peut pas être supprimé, seulement désactivé', async () => {
+    await queryAs(
+      users.ownerA,
+      `delete from public.storage_locations
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+  }, /permission denied|row-level security|politique/i);
+
+  await check('le propriétaire désactive un casier sans perdre l’historique', async () => {
+    const deactivated = await queryAs(
+      users.ownerA,
+      `update public.storage_locations
+          set is_active = false
+        where code = 'C-01'
+          and shop_id = '20000000-0000-4000-8000-000000000001'
+        returning is_active`
+    );
+    assert.equal(deactivated.rows.length, 1);
+    assert.equal(deactivated.rows[0].is_active, false);
+  });
+
+  await check('chaque agence possède une ligne d’abonnement', async () => {
+    // Chaque agence possède une ligne, y compris celles créées après la
+    // migration (déclencheur sur public.shops).
+    const rows = await db.query(`
+      select count(*)::int as shops,
+             (select count(*)::int from public.shop_subscriptions) as subscriptions
+        from public.shops
+    `);
+    assert.equal(rows.rows[0].shops, rows.rows[0].subscriptions);
+
+    const alpha = await db.query(
+      `select plan, status, trial_started_at from public.shop_subscriptions
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(alpha.rows[0].plan, 'business');
+    assert.ok(alpha.rows[0].trial_started_at);
+  });
+
+  await check('le propriétaire lit l’état de son abonnement, un étranger est refusé', async () => {
+    const state = await queryAs(
+      users.ownerA,
+      `select public.get_shop_subscription_state('20000000-0000-4000-8000-000000000001') as s`
+    );
+    assert.equal(state.rows[0].s.effective_plan, 'business');
+    assert.equal(state.rows[0].s.limits.users, null);
+
+    await expectFailure('un membre d’une autre organisation ne lit pas l’abonnement', async () => {
+      await queryAs(
+        users.ownerB,
+        `select public.get_shop_subscription_state('20000000-0000-4000-8000-000000000001')`
+      );
+    }, /Accès refusé/i);
+  });
+
+  await check('le propriétaire peut demander une formule mais pas l’appliquer', async () => {
+    const requested = await queryAs(
+      users.ownerA,
+      `update public.shop_subscriptions
+          set requested_plan = 'pro', requested_at = now()
+        where shop_id = '20000000-0000-4000-8000-000000000001'
+        returning requested_plan`
+    );
+    assert.equal(requested.rows.length, 1);
+    assert.equal(requested.rows[0].requested_plan, 'pro');
+
+    await expectFailure('changer soi-même de formule est refusé par les droits', async () => {
+      await queryAs(
+        users.ownerA,
+        `update public.shop_subscriptions
+            set plan = 'business'
+          where shop_id = '20000000-0000-4000-8000-000000000001'`
+      );
+    }, /permission denied/i);
+
+    await expectFailure('décaler la date d’essai est refusé', async () => {
+      await queryAs(
+        users.ownerA,
+        `update public.shop_subscriptions
+            set trial_started_at = now() + interval '365 days'
+          where shop_id = '20000000-0000-4000-8000-000000000001'`
+      );
+    }, /permission denied/i);
+
+    await db.query(
+      `update public.shop_subscriptions
+          set requested_plan = null, requested_at = null
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+  });
+
+  await check('un caissier ne peut pas déposer de demande', async () => {
+    const attempted = await queryAs(
+      users.cashierA1,
+      `update public.shop_subscriptions
+          set requested_plan = 'pro', requested_at = now()
+        where shop_id = '20000000-0000-4000-8000-000000000001'
+        returning shop_id`
+    );
+    assert.equal(attempted.rows.length, 0);
+  });
+
+  await check('la demande de formule passe par la RPC et respecte les rôles', async () => {
+    const owner = await queryAs(
+      users.ownerA,
+      `select public.request_subscription_plan('20000000-0000-4000-8000-000000000001', 'pro') as s`
+    );
+    assert.equal(owner.rows[0].s.requested_plan, 'pro');
+    assert.ok(owner.rows[0].s.requested_at);
+    // La demande n'applique pas la formule : seul l'éditeur la change.
+    assert.notEqual(owner.rows[0].s.plan, 'pro');
+    assert.equal(owner.rows[0].s.plan, 'business');
+
+    await expectFailure(
+      'un caissier ne peut pas demander une formule par la RPC',
+      async () => {
+        await queryAs(
+          users.cashierA1,
+          `select public.request_subscription_plan('20000000-0000-4000-8000-000000000001', 'business')`
+        );
+      },
+      /propriétaire/i
+    );
+
+    await expectFailure(
+      'une formule inconnue est refusée',
+      async () => {
+        await queryAs(
+          users.ownerA,
+          `select public.request_subscription_plan('20000000-0000-4000-8000-000000000001', 'platinum')`
+        );
+      },
+      /Formule inconnue/i
+    );
+
+    await db.query(
+      `update public.shop_subscriptions
+          set requested_plan = null, requested_at = null
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+  });
+
+  await check('l’essai de 14 jours ouvre Pro, puis retombe sur Free', async () => {
+    await db.query(
+      `update public.shop_subscriptions
+          set plan = 'free', status = 'essai',
+              trial_started_at = now() - interval '3 days'
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    const during = await queryAs(
+      users.ownerA,
+      `select public.get_shop_subscription_state('20000000-0000-4000-8000-000000000001') as s`
+    );
+    assert.equal(during.rows[0].s.effective_plan, 'pro');
+    assert.equal(during.rows[0].s.trial_active, true);
+    assert.equal(during.rows[0].s.trial_days_left, 11);
+
+    await db.query(
+      `update public.shop_subscriptions
+          set trial_started_at = now() - interval '15 days'
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    const after = await queryAs(
+      users.ownerA,
+      `select public.get_shop_subscription_state('20000000-0000-4000-8000-000000000001') as s`
+    );
+    assert.equal(after.rows[0].s.effective_plan, 'free');
+    assert.equal(after.rows[0].s.trial_active, false);
+    assert.equal(after.rows[0].s.limits.orders_per_month, 100);
+    assert.equal(after.rows[0].s.limits.storage_locations, 10);
+  });
+
+  await check('le quota de casiers est appliqué en base', async () => {
+    const existing = await db.query(
+      `select count(*)::int as total from public.storage_locations where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    const remaining = 10 - existing.rows[0].total;
+    for (let index = 0; index < remaining; index += 1) {
+      await queryAs(
+        users.ownerA,
+        `insert into public.storage_locations
+           (organization_id, shop_id, code, label, zone, capacity_packages)
+         values ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'Q-' || lpad('${index + 1}', 2, '0'), 'Quota', 'other', 5)`
+      );
+    }
+    await expectFailure('la 11e place de rangement est refusée', async () => {
+      await queryAs(
+        users.ownerA,
+        `insert into public.storage_locations
+           (organization_id, shop_id, code, label, zone, capacity_packages)
+         values ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'Q-99', 'Trop', 'other', 5)`
+      );
+    }, /emplacements de rangement au maximum/i);
+
+    await db.query(`delete from public.storage_locations where shop_id = '20000000-0000-4000-8000-000000000001' and code like 'Q-%'`);
+  });
+
+  await check('le quota de comptes est appliqué en base', async () => {
+    // Le quota d'équipe se compte par organisation : toutes ses agences
+    // doivent être en Free pour que le plafond s'applique.
+    await db.query(
+      `update public.shop_subscriptions
+          set plan = 'free', status = 'essai', trial_started_at = now() - interval '15 days'
+        where organization_id = '10000000-0000-4000-8000-000000000001'`
+    );
+    await expectFailure('un 3e compte actif est refusé en Free', async () => {
+      await queryAs(
+        users.ownerA,
+        `insert into public.memberships (organization_id, shop_id, user_id, role, status)
+         values ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002',
+                 '00000000-0000-4000-8000-000000000301', 'cashier', 'active')`
+      );
+    }, /comptes au maximum/i);
+    await db.query(
+      `update public.shop_subscriptions
+          set plan = 'business', status = 'actif'
+        where organization_id = '10000000-0000-4000-8000-000000000001'`
+    );
+  });
+
+  await check('le quota de commandes du mois est appliqué en base', async () => {
+    // On remplit le mois en Business (illimité), puis on rétrograde en Free :
+    // c'est le plafond de 100 commandes du mois qui doit bloquer la suivante.
+    // Les commandes créées pour le test sont supprimées à la fin.
+    await db.query(
+      `with c as (
+         select id from public.customers
+          where organization_id = '10000000-0000-4000-8000-000000000001'
+          limit 1
+       )
+       insert into public.orders (
+         organization_id, shop_id, customer_id, ticket_number,
+         customer_name_snapshot, customer_phone_snapshot, lines,
+         subtotal_xof, total_xof, payment_method, promised_at
+       )
+       select '10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', c.id,
+              900000 + g, 'Client quota', '+2250700000099',
+              '[{"name":"Chemise","quantity":1,"unitPrice":1000,"total":1000}]'::jsonb,
+              1000, 1000, 'especes', now() + interval '1 day'
+         from generate_series(1, 100) as g
+         cross join c`
+    );
+    await db.query(
+      `update public.shop_subscriptions
+          set plan = 'free', status = 'essai', trial_started_at = now() - interval '15 days'
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    try {
+      await expectFailure('la 101e commande du mois est refusée', async () => {
+        // Les commandes se créent via public.create_order (insert révoqué) :
+        // on teste ici le déclencheur de quota, qui s'applique quel que soit
+        // le rôle.
+        await db.query(
+          `with c as (
+             select id from public.customers
+              where organization_id = '10000000-0000-4000-8000-000000000001'
+              limit 1
+           )
+           insert into public.orders (
+             organization_id, shop_id, customer_id, ticket_number,
+             customer_name_snapshot, customer_phone_snapshot, lines,
+             subtotal_xof, total_xof, payment_method, promised_at
+           )
+           select '10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', c.id,
+                  999999, 'Client quota', '+2250700000099',
+                  '[{"name":"Chemise","quantity":1,"unitPrice":1000,"total":1000}]'::jsonb,
+                  1000, 1000, 'especes', now() + interval '1 day'
+             from c`
+        );
+      }, /commandes par mois au maximum/i);
+    } finally {
+      await db.query(
+        `update public.shop_subscriptions
+            set plan = 'business', status = 'actif'
+          where shop_id = '20000000-0000-4000-8000-000000000001'`
+      );
+      await db.query(
+        `delete from public.order_events
+          where order_id in (
+            select id from public.orders
+             where shop_id = '20000000-0000-4000-8000-000000000001'
+               and ticket_number between 900001 and 900100
+          )`
+      );
+      await db.query(
+        `delete from public.orders
+          where shop_id = '20000000-0000-4000-8000-000000000001'
+            and ticket_number between 900001 and 900100`
+      );
+    }
+  });
 
   console.log(`\nPhase 0 PGlite : ${passed} vérifications réussies.`);
 } catch (error) {

@@ -57,6 +57,7 @@ import type {
 import { StorageAssignmentModal } from './StorageAssignmentModal';
 import { StorageLocationFormModal } from './StorageLocationFormModal';
 import { StorageLocationSeriesModal } from './StorageLocationSeriesModal';
+import { StorageSyncBanner } from './StorageSyncBanner';
 
 type StorageView = 'orders' | 'locations';
 type StorageStateFilter = 'all' | 'unstored' | 'legacy' | 'stored';
@@ -878,10 +879,11 @@ export const StoragePanel: React.FC = () => {
         <span>
           Le plan A–E est seulement une <strong>proposition de démarrage</strong> : créez vos propres
           codes, dupliquez un casier type ou générez une série complète (B-01 → B-12). Les règles
-          du propriétaire se règlent dans <strong>Paramètres → Rangement atelier</strong>. Les données
-          restent <strong>uniquement dans ce navigateur</strong> pour le moment.
+          du propriétaire se règlent dans <strong>Paramètres → Rangement atelier</strong>.
         </span>
       </p>
+
+      <StorageSyncBanner />
 
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         <KpiCard

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { getWorkspaceLabel } from '../../lib/workspaceScope';
+import { resolveShopDisplayName } from '../../lib/shopIdentity';
 import { ServiceTypeSelectionScreen } from './ServiceTypeSelectionScreen';
 import { OrderStepperHeader } from './OrderStepperHeader';
 import { Step1ClientAndDates } from './Step1ClientAndDates';
@@ -25,6 +27,8 @@ export const PosPage: React.FC = () => {
     orders,
     setActiveScreen,
     cartLines,
+    workspace,
+    shopSettings,
   } = useApp();
 
   // Mode: 'stepper' (new multi-step flow) or 'classic' (single-view all-in-one POS)
@@ -171,7 +175,10 @@ export const PosPage: React.FC = () => {
               </div>
               <div className={classicTab === 'articles' ? 'space-y-3' : 'hidden'}>
                 <ClothingCatalogSection />
-                <PromoBanner />
+                <PromoBanner
+                  brandName={resolveShopDisplayName(shopSettings, workspace)}
+                  logoDataUrl={shopSettings.logoDataUrl}
+                />
               </div>
               <div className={classicTab === 'retrait' ? 'space-y-3' : 'hidden'}>
                 <PickupOptionsSection />
@@ -190,9 +197,13 @@ export const PosPage: React.FC = () => {
       {/* Footer Info Banner */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl mt-4 px-4 py-2.5 text-[11.5px] text-zinc-500 dark:text-zinc-400 shadow-2xs flex flex-wrap items-center justify-between gap-2">
         <p>
-          PressingPro CI • Système d’encaissement & de gestion pressing conforme Côte d'Ivoire • Raccourcis : F1 Accueil, F2 Réception, F3 Atelier, F4 Caisse
+          {resolveShopDisplayName(shopSettings, workspace)} • Système d’encaissement & de
+          gestion pressing conforme Côte d'Ivoire • Raccourcis : F1 Accueil, F2
+          Réception, F3 Atelier, F4 Caisse
         </p>
-        <span className="font-semibold text-zinc-700 dark:text-zinc-300">Abidjan, Cocody • Devise FCFA</span>
+        <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+          {getWorkspaceLabel(workspace)} • Devise FCFA
+        </span>
       </div>
     </div>
   );

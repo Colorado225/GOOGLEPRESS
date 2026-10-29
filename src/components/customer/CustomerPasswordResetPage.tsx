@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
+import { ArrowLeft, KeyRound, LogIn } from 'lucide-react';
 import {
   CUSTOMER_HOME_PATH,
   CUSTOMER_LOGIN_PATH,
@@ -9,18 +9,18 @@ import {
 } from '../../lib/customerAuth';
 import { getSupabaseConfigStatus, supabase } from '../../lib/supabase';
 import {
-  CustomerAuthLayout,
-  CustomerFormAlerts,
-  CustomerNavLink,
-  PasswordField,
-  customerPrimaryButtonClassName,
-  customerSecondaryButtonClassName,
-  type CustomerNavigate,
-} from './CustomerAuthLayout';
+  AuthAlert,
+  AuthButton,
+  AuthPasswordField,
+  AuthShell,
+  AuthSpaceSwitch,
+  AuthUnconfiguredNotice,
+  type AuthNavigate,
+} from '../auth/AuthShell';
 
 interface CustomerPasswordResetPageProps {
   session: Session | null;
-  onNavigate: CustomerNavigate;
+  onNavigate: AuthNavigate;
 }
 
 export const CustomerPasswordResetPage: React.FC<CustomerPasswordResetPageProps> = ({
@@ -34,83 +34,115 @@ export const CustomerPasswordResetPage: React.FC<CustomerPasswordResetPageProps>
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    document.title = 'Nouveau mot de passe — PressingPro CI';
+  }, []);
+
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!supabase || !session || busy) return;
+    setError(null);
+    setMessage(null);
+    if (!supabase || !session) {
+      setError(
+        'Aucune vérification n’a été effectuée : le service d’authentification n’est pas disponible dans cet environnement.'
+      );
+      return;
+    }
 
     const validationError = validateNewPassword(password, confirmPassword);
     if (validationError) {
       setError(validationError);
-      setMessage(null);
       return;
     }
 
     setBusy(true);
-    setError(null);
-    setMessage(null);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    setBusy(false);
-    setPassword('');
-    setConfirmPassword('');
-
-    if (updateError) {
-      setError(mapSupabaseAuthError(updateError));
-      return;
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) {
+        setError(mapSupabaseAuthError(updateError));
+        return;
+      }
+      setPassword('');
+      setConfirmPassword('');
+      setMessage(
+        'Votre mot de passe a été modifié. Vous pouvez maintenant ouvrir votre espace client.'
+      );
+    } catch (unexpectedError) {
+      setError(mapSupabaseAuthError(unexpectedError));
+    } finally {
+      setBusy(false);
     }
-
-    setMessage('Votre mot de passe a été modifié. Vous pouvez maintenant ouvrir votre espace client.');
   };
 
   return (
-    <CustomerAuthLayout
-      title="Choisir un nouveau mot de passe"
-      subtitle="Cette page doit être ouverte depuis le lien reçu par e-mail. Le lien est temporaire et ne doit pas être partagé."
-      active="password"
-      onNavigate={onNavigate}
+    <AuthShell
+      audience="customer"
+      title={message ? 'Mot de passe mis à jour.' : 'Choisissez un nouveau mot de passe.'}
+      subtitle={
+        message
+          ? 'Votre compte client utilise désormais ce nouveau mot de passe.'
+          : 'Cette page s’ouvre depuis le lien reçu par e-mail. Le lien est temporaire et ne doit pas être partagé.'
+      }
+      notice={!config.configured ? <AuthUnconfiguredNotice audience="customer" /> : undefined}
+      footer={<AuthSpaceSwitch audience="customer" onNavigate={onNavigate} />}
     >
       {!config.configured ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] leading-relaxed text-amber-900 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
-          Le service d’authentification n’est pas configuré dans cet environnement.
-        </p>
+        <div className="space-y-4">
+          <AuthAlert tone="warning">
+            La page reste consultable, mais aucun changement de mot de passe ne peut être
+            enregistré ici.
+          </AuthAlert>
+          <AuthButton
+            type="button"
+            variant="secondary"
+            icon={ArrowLeft}
+            onClick={() => onNavigate(CUSTOMER_LOGIN_PATH)}
+          >
+            Retour à la connexion
+          </AuthButton>
+        </div>
       ) : !session ? (
         <div className="space-y-4">
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-[13px] leading-relaxed text-red-900 dark:border-red-900 dark:bg-red-950/60 dark:text-red-200">
-            Aucune session de récupération n’est active. Ce lien est peut-être
-            expiré, déjà utilisé ou incomplet.
-          </p>
-          <CustomerNavLink
-            href={CUSTOMER_LOGIN_PATH}
-            onNavigate={onNavigate}
-            className={`${customerSecondaryButtonClassName} w-full`}
+          <AuthAlert tone="error" title="Lien inutilisable">
+            Aucune session de récupération n’est active. Le lien est peut-être expiré, déjà
+            utilisé ou incomplet.
+          </AuthAlert>
+          <AuthButton
+            type="button"
+            icon={LogIn}
+            onClick={() => onNavigate(CUSTOMER_LOGIN_PATH)}
           >
-            Demander un nouveau lien depuis la connexion
-          </CustomerNavLink>
+            Demander un nouveau lien
+          </AuthButton>
         </div>
       ) : message ? (
         <div className="space-y-4">
-          <p className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-[13px] leading-relaxed text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200">
-            <CheckCircle2 className="mt-0.5 h-4.5 w-4.5 shrink-0" aria-hidden="true" />
+          <AuthAlert tone="success" title="C’est enregistré">
             {message}
-          </p>
-          <CustomerNavLink
-            href={CUSTOMER_HOME_PATH}
-            onNavigate={onNavigate}
-            className={customerPrimaryButtonClassName}
+          </AuthAlert>
+          <AuthButton
+            type="button"
+            icon={LogIn}
+            onClick={() => onNavigate(CUSTOMER_HOME_PATH, { replace: true })}
           >
             Ouvrir mon espace client
-          </CustomerNavLink>
+          </AuthButton>
         </div>
       ) : (
         <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
-          <PasswordField
+          {error ? <AuthAlert tone="error">{error}</AuthAlert> : null}
+          <AuthPasswordField
             id="customer-new-password"
             label="Nouveau mot de passe"
             value={password}
             onChange={setPassword}
             autoComplete="new-password"
             disabled={busy}
+            showStrength
+            hint="Au moins 8 caractères."
+            autoFocus
           />
-          <PasswordField
+          <AuthPasswordField
             id="customer-confirm-new-password"
             label="Confirmer le mot de passe"
             value={confirmPassword}
@@ -118,17 +150,21 @@ export const CustomerPasswordResetPage: React.FC<CustomerPasswordResetPageProps>
             autoComplete="new-password"
             disabled={busy}
           />
-          <CustomerFormAlerts error={error} />
-          <button type="submit" disabled={busy} className={customerPrimaryButtonClassName}>
-            {busy ? (
-              <Loader2 className="h-4.5 w-4.5 animate-spin" aria-hidden="true" />
-            ) : (
-              <KeyRound className="h-4.5 w-4.5" aria-hidden="true" />
-            )}
+          <AuthButton type="submit" busy={busy} icon={KeyRound}>
             Enregistrer le nouveau mot de passe
-          </button>
+          </AuthButton>
+          <p className="text-center text-[11.5px] leading-relaxed text-[#6B665D] dark:text-zinc-400">
+            Vous ne vous attendiez pas à cette page ?{' '}
+            <button
+              type="button"
+              onClick={() => onNavigate(CUSTOMER_LOGIN_PATH)}
+              className="rounded font-bold text-[#1D4ED8] underline-offset-4 hover:underline focus:outline-none focus-visible:ring-4 focus-visible:ring-[#1D4ED8]/20 dark:text-blue-300"
+            >
+              Revenir à la connexion
+            </button>
+          </p>
         </form>
       )}
-    </CustomerAuthLayout>
+    </AuthShell>
   );
 };

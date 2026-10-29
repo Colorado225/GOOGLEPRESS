@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js';
 import type { Database, Tables } from './database.types';
 import { getMetadataString, normalizePhoneToE164 } from './customerAuth';
 import { supabase } from './supabase';
+import { updateOrInsert } from './supabaseWrite';
 
 type Client = SupabaseClient<Database>;
 
@@ -60,11 +61,32 @@ export async function syncCustomerProfile(
   if (phone && !existingProfile?.phone_e164) payload.phone_e164 = phone;
   if (existingProfile && !payload.display_name && !payload.phone_e164) return;
 
-  const { error } = await resolved
-    .from('profiles')
-    .upsert(payload, { onConflict: 'user_id' });
+  // Pas d'upsert : la table n'accorde que des droits par colonne et `user_id`
+  // n'est pas modifiable (voir `supabaseWrite.ts`).
+  const { user_id: userId, ...profilePatch } = payload;
+  const written = await updateOrInsert<{ user_id: string }>({
+    update: () =>
+      resolved
+        .from('profiles')
+        .update(profilePatch)
+        .eq('user_id', userId)
+        .select('user_id')
+        .maybeSingle(),
+    insert: () =>
+      resolved
+        .from('profiles')
+        .insert(payload)
+        .select('user_id')
+        .maybeSingle(),
+  });
 
-  if (error) throw new Error(error.message);
+  if (!written.ok) {
+    throw new Error(
+      typeof written.error === 'object' && written.error !== null && 'message' in written.error
+        ? String((written.error as { message?: unknown }).message)
+        : 'Profil client non enregistré.'
+    );
+  }
 }
 
 export async function getCustomerProfile(
@@ -87,20 +109,34 @@ export async function updateCustomerProfile(
   client?: Client | null
 ): Promise<CustomerProfile> {
   const resolved = requireSupabaseClient(client);
-  const { data, error } = await resolved
-    .from('profiles')
-    .upsert(
-      {
-        user_id: input.userId,
-        display_name: input.displayName.trim().replace(/\s+/g, ' '),
-        phone_e164: input.phoneE164,
-      },
-      { onConflict: 'user_id' }
-    )
-    .select('*')
-    .single();
+  const patch = {
+    display_name: input.displayName.trim().replace(/\s+/g, ' '),
+    phone_e164: input.phoneE164,
+  };
+  const written = await updateOrInsert<CustomerProfile>({
+    update: () =>
+      resolved
+        .from('profiles')
+        .update(patch)
+        .eq('user_id', input.userId)
+        .select('*')
+        .maybeSingle(),
+    insert: () =>
+      resolved
+        .from('profiles')
+        .insert({ user_id: input.userId, ...patch })
+        .select('*')
+        .maybeSingle(),
+  });
 
-  if (error) throw new Error(error.message);
+  if (!written.ok) {
+    throw new Error(
+      typeof written.error === 'object' && written.error !== null && 'message' in written.error
+        ? String((written.error as { message?: unknown }).message)
+        : 'Profil client non enregistré.'
+    );
+  }
+  const data = written.row;
 
   // Garder les métadonnées Auth cohérentes pour les prochaines connexions.
   const { error: userError } = await resolved.auth.updateUser({

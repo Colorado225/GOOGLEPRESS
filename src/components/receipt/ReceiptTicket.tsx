@@ -2,6 +2,7 @@ import React from 'react';
 import { Customer, LaundryOrder } from '../../types';
 import { formatFCFA } from '../../data/demoData';
 import { encodeCode39 } from '../../lib/barcode';
+import { getBrandInitials } from '../../lib/shopIdentity';
 import { useApp } from '../../context/AppContext';
 import {
   formatLogisticsSchedule,
@@ -120,7 +121,9 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
   let kilos = 0;
   order.lines.forEach((line) => {
     if (line.pricingType === 'kilo') kilos += line.weightKg ?? line.quantity;
-    else pieces += line.quantity;
+    // Un forfait couvre plusieurs vêtements : on compte les vêtements réels,
+    // pas les blocs de forfait facturés.
+    else pieces += line.garments ?? line.quantity;
   });
   const itemsSummaryParts: string[] = [];
   if (pieces > 0) itemsSummaryParts.push(`${formatQty(pieces)} pièce${pieces > 1 ? 's' : ''}`);
@@ -154,13 +157,29 @@ export const ReceiptTicket: React.FC<ReceiptTicketProps> = ({ order, variant, cu
       <div className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-mono text-[12px] leading-snug px-5 py-5 shadow-[0_18px_45px_-12px_rgba(0,0,0,0.45)] print:shadow-none">
         {/* ─── En-tête boutique ─── */}
         <div className="text-center">
-          <div className="w-9 h-9 bg-zinc-950 text-white flex items-center justify-center font-sans font-black text-[17px] rounded-md mx-auto">
-            P
-          </div>
-          <h2 className="font-sans font-black text-[18px] tracking-tight mt-1.5">{shopSettings.name.toUpperCase()}</h2>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">{shopSettings.tagline}</p>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 mt-1">{shopSettings.address}</p>
-          <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">Tél : {shopSettings.phone}</p>
+          {shopSettings.logoDataUrl ? (
+            <img
+              src={shopSettings.logoDataUrl}
+              alt={`Logo ${shopSettings.name}`}
+              className="mx-auto h-10 w-10 rounded-md object-contain"
+            />
+          ) : (
+            <div className="w-9 h-9 bg-zinc-950 text-white flex items-center justify-center font-sans font-black text-[15px] rounded-md mx-auto">
+              {getBrandInitials(shopSettings.name)}
+            </div>
+          )}
+          <h2 className="font-sans font-black text-[18px] tracking-tight mt-1.5">
+            {(shopSettings.name || 'Mon pressing').toUpperCase()}
+          </h2>
+          {shopSettings.tagline && (
+            <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">{shopSettings.tagline}</p>
+          )}
+          {shopSettings.address && (
+            <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400 mt-1">{shopSettings.address}</p>
+          )}
+          {shopSettings.phone && (
+            <p className="text-[10.5px] text-zinc-600 dark:text-zinc-400">Tél : {shopSettings.phone}</p>
+          )}
         </div>
 
         <div className="mt-3">

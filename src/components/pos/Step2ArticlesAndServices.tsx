@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CurrentColorSelector, LineColorSelect } from './ColorPicker';
 import { useApp } from '../../context/AppContext';
-import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
+import { formatFCFA } from '../../data/demoData';
+import { getGarmentCatalog } from '../../lib/garmentCatalog';
 import { calculateOrderTotals } from '../../lib/pricing';
+import { resolvePressingPrice } from '../../lib/pressing';
 import { ClothingItem, OrderLine } from '../../types';
 import {
   ArrowLeft,
@@ -17,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '../common/DataTable';
 import { SegmentedControl } from '../common/SegmentedControl';
+import { BlanchisserieCounter } from './BlanchisserieCounter';
 
 export const Step2ArticlesAndServices: React.FC = () => {
   const {
@@ -40,29 +43,30 @@ export const Step2ArticlesAndServices: React.FC = () => {
   const isBlanchisserie = selectedServiceCategory === 'blanchisserie';
 
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
-  const [kiloWeightInput, setKiloWeightInput] = useState<number>(3.5);
 
-  // Available services depending on category
-  const pressingServices = [
-    'Lavage + Repassage',
-    'Pressing à sec',
-    'Repassage seul',
-    'Teinture',
-    'Express 24h',
-  ];
+  // Prestations du pressing : liste et prix réglés dans Paramètres →
+  // Prestations. « Express 24h » n'en fait pas partie : c'est un type de
+  // service (normal / express) qui double le montant, pas un traitement.
+  const pressingServiceDefs = shopSettings.pressing.services;
+  const currentServicesList = pressingServiceDefs.map((service) => service.label);
+  const activePressingService =
+    pressingServiceDefs.find((service) => service.label === selectedServiceFilter) ??
+    pressingServiceDefs[0];
 
-  const blanchisserieServices = [
-    'Blanchisserie complète',
-    'Lavage désinfectant',
-    'Repassage calandre',
-    'Lavage au kilo',
-    'Express 24h',
-  ];
+  // Une prestation renommée ou supprimée dans les Paramètres ne doit pas
+  // laisser le comptoir sur un libellé fantôme.
+  useEffect(() => {
+    if (!pressingServiceDefs.some((service) => service.label === selectedServiceFilter)) {
+      setSelectedServiceFilter(pressingServiceDefs[0]?.label ?? '');
+    }
+  }, [pressingServiceDefs, selectedServiceFilter, setSelectedServiceFilter]);
 
-  const currentServicesList = isPressing ? pressingServices : blanchisserieServices;
+  const priceFor = (item: ClothingItem) =>
+    resolvePressingPrice(item, shopSettings.pressing, activePressingService?.id ?? '');
 
   // Filter catalog items by service category (pressing vs blanchisserie)
-  const catalogItems = INITIAL_CLOTHING_ITEMS.filter((item) => {
+  // Catalogue réel : vêtements créés dans les Paramètres + catalogue fourni.
+  const catalogItems = getGarmentCatalog(shopSettings).filter((item) => {
     const matchesCategory =
       item.serviceCategory === selectedServiceCategory || item.serviceCategory === 'both';
     const matchesTab =
@@ -92,11 +96,6 @@ export const Step2ArticlesAndServices: React.FC = () => {
       .reduce((sum, l) => sum + l.quantity, 0);
   };
 
-  const handleAddKiloItem = (item: ClothingItem) => {
-    addCartItem(item, 'Lavage au kilo', 1, kiloWeightInput);
-    showToast(`✓ ${kiloWeightInput} kg de linge ajoutés (${formatFCFA(item.unitPrice * kiloWeightInput)})`);
-  };
-
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Intro Bar */}
@@ -105,28 +104,37 @@ export const Step2ArticlesAndServices: React.FC = () => {
           <h2 className="text-lg font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
             <span>Étape 2 • Articles & Prestations</span>
             <Badge variant={isPressing ? 'info' : 'teal'} className={isPressing ? 'bg-blue-50 dark:bg-blue-950' : 'bg-teal-50 dark:bg-teal-950'}>
-              {isPressing ? 'Catalogue Pressing' : 'Catalogue Blanchisserie'}
+              {isPressing ? 'Catalogue Pressing' : 'Forfaits Blanchisserie'}
             </Badge>
           </h2>
           <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Sélectionnez les vêtements ou le linge apporté par {selectedCustomer?.name || 'le client'}.
+            {isPressing
+              ? `Sélectionnez les vêtements apportés par ${selectedCustomer?.name || 'le client'}.`
+              : 'Choisissez la prestation et le nombre de vêtements déposés.'}
           </p>
         </div>
 
-        {/* Filtre du traitement appliqué aux articles ajoutés (code couleur pressing/blanchisserie) */}
-        <SegmentedControl
-          ariaLabel="Choisir le traitement appliqué aux articles ajoutés"
-          tone={isPressing ? 'blue' : 'teal'}
-          options={currentServicesList.map((srv) => ({ id: srv, label: srv }))}
-          value={selectedServiceFilter}
-          onChange={setSelectedServiceFilter}
-        />
+        {/* Traitement du catalogue pressing ; la blanchisserie choisit sa
+            prestation dans son propre comptoir. */}
+        {isPressing && (
+          <SegmentedControl
+            ariaLabel="Choisir le traitement appliqué aux articles ajoutés"
+            tone="blue"
+            options={currentServicesList.map((srv) => ({ id: srv, label: srv }))}
+            value={selectedServiceFilter}
+            onChange={setSelectedServiceFilter}
+          />
+        )}
       </div>
 
       {/* Main Grid: Left Catalog, Right Cart summary */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Left Column: Catalog Items */}
         <div className="lg:col-span-3 space-y-3">
+          {isBlanchisserie ? (
+            <BlanchisserieCounter />
+          ) : (
+            <>
           {/* Sub-category tabs */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-700/90 rounded-xl p-3 shadow-2xs flex items-center justify-between gap-2">
             <span className="text-[12px] font-bold text-zinc-600 dark:text-zinc-400">Catégories :</span>
@@ -152,7 +160,6 @@ export const Step2ArticlesAndServices: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {catalogItems.map((item, index) => {
               const count = getItemCount(item.id);
-              const isKilo = item.pricingType === 'kilo';
 
               return (
                 <div
@@ -178,7 +185,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
                           isPressing ? 'bg-blue-600' : 'bg-teal-600'
                         }`}
                       >
-                        {isKilo ? `${count} kg` : `× ${count}`}
+                        × {count}
                       </span>
                     )}
                   </div>
@@ -188,7 +195,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
                       {item.name}
                     </p>
                     <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 font-semibold tabular-nums mt-0.5">
-                      {formatFCFA(item.unitPrice)}{' '}
+                      {formatFCFA(priceFor(item))}{' '}
                       <span className="font-normal text-zinc-400 dark:text-zinc-500">/ {item.unitLabel || 'pièce'}</span>
                     </p>
                     {item.description && (
@@ -198,52 +205,26 @@ export const Step2ArticlesAndServices: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Kilo input or standard click button */}
-                  {isKilo ? (
-                    <div className="mt-1 pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-medium text-zinc-600 dark:text-zinc-400">Poids :</span>
-                        <div className="flex items-center gap-1 font-bold">
-                          <input
-                            type="number"
-                            step="0.5"
-                            min="0.5"
-                            value={kiloWeightInput}
-                            onChange={(e) => setKiloWeightInput(parseFloat(e.target.value) || 1)}
-                            className="w-14 border border-zinc-300 dark:border-zinc-600 rounded px-1.5 py-0.5 text-center text-[12px] tabular-nums"
-                          />
-                          <span>kg</span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleAddKiloItem(item)}
-                        className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11.5px] py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-2xs"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Peser & Ajouter</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => addCartItem(item)}
-                      className={`w-full font-bold text-[12px] py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-2xs mt-1 ${
-                        count > 0
-                          ? isPressing
-                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                            : 'bg-teal-600 text-white hover:bg-teal-700'
-                          : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200'
-                      }`}
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{count > 0 ? '+ Ajouter encore' : 'Ajouter'}</span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      addCartItem({ ...item, unitPrice: priceFor(item) })
+                    }
+                    className={`w-full font-bold text-[12px] py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-2xs mt-1 ${
+                      count > 0
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200'
+                    }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{count > 0 ? '+ Ajouter encore' : 'Ajouter'}</span>
+                  </button>
                 </div>
               );
             })}
           </div>
+            </>
+          )}
         </div>
 
         {/* Right Column: Live Order Cart Ticket */}
@@ -336,7 +317,7 @@ export const Step2ArticlesAndServices: React.FC = () => {
                 </div>
                 {expressFee > 0 && (
                   <div className="flex justify-between text-amber-800 dark:text-amber-200">
-                    <span>Supplément express</span>
+                    <span>Type express 24h (×2)</span>
                     <span className="font-bold tabular-nums">+{formatFCFA(expressFee)}</span>
                   </div>
                 )}

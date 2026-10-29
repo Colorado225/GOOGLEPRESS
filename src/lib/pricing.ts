@@ -4,15 +4,19 @@ import type { OrderLine, PickupOption } from '../types';
  * Calculs tarifaires — PressingPro CI.
  *
  * Point d'entrée UNIQUE pour tous les montants d'une commande.
- * Avant ce module, la même formule (sous-total, express +50 %, remise
+ * Avant ce module, la même formule (sous-total, express ×2, remise
  * fidélité, total, reste à payer) était recopiée dans AppContext,
  * OrderCartTicket et Step3SummaryAndConfirm, avec un risque de divergence
  * entre le montant affiché à l'écran et celui enregistré sur la commande.
  * Tous les montants sont en FCFA entiers (pas de centimes).
  */
 
-/** Majoration appliquée aux commandes express (+50 % du sous-total). */
-export const EXPRESS_SURCHARGE_RATE = 0.5;
+/**
+ * Le type de service « Express 24h » vaut le DOUBLE du service normal : la
+ * majoration est donc égale à 100 % des prestations (total = 2 × sous-total).
+ * « Express » n'est pas un traitement : il s'applique à toute la commande.
+ */
+export const EXPRESS_SURCHARGE_RATE = 1;
 
 const sanitizeFiniteNumber = (value: number | undefined): number =>
   Number.isFinite(value) ? (value as number) : 0;

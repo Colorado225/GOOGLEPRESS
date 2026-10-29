@@ -12,7 +12,10 @@ import { formatRangeLabel, getPeriodRange, isISOInRange, PeriodPreset } from '..
 import { getAlertProducts } from '../../lib/inventory';
 import { orderReceivedISO } from '../../lib/reports';
 import { printDocument } from '../../lib/print';
+import { resolveShopDisplayName } from '../../lib/shopIdentity';
 import { Activity, Wallet, Users, Boxes, ArrowLeft, Printer, ChevronRight } from 'lucide-react';
+import { PlanLockPanel } from '../subscription/PlanLockPanel';
+import { isFeatureIncluded } from '../../lib/planAccess';
 
 type ReportId = 'activity' | 'financial' | 'employees' | 'inventory';
 
@@ -30,7 +33,18 @@ const REPORT_TITLES: Record<ReportId, string> = {
  * une zone imprimable dédiée (#report-print-area, voir index.css).
  */
 export const ReportsPage: React.FC = () => {
-  const { setActiveScreen, orders, expenses, employees, attendanceRecords, products, shopSettings } = useApp();
+  const {
+    setActiveScreen,
+    orders,
+    expenses,
+    employees,
+    attendanceRecords,
+    products,
+    shopSettings,
+    workspace,
+    effectivePlanId,
+  } = useApp();
+  const canUseDetailedReports = isFeatureIncluded(effectivePlanId, 'detailedReports');
   const [activeReport, setActiveReport] = useState<ReportId | null>(null);
   const [preset, setPreset] = useState<PeriodPreset>('month');
   const [customStart, setCustomStart] = useState('');
@@ -90,6 +104,21 @@ export const ReportsPage: React.FC = () => {
       preview: previews.inventory,
     },
   ];
+
+  if (!canUseDetailedReports) {
+    return (
+      <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+        <PageHeader
+          title="Rapports"
+          subtitle="Rapports détaillés et exports"
+          onBack={() => setActiveScreen('dashboard')}
+        />
+        <div className="mt-4 max-w-2xl">
+          <PlanLockPanel feature="detailedReports" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
@@ -186,7 +215,8 @@ export const ReportsPage: React.FC = () => {
           {/* Zone imprimable : en-tête de document + contenu du rapport */}
           <div id="report-print-area">
             <div className="hidden print:block mb-4 border-b border-zinc-300 dark:border-zinc-600 pb-3">
-              <p className="text-[18px] font-black text-zinc-900 dark:text-zinc-100">{shopSettings.name} — {shopSettings.address}</p>
+              <p className="text-[18px] font-black text-zinc-900 dark:text-zinc-100">{resolveShopDisplayName(shopSettings, workspace)}
+                {shopSettings.address ? ` — ${shopSettings.address}` : ''}</p>
               <p className="text-[15px] font-bold mt-1">{REPORT_TITLES[activeReport]}</p>
               <p className="text-[12px] text-zinc-600 dark:text-zinc-400 tabular-nums mt-1">
                 Période analysée : {formatRangeLabel(range)} · Généré le {formatLongDateTime(new Date())}

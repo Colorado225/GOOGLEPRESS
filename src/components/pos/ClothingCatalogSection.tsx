@@ -1,25 +1,43 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { INITIAL_CLOTHING_ITEMS, formatFCFA } from '../../data/demoData';
+import { formatFCFA } from '../../data/demoData';
+import { getGarmentCatalog } from '../../lib/garmentCatalog';
 import { ClothingItem } from '../../types';
 import { CurrentColorSelector } from './ColorPicker';
 import { Reveal } from '../common/Reveal';
 import { SegmentedControl } from '../common/SegmentedControl';
+import { BlanchisserieCounter } from './BlanchisserieCounter';
+import { resolvePressingPrice } from '../../lib/pressing';
 
 export const ClothingCatalogSection: React.FC = () => {
-  const { addCartItem, cartLines, selectedServiceFilter, setSelectedServiceFilter } = useApp();
+  const {
+    addCartItem,
+    cartLines,
+    selectedServiceFilter,
+    setSelectedServiceFilter,
+    selectedServiceCategory,
+    shopSettings,
+  } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'men' | 'women' | 'home'>('all');
   const [itemSearch, setItemSearch] = useState('');
 
-  const services = [
-    { id: 'Lavage + Repassage', label: '🧺 Lavage + Repassage' },
-    { id: 'Pressing à sec', label: '🧴 Pressing à sec' },
-    { id: 'Repassage seul', label: '🔥 Repassage seul' },
-    { id: 'Teinture', label: '🎨 Teinture' },
-    { id: 'Express 24h', label: '⚡ Express 24h' },
-  ];
+  // Prestations réglées dans Paramètres → Prestations (Express 24h est un
+  // type de service, pas un traitement).
+  const services = shopSettings.pressing.services.map((service) => ({
+    id: service.label,
+    label: service.label,
+    serviceId: service.id,
+  }));
+  const activeService =
+    services.find((service) => service.id === selectedServiceFilter) ?? services[0];
+  const priceFor = (item: ClothingItem) =>
+    resolvePressingPrice(item, shopSettings.pressing, activeService?.serviceId ?? '');
 
-  const filteredItems = INITIAL_CLOTHING_ITEMS.filter((item) => {
+  // La blanchisserie ne se vend plus à la pièce : elle a son comptoir de
+  // forfaits au nombre de vêtements.
+  if (selectedServiceCategory === 'blanchisserie') return <BlanchisserieCounter />;
+
+  const filteredItems = getGarmentCatalog(shopSettings).filter((item) => {
     const matchesCat = selectedCategory === 'all' || item.category === selectedCategory || item.category === 'all';
     const matchesSearch = item.name.toLowerCase().includes(itemSearch.toLowerCase());
     return matchesCat && matchesSearch;
@@ -50,7 +68,7 @@ export const ClothingCatalogSection: React.FC = () => {
       </div>
 
       <div className="flex items-center justify-between mb-3 text-[12px] text-zinc-500 dark:text-zinc-400">
-        <p>Tarifs affichés en FCFA • Express = +50 %</p>
+        <p>Tarifs affichés en FCFA • Express 24h = ×2</p>
         <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">
           Cliquez sur un vêtement pour l'ajouter
         </span>
@@ -70,7 +88,7 @@ export const ClothingCatalogSection: React.FC = () => {
             <button
               key={item.id}
               type="button"
-              onClick={() => addCartItem(item)}
+              onClick={() => addCartItem({ ...item, unitPrice: priceFor(item) })}
               className={`border-1.5 rounded-xl p-3 text-center transition-all duration-200 cursor-pointer relative group flex flex-col items-center justify-between min-h-[115px] select-none ${
                 isSelected
                   ? 'border-[#09090b] dark:border-zinc-100 bg-[#09090b] dark:bg-zinc-100 text-white dark:text-zinc-950 shadow-pop scale-[1.02]'
@@ -91,7 +109,7 @@ export const ClothingCatalogSection: React.FC = () => {
               <div className="my-1">
                 <p className="font-bold text-[13px] leading-tight">{item.name}</p>
                 <p className={`text-[11.5px] ${isSelected ? 'text-zinc-300' : 'text-zinc-500 dark:text-zinc-400'}`}>
-                  {formatFCFA(item.unitPrice)}
+                  {formatFCFA(priceFor(item))}
                 </p>
               </div>
               {count > 0 ? (

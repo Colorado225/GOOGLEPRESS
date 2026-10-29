@@ -36,10 +36,13 @@ export const WorkshopPage: React.FC = () => {
     focusedStorageOrderId,
     workshopTabRequest,
     clearWorkshopTabRequest,
+    activeWorkshopTab: tab,
+    setActiveWorkshopTab: setTab,
   } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [tab, setTab] = useState<WorkshopTab>('production');
+  // L'onglet courant vit dans le contexte : la barre latérale le surligne et
+  // les raccourcis de navigation peuvent le changer depuis n'importe où.
   const [storageRequest, setStorageRequest] = useState<{
     order: LaundryOrder;
     mode: StorageAssignmentMode;

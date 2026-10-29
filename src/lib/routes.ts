@@ -11,6 +11,7 @@ import {
   type StaffRoute,
 } from './staffAuth';
 import type { ScreenId } from '../context/AppContext';
+import { buildBrandedTitle } from './shopIdentity';
 
 /**
  * Table des routes de l'application, organisée par contexte d'implémentation :
@@ -56,7 +57,8 @@ export interface ErpRouteDefinition {
 export const ERP_ROUTES: readonly ErpRouteDefinition[] = [
   { screen: 'dashboard', path: '/', aliases: ['/tableau-de-bord'], label: 'Tableau de bord' },
   { screen: 'pos', path: '/reception', aliases: [], label: 'Réception (POS)' },
-  { screen: 'workshop', path: '/atelier', aliases: [], label: 'Production & Suivi' },
+  { screen: 'workshop', path: '/atelier', aliases: [], label: 'Production & Remise' },
+  { screen: 'courier', path: '/tournee', aliases: ['/ma-tournee'], label: 'Ma tournée' },
   { screen: 'orders', path: '/commandes', aliases: [], label: 'Commandes' },
   { screen: 'clients', path: '/clients', aliases: [], label: 'Clients' },
   { screen: 'employees', path: '/personnel', aliases: [], label: 'Personnel' },
@@ -68,6 +70,13 @@ export const ERP_ROUTES: readonly ErpRouteDefinition[] = [
 
 export const ERP_HOME_PATH = '/';
 export const ERP_NOT_FOUND_TITLE = 'Page introuvable — PressingPro CI';
+
+/**
+ * Titre de la page « introuvable », avec le nom réel du pressing quand il est
+ * connu (le produit n'est qu'un repli).
+ */
+export const getErpNotFoundTitle = (brandName?: string): string =>
+  buildBrandedTitle('Page introuvable', brandName?.trim() || 'PressingPro CI');
 
 const erpRouteByPath = new Map<string, ErpRouteDefinition>(
   ERP_ROUTES.flatMap((route) => [
@@ -94,10 +103,18 @@ export const parseErpRoute = (pathname: string): ScreenId | null => {
 export const erpPathForScreen = (screen: ScreenId): string =>
   erpRouteByScreen.get(screen)?.path ?? ERP_HOME_PATH;
 
-/** Titre d'onglet/document d'un écran ERP. */
-export const getErpScreenTitle = (screen: ScreenId): string => {
+/**
+ * Titre d'onglet/document d'un écran ERP.
+ *
+ * Le nom affiché après le séparateur est celui du pressing connecté ; sans nom
+ * connu (démonstration, avant chargement), le nom du produit sert de repli.
+ */
+export const getErpScreenTitle = (
+  screen: ScreenId,
+  brandName?: string
+): string => {
   const label = erpRouteByScreen.get(screen)?.label ?? 'PressingPro CI';
-  return `${label} — PressingPro CI`;
+  return buildBrandedTitle(label, brandName?.trim() || 'PressingPro CI');
 };
 
 /* ------------------------------------------------------------------------- */

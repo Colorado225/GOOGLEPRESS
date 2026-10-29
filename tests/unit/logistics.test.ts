@@ -9,6 +9,7 @@ import {
   getPhoneHref,
   isLogisticsTaskActionable,
   normalizeLogisticsFee,
+  normalizeStoredLogisticsTask,
   sortCourierCandidates,
 } from '../../src/lib/logistics';
 import type { Employee, LogisticsTask } from '../../src/types';
@@ -86,6 +87,62 @@ describe('logistics', () => {
     expect(getDefaultDeliveryTimeSlot('delayed')).toBe('10:00-12:00');
     expect(getPhoneHref('+225 07-08 09')).toBe('tel:+225070809');
     expect(formatLogisticsDateTime('invalide')).toBe('Non renseigné');
+  });
+
+  it('relit une tournée stockée sans conserver de preuve inexploitable', () => {
+    const photo = 'data:image/png;base64,iVBORw0KGgo=';
+
+    const withProof = normalizeStoredLogisticsTask(
+      makeTask({
+        deliveryCode: '0042',
+        proof: {
+          photoDataUrl: photo,
+          receiverName: 'Awa',
+          capturedAt: '2026-10-28T10:00:00.000Z',
+        },
+      })
+    );
+    expect(withProof.deliveryCode).toBe('0042');
+    expect(withProof.proof?.photoDataUrl).toBe(photo);
+    expect(withProof.proof?.receiverName).toBe('Awa');
+
+    const broken = normalizeStoredLogisticsTask(
+      makeTask({
+        deliveryCode: '12',
+        proof: {
+          photoDataUrl: 'https://exemple.ci/photo.jpg',
+          receiverName: 'Awa',
+          capturedAt: '2026-10-28T10:00:00.000Z',
+        },
+      })
+    );
+    expect(broken.deliveryCode).toBeUndefined();
+    expect(broken.proof?.photoDataUrl).toBeUndefined();
+    expect(broken.proof?.receiverName).toBe('Awa');
+
+    const empty = normalizeStoredLogisticsTask(makeTask({ proof: undefined }));
+    expect(empty.proof).toBeUndefined();
+  });
+
+  it('conserve un point de livraison valide et écarte un point impossible', () => {
+    const withPoint = normalizeStoredLogisticsTask(
+      makeTask({
+        destination: {
+          lat: 5.36,
+          lng: -4.0083,
+          source: 'manual',
+          recordedAt: '2026-10-28T09:00:00.000Z',
+        },
+      })
+    );
+    expect(withPoint.destination?.lat).toBe(5.36);
+
+    const broken = normalizeStoredLogisticsTask(
+      makeTask({
+        destination: { lat: 0, lng: 0, source: 'manual', recordedAt: '2026-10-28T09:00:00.000Z' },
+      })
+    );
+    expect(broken.destination).toBeUndefined();
   });
 
   it('place les livreurs actifs avant les autres employés actifs', () => {

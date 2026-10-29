@@ -2,10 +2,11 @@ import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { formatFCFA } from '../../data/demoData';
 import { formatDate } from '../../lib/dates';
+import { getUserDisplayName, getWorkspaceLabel } from '../../lib/workspaceScope';
 import { Printer, Lock, CheckCircle2 } from 'lucide-react';
 
 export const DailyClosingCard: React.FC = () => {
-  const { cashRegister, setClosingZModalOpen, showToast } = useApp();
+  const { cashRegister, setClosingZModalOpen, showToast, workspace } = useApp();
 
   return (
     <div className="bg-[#09090b] border border-zinc-800 text-white rounded-xl p-4 shadow-xl flex flex-col justify-between">
@@ -19,7 +20,8 @@ export const DailyClosingCard: React.FC = () => {
           </span>
         </div>
         <p className="text-[12px] text-zinc-400 mt-0.5">
-          Poste 01 • Awa Koné • {formatDate(new Date())}
+          {getWorkspaceLabel(workspace)} • {getUserDisplayName(workspace)} •{' '}
+          {formatDate(new Date())}
         </p>
 
         {/* 3 Payment modes breakdown */}

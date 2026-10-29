@@ -22,14 +22,16 @@ describe('pricing', () => {
       depositAmount: 10_000,
     });
 
+    // Express 24h = le double du service normal : 3 500 × 2, plus la course,
+    // moins la remise fidélité (calculée sur les prestations).
     expect(totals).toMatchObject({
       subtotal: 3500,
-      expressFee: 1750,
+      expressFee: 3500,
       collectionFee: 500,
       deliveryFee: 0,
       discountAmount: 350,
-      total: 5400,
-      deposit: 5400,
+      total: 7150,
+      deposit: 7150,
       remaining: 0,
     });
   });
