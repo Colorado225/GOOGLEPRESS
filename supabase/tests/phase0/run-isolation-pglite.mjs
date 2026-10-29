@@ -1220,6 +1220,48 @@ try {
     );
   }, /permission denied/i);
 
+  await check('le propriétaire enregistre l’instantané des paramètres et l’horodatage serveur est posé', async () => {
+    const before = await db.query(
+      `select settings, settings_updated_at
+         from public.shop_settings
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.deepEqual(before.rows[0].settings, {});
+
+    const updated = await queryAs(
+      users.ownerA,
+      `update public.shop_settings
+          set settings = '{"name":"Alpha Cocody","pickupFee":1500}'::jsonb,
+              pickup_fee_xof = 1500
+        where shop_id = '20000000-0000-4000-8000-000000000001'
+        returning settings, pickup_fee_xof::int as pickup_fee, settings_updated_at`
+    );
+    assert.equal(updated.rows.length, 1);
+    assert.equal(updated.rows[0].settings.name, 'Alpha Cocody');
+    assert.equal(updated.rows[0].pickup_fee, 1500);
+    assert.ok(
+      new Date(updated.rows[0].settings_updated_at).getTime() >=
+        new Date(before.rows[0].settings_updated_at).getTime()
+    );
+  });
+
+  await check('un caissier ne peut pas enregistrer les paramètres de l’agence', async () => {
+    const attempted = await queryAs(
+      users.cashierA1,
+      `update public.shop_settings
+          set settings = '{"name":"Caisse pirate"}'::jsonb
+        where shop_id = '20000000-0000-4000-8000-000000000001'
+        returning shop_id`
+    );
+    assert.equal(attempted.rows.length, 0);
+
+    const unchanged = await db.query(
+      `select settings from public.shop_settings
+        where shop_id = '20000000-0000-4000-8000-000000000001'`
+    );
+    assert.equal(unchanged.rows[0].settings.name, 'Alpha Cocody');
+  });
+
   console.log(`\nPhase 0 PGlite : ${passed} vérifications réussies.`);
 } catch (error) {
   console.error(`\nÉchec Phase 0 PGlite : ${error?.message ?? error}`);

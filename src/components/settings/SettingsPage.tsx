@@ -41,6 +41,7 @@ import {
   getBrandInitials,
   resolveShopDisplayName,
 } from '../../lib/shopIdentity';
+import { SettingsSyncStatus } from './SettingsSyncStatus';
 
 /**
  * Carte « Apparence » : thème clair/sombre de l'interface. Le choix est appliqué
@@ -368,7 +369,7 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
     if (openStorageManager) {
       openStorageLocationsConfig();
     } else {
-      showToast('✓ Paramètres enregistrés sur cet appareil');
+      showToast('✓ Paramètres enregistrés');
     }
     return true;
   };
@@ -1129,10 +1130,7 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
             >
               <Save className="w-4 h-4" /> Enregistrer les réglages
             </button>
-            <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
-              Réglages conservés uniquement dans ce navigateur : sans serveur, ils ne se synchronisent pas
-              entre appareils.
-            </p>
+            <SettingsSyncStatus />
           </>
         )}
       </form>

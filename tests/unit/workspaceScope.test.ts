@@ -14,6 +14,7 @@ import {
 const liveScope = (overrides: Partial<WorkspaceScope> = {}): WorkspaceScope => ({
   mode: 'live',
   organizationId: '11111111-2222-3333-4444-555555555555',
+  shopId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
   organizationName: 'Pressing Éclat',
   shopName: 'Agence Cocody',
   userName: 'Awa Koné',

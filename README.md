@@ -180,8 +180,11 @@ src/
 Tant que la bascule métier complète n’est pas livrée, les écrans historiques
 stockent leurs données dans le **localStorage** du navigateur, sous des clés
 `pressingpro_*` : commandes, clients, caisse, tournées, personnel, stocks,
-dépenses, emplacements, paramètres, compteur de tickets et préférences de
-l’appareil. La liste exacte reprise par la sauvegarde fait foi dans
+dépenses, emplacements, compteur de tickets et préférences de l’appareil.
+Les **paramètres de l’application** y sont aussi conservés, mais ils sont en
+plus enregistrés dans `public.shop_settings` dès qu’un compte réel est ouvert :
+ils suivent alors les appareils du pressing (voir
+[`docs/PARAMETRES-EN-BASE.md`](docs/PARAMETRES-EN-BASE.md)). La liste exacte reprise par la sauvegarde fait foi dans
 `src/lib/backup.ts` (`BACKUP_KEYS`). Les exceptions sont Atelier → Suivi
 distant et l’espace `/client`, qui ne lisent que des données déjà présentes
 dans Supabase et autorisées par la RLS ; l’espace client ne charge pas les
@@ -287,6 +290,8 @@ la barre latérale personnalisable et la carte d'abonnement dans
 [`docs/BARRE-LATERALE.md`](docs/BARRE-LATERALE.md), le nom et le logo propres à
 chaque pressing dans
 [`docs/IDENTITE-ETABLISSEMENT.md`](docs/IDENTITE-ETABLISSEMENT.md), la
+paramètres enregistrés dans la base dans
+[`docs/PARAMETRES-EN-BASE.md`](docs/PARAMETRES-EN-BASE.md), la
 blanchisserie au forfait par nombre de vêtements dans
 [`docs/BLANCHISSERIE-FORFAITS.md`](docs/BLANCHISSERIE-FORFAITS.md), les
 prestations du pressing et le type de service express dans

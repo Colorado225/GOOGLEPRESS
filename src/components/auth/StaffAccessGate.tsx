@@ -134,6 +134,10 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
       const primary = activeMemberships[0];
       let organizationName: string | null = null;
       let shopName: string | null = null;
+      // Le propriétaire initial est rattaché à l'organisation sans agence :
+      // on retient alors la première agence de l'organisation, celle que
+      // l'onboarding vient de créer.
+      let shopId: string | null = primary.shop_id ?? null;
       try {
         const [organizations, shops] = await Promise.all([
           listAccessibleOrganizations(),
@@ -144,8 +148,9 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
         const organizationShops = shops.filter(
           (shop) => shop.organization_id === primary.organization_id
         );
+        shopId = primary.shop_id ?? organizationShops[0]?.id ?? null;
         shopName =
-          organizationShops.find((shop) => shop.id === primary.shop_id)?.name ??
+          organizationShops.find((shop) => shop.id === shopId)?.name ??
           organizationShops[0]?.name ??
           null;
       } catch {
@@ -173,6 +178,7 @@ export const StaffAccessGate: React.FC<StaffAccessGateProps> = ({ children }) =>
       setWorkspaceScope({
         mode: 'live',
         organizationId: primary.organization_id,
+        shopId,
         organizationName,
         shopName,
         userName,

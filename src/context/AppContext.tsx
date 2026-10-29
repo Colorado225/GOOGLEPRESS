@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   Customer, LaundryOrder, OrderLine, ClothingItem, CartLineDetails, CashRegisterData, OrderStatus, ServiceCategory, PickupOption,
   Employee, EmployeeStatus, EmployeeFormData, AttendanceRecord,
@@ -53,8 +53,14 @@ import { AppTheme, applyTheme, getInitialTheme, persistTheme } from '../lib/them
 import {
   DEFAULT_SHOP_SETTINGS,
   SHOP_SETTINGS_STORAGE_KEY,
+  mergeShopSettings,
   resolveDefaultShopSettings,
 } from '../lib/shopSettings';
+import {
+  loadRemoteShopSettings,
+  saveRemoteShopSettings,
+  type ShopSettingsSyncState,
+} from '../lib/shopSettingsSync';
 import { isValidLogoDataUrl } from '../lib/shopIdentity';
 import { normalizeBlanchisserieSettings } from '../lib/blanchisserie';
 import { normalizePressingSettings } from '../lib/pressing';
@@ -248,6 +254,9 @@ interface AppContextType {
   toggleTheme: () => void;
   shopSettings: ShopSettings;
   updateShopSettings: (settings: ShopSettings) => void;
+  /** État d'enregistrement des paramètres dans la base (compte réel). */
+  settingsSync: ShopSettingsSyncState;
+  retryShopSettingsSync: () => void;
   shortcutHelpOpen: boolean;
   setShortcutHelpOpen: (open: boolean) => void;
   notificationToast: string | null;
@@ -451,57 +460,132 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // défaut pour rester complets même si une ancienne version est en mémoire.
   // Sur un espace réel, la base porte le nom du pressing effectivement créé :
   // le nom de l'application n'apparaît jamais comme enseigne.
-  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => {
-    const base = resolveDefaultShopSettings(workspace);
-    const persisted = loadPersistedState<Partial<ShopSettings>>(
-      storageKey(SHOP_SETTINGS_STORAGE_KEY),
-      {}
-    );
-    // Un nom vide côté sauvegarde ne doit pas écraser celui du serveur.
-    const merged = {
-      ...base,
-      ...persisted,
-      name: persisted.name?.trim() ? persisted.name : base.name,
-      logoDataUrl: isValidLogoDataUrl(persisted.logoDataUrl) ? persisted.logoDataUrl : null,
-      // Une sauvegarde absente ne doit pas écraser la grille de départ
-      // (démonstration) : seule une valeur réellement enregistrée est nettoyée.
-      blanchisserie:
-        persisted.blanchisserie === undefined
-          ? base.blanchisserie
-          : normalizeBlanchisserieSettings(persisted.blanchisserie),
-      pressing:
-        persisted.pressing === undefined
-          ? base.pressing
-          : normalizePressingSettings(persisted.pressing),
-      customGarments:
-        persisted.customGarments === undefined
-          ? base.customGarments
-          : normalizeCustomGarments(persisted.customGarments),
-      catalogOverrides:
-        persisted.catalogOverrides === undefined
-          ? base.catalogOverrides
-          : normalizeCatalogOverrides(persisted.catalogOverrides),
-      deliveryProof:
-        persisted.deliveryProof === undefined
-          ? base.deliveryProof
-          : normalizeDeliveryProofSettings(persisted.deliveryProof),
-      deliveryGps:
-        persisted.deliveryGps === undefined
-          ? base.deliveryGps
-          : normalizeDeliveryGpsSettings(persisted.deliveryGps),
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(() =>
+    mergeShopSettings(
+      resolveDefaultShopSettings(workspace),
+      loadPersistedState<Partial<ShopSettings>>(storageKey(SHOP_SETTINGS_STORAGE_KEY), {})
+    )
+  );
+
+  // --- Paramètres : enregistrement dans la base (compte réel) ------------
+  // Chaque enregistrement de l'écran Paramètres part vers Supabase. Le
+  // navigateur garde sa copie : hors ligne, l'écran reste utilisable et
+  // l'erreur est affichée, jamais masquée.
+  const [settingsSync, setSettingsSync] = useState<ShopSettingsSyncState>(() => ({
+    status: liveWorkspace ? 'loading' : 'idle',
+    error: null,
+    warning: null,
+    savedAt: null,
+  }));
+  const shopSettingsRef = useRef(shopSettings);
+  shopSettingsRef.current = shopSettings;
+  const settingsPushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Une modification faite avant la fin de la lecture distante ne doit pas
+  // être écrasée par la réponse du serveur.
+  const settingsTouchedRef = useRef(false);
+
+  const flushShopSettings = async (next: ShopSettings) => {
+    const shopId = workspace.shopId;
+    const organizationId = workspace.organizationId;
+    if (!liveWorkspace || !shopId || !organizationId) return;
+    setSettingsSync((previous) => ({
+      status: 'saving',
+      error: null,
+      warning: previous.warning,
+      savedAt: previous.savedAt,
+    }));
+    const result = await saveRemoteShopSettings({ shopId, organizationId, settings: next });
+    if (!result.ok) {
+      setSettingsSync((previous) => ({
+        status: 'error',
+        error: result.error,
+        warning: null,
+        savedAt: previous.savedAt,
+      }));
+      return;
+    }
+    setSettingsSync({
+      status: 'saved',
+      error: null,
+      warning: result.warning ?? null,
+      savedAt: result.updatedAt ?? new Date().toISOString(),
+    });
+  };
+
+  const scheduleShopSettingsPush = (next: ShopSettings) => {
+    if (!liveWorkspace || !workspace.shopId) return;
+    settingsTouchedRef.current = true;
+    if (settingsPushTimer.current) clearTimeout(settingsPushTimer.current);
+    setSettingsSync((previous) => ({
+      status: 'saving',
+      error: null,
+      warning: previous.warning,
+      savedAt: previous.savedAt,
+    }));
+    settingsPushTimer.current = setTimeout(() => {
+      settingsPushTimer.current = null;
+      void flushShopSettings(next);
+    }, 600);
+  };
+
+  useEffect(
+    () => () => {
+      if (settingsPushTimer.current) clearTimeout(settingsPushTimer.current);
+    },
+    []
+  );
+
+  const retryShopSettingsSync = () => {
+    if (settingsPushTimer.current) {
+      clearTimeout(settingsPushTimer.current);
+      settingsPushTimer.current = null;
+    }
+    void flushShopSettings(shopSettingsRef.current);
+  };
+
+  // Lecture initiale : la base fait foi pour un compte réel. Une ligne encore
+  // vide reçoit la configuration courante (issue de l'onboarding).
+  useEffect(() => {
+    const shopId = workspace.shopId;
+    if (!liveWorkspace || !shopId) return;
+    let cancelled = false;
+    setSettingsSync((previous) => ({ ...previous, status: 'loading', error: null }));
+    void (async () => {
+      const base = resolveDefaultShopSettings(workspace);
+      const result = await loadRemoteShopSettings(shopId, base);
+      if (cancelled) return;
+      if (!result.ok) {
+        setSettingsSync({
+          status: 'error',
+          error: result.error,
+          warning: null,
+          savedAt: null,
+        });
+        return;
+      }
+      if (result.hasSnapshot) {
+        if (!settingsTouchedRef.current) setShopSettings(result.settings);
+        setSettingsSync({
+          status: 'saved',
+          error: null,
+          warning: null,
+          savedAt: result.updatedAt,
+        });
+        return;
+      }
+      setSettingsSync({ status: 'saving', error: null, warning: null, savedAt: null });
+      await flushShopSettings(result.settings);
+    })();
+    return () => {
+      cancelled = true;
     };
-    return {
-      ...merged,
-      storageAssignmentRequired: merged.storageAssignmentRequired === true,
-      storageAllowCapacityOverflow: merged.storageAllowCapacityOverflow !== false,
-      storageSuggestionsEnabled: merged.storageSuggestionsEnabled !== false,
-      storageDefaultCapacityPackages:
-        sanitizePackageCount(merged.storageDefaultCapacityPackages) ??
-        DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
-    };
-  });
-  const updateShopSettings = (next: ShopSettings) =>
-    setShopSettings({
+    // `workspace` change d'identité à chaque rendu : on ne dépend que de ce
+    // qui compte pour la synchronisation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveWorkspace, workspace.shopId]);
+
+  const updateShopSettings = (next: ShopSettings) => {
+    const normalized: ShopSettings = {
       ...next,
       logoDataUrl: isValidLogoDataUrl(next.logoDataUrl) ? next.logoDataUrl : null,
       blanchisserie: normalizeBlanchisserieSettings(next.blanchisserie),
@@ -518,7 +602,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       storageDefaultCapacityPackages:
         sanitizePackageCount(next.storageDefaultCapacityPackages) ??
         DEFAULT_SHOP_SETTINGS.storageDefaultCapacityPackages,
-    });
+    };
+    setShopSettings(normalized);
+    scheduleShopSettingsPush(normalized);
+  };
 
   const [courierPositions, setCourierPositions] = useState<CourierPositions>(() =>
     pruneCourierPositions(
@@ -2489,6 +2576,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleTheme,
         shopSettings,
         updateShopSettings,
+        settingsSync,
+        retryShopSettingsSync,
         shortcutHelpOpen,
         setShortcutHelpOpen,
         notificationToast,

@@ -24,6 +24,8 @@ export type WorkspaceDataScope = 'demo' | 'live';
 export interface WorkspaceScope {
   mode: WorkspaceDataScope;
   organizationId: string | null;
+  /** Agence effective (rattachement, ou première agence de l'organisation). */
+  shopId: string | null;
   organizationName: string | null;
   shopName: string | null;
   /** Nom affiché de la personne connectée (profil ou métadonnées Auth). */
@@ -36,6 +38,7 @@ export interface WorkspaceScope {
 export const DEMO_WORKSPACE_SCOPE: WorkspaceScope = {
   mode: 'demo',
   organizationId: null,
+  shopId: null,
   organizationName: null,
   shopName: null,
   userName: null,

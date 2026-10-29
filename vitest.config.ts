@@ -24,6 +24,8 @@ export default defineConfig({
         'src/lib/geo.ts',
         'src/lib/courierPositions.ts',
         'src/lib/courierTour.ts',
+        'src/lib/shopSettings.ts',
+        'src/lib/shopSettingsSync.ts',
       ],
       thresholds: {
         statements: 70,
