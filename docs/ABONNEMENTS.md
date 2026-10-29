@@ -64,9 +64,52 @@ testent (§ 6).
   démonstration n'écrase pas le choix d'un compte réel.
 - Les anciennes valeurs enregistrées (`decouverte`, `standard`) restent
   lisibles et sont converties sans perte.
-- **Aucune limite n'est encore bloquante** : ce sont des engagements
-  commerciaux, et l'écran le dit. Facturer sans appliquer les quotas serait mal
- honnête ; bloquer sans encaissement le serait aussi.
+- **Les garde-fous sont appliqués** au moment de l'action (§ 3 bis). Choisir
+  une formule la débloque immédiatement sur l'appareil ; c'est le point de
+  bascule tant que la facturation n'existe pas côté serveur.
+
+## 3 bis. Les garde-fous, règle par règle
+
+Toutes les règles vivent dans `src/lib/planAccess.ts`, testées par
+`tests/unit/planAccess.test.ts`. Elles s'appliquent **au moment de l'action**,
+jamais en supprimant des données existantes.
+
+| Règle | Free | Pro | Business | Appliqué dans |
+| --- | --- | --- | --- | --- |
+| Emplacements de rangement | **10 maximum** | illimité | illimité | création d'un casier et des séries |
+| Comptes d'équipe | **2 maximum** | 8 maximum | illimité | ajout d'un employé (le formulaire reste ouvert, la saisie n'est pas perdue) |
+| Commandes par mois | **100 maximum** | illimité | illimité | création d'une commande au comptoir |
+| Espace client / suivi en ligne | verrouillé | inclus | inclus | panneau « Suivi distant » |
+| Tournées et carte | verrouillé | inclus | inclus | bascule Liste / Carte, réglages GPS |
+| Preuve de remise | verrouillé | inclus | inclus | réglages « Preuve de remise » |
+| Rapports détaillés et exports | verrouillés | inclus | inclus | écran Rapports |
+| Pilotage multi-agences | non | non | annoncé | pas encore livré : affiché « bientôt » |
+
+### Comment un blocage se présente
+
+- **Limite atteinte** : l'action est refusée avec un message qui donne le
+  plafond, le nombre consommé et la formule à prendre. Rien n'est supprimé.
+- **Fonction réservée** : un panneau « … — formule Pro » remplace la fonction,
+  avec le prix et un bouton **Voir la formule Pro** qui ouvre l'onglet
+  Abonnement. Jamais d'erreur technique, jamais de bouton inerte.
+- Le compteur de commandes se remet à zéro au changement de mois.
+
+### Ce qui n'est pas encore un garde-fou
+
+- **Les invitations d'équipe côté Supabase** (rôles et accès serveur) ne
+  consultent pas encore la formule : elles restent régies par la RLS.
+- **Les exports ponctuels** hors écran Rapports (dépenses, sauvegarde JSON)
+  restent ouverts : sauvegarder ses données n'est pas une fonction premium.
+- **Le multi-agences** n'est pas facturable puisqu'il n'existe pas.
+
+### Limite honnête : ces garde-fous sont côté client
+
+Le choix de formule vit sur l'appareil (`pressingpro_subscription`). Un
+utilisateur techniquement curieux peut donc le modifier dans le stockage du
+navigateur. C'est acceptable pour une **phase commerciale sans encaissement**,
+pas pour de la facturation réelle : la formule devra être stockée en base et
+vérifiée par la RLS et les RPC, et les quotas calculés côté serveur. C'est le
+lot suivant (§ 4).
 
 ## 4. Feuille de route facturation
 
@@ -77,8 +120,9 @@ testent (§ 6).
 3. **Encaissement en ligne** : agrégateur local (CinetPay, PayDunya, Wave,
    Orange Money / MTN MoMo) plutôt qu'une intégration bancaire directe.
    À décider avec les frais réels par transaction.
-4. **Application réelle des quotas** : commandes/mois par RPC serveur, pas
-   seulement à l'affichage. À faire **avant** de vendre Business.
+4. **Garde-fous côté serveur** : formule en base, quotas et fonctions
+   vérifiés par la RLS / les RPC, pour que le client ne puisse plus les
+   contourner. À faire **avant** d'encaisser le premier abonnement.
 5. **Multi-agences** : la formule Business ne tient sa promesse qu'une fois le
    rattachement de plusieurs agences livré.
 

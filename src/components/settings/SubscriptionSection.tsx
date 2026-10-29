@@ -89,16 +89,15 @@ export const SubscriptionSection: React.FC = () => {
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span>
             <strong className="font-bold">Aucun paiement n’est encaissé dans l’application.</strong>{' '}
-            Choisir une formule enregistre une demande sur cet appareil ; l’activation se fait avec
-            l’équipe. Les limites sont des engagements commerciaux, pas encore des blocages
-            techniques.
+            Choisir une formule l’applique immédiatement sur cet appareil (déblocage des fonctions
+            et des plafonds) et enregistre votre demande ; l’encaissement se fait avec l’équipe.
           </span>
         </p>
 
         {workspace.mode !== 'live' && (
           <p className="mt-2 text-[11.5px] text-zinc-500 dark:text-zinc-400">
-            Démonstration locale : le choix ne change que l’affichage de cet appareil. Sur un compte
-            réel, la demande est conservée et rattachée à votre agence.
+            Démonstration locale : le choix ne change que cet appareil. Sur un compte réel, il
+            s’applique à votre agence et sert de demande auprès de l’équipe.
           </p>
         )}
       </section>

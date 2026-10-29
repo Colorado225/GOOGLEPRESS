@@ -41,6 +41,8 @@ import {
 } from '../../lib/shopIdentity';
 import { SettingsSyncStatus } from './SettingsSyncStatus';
 import { SubscriptionSection } from './SubscriptionSection';
+import { PlanLockPanel } from '../subscription/PlanLockPanel';
+import { isFeatureIncluded } from '../../lib/planAccess';
 
 /**
  * Carte « Application installable (PWA) » : reflète l'état réel détecté dans le
@@ -133,7 +135,11 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
     openStorageLocationsConfig,
     settingsTabRequest,
     clearSettingsTabRequest,
+    subscription,
   } = useApp();
+
+  const canUseDeliveryTracking = isFeatureIncluded(subscription.plan, 'deliveryTracking');
+  const canUseDeliveryProof = isFeatureIncluded(subscription.plan, 'deliveryProof');
 
   // Le formulaire démarre depuis les paramètres persistés (contexte).
   const [shopName, setShopName] = useState(shopSettings.name);
@@ -626,7 +632,13 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
             montants selon vos coûts réels de carburant et vos quartiers desservis.
           </div>
 
-          {/* Preuve de remise */}
+          {/* Preuve de remise (Pro) */}
+          {!canUseDeliveryProof && (
+            <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
+              <PlanLockPanel feature="deliveryProof" compact />
+            </div>
+          )}
+          {canUseDeliveryProof && (
           <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
             <h3 className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">
               Preuve de remise des livraisons
@@ -708,8 +720,15 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
               n’a été enregistrée.
             </p>
           </div>
+          )}
 
-          {/* Carte et suivi GPS */}
+          {/* Carte et suivi GPS (Pro) */}
+          {!canUseDeliveryTracking && (
+            <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
+              <PlanLockPanel feature="deliveryTracking" compact />
+            </div>
+          )}
+          {canUseDeliveryTracking && (
           <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-2.5">
             <h3 className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">
               Carte et suivi des tournées
@@ -822,6 +841,7 @@ export const SettingsPage: React.FC<{ initialTab?: SettingsTab }> = ({ initialTa
               </div>
             </div>
           </div>
+          )}
         </div>
         )}
 

@@ -19,6 +19,7 @@ import { LogisticsTaskCard } from './LogisticsTaskCard';
 import { LogisticsTaskFormModal } from './LogisticsTaskFormModal';
 import { LogisticsActionModal, type LogisticsActionRequest } from './LogisticsActionModal';
 import { TourMapPanel } from './TourMapPanel';
+import { PlanLockPanel, usePlanFeature } from '../subscription/PlanLockPanel';
 
 type LogisticsView = 'day' | 'action' | 'history';
 type KindFilter = 'all' | LogisticsTaskKind;
@@ -40,6 +41,7 @@ export const LogisticsPanel: React.FC = () => {
   } = useApp();
 
   const [view, setView] = useState<LogisticsView>('day');
+  const canUseMap = usePlanFeature('deliveryTracking');
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [searchTerm, setSearchTerm] = useState('');
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
@@ -454,12 +456,21 @@ export const LogisticsPanel: React.FC = () => {
             }`}
           >
             <MapIcon className="h-3.5 w-3.5" aria-hidden="true" /> Carte
+            {!canUseMap && (
+              <span className="ml-0.5 rounded bg-amber-100 px-1 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+                Pro
+              </span>
+            )}
           </button>
         </div>
       )}
 
       {displayMode === 'map' ? (
-        <TourMapPanel tasks={filteredTasks} />
+        canUseMap ? (
+          <TourMapPanel tasks={filteredTasks} />
+        ) : (
+          <PlanLockPanel feature="deliveryTracking" />
+        )
       ) : (
         <>
           {renderTasks()}

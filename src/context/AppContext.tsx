@@ -67,6 +67,12 @@ import {
   type StorageSyncState,
 } from '../lib/storageLocationsSync';
 import {
+  countOrdersInMonth,
+  guardEmployeeCount,
+  guardMonthlyOrderCount,
+  guardStorageLocationCount,
+} from '../lib/planAccess';
+import {
   SUBSCRIPTION_STORAGE_KEY,
   normalizeSubscription,
   resolveDefaultSubscription,
@@ -283,7 +289,7 @@ interface AppContextType {
   // --- Module Personnel ---
   employees: Employee[];
   attendanceRecords: AttendanceRecord[];
-  addEmployee: (data: EmployeeFormData) => Employee;
+  addEmployee: (data: EmployeeFormData) => ActionResult & { employee?: Employee };
   updateEmployee: (id: string, data: EmployeeFormData) => boolean;
   setEmployeeStatus: (id: string, status: EmployeeStatus) => void;
   upsertAttendance: (
@@ -1067,6 +1073,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const submitNewOrder = (): LaundryOrder | null => {
+    const monthlyGuard = guardMonthlyOrderCount(
+      countOrdersInMonth(orders),
+      subscription.plan
+    );
+    if (!monthlyGuard.allowed) {
+      showToast(monthlyGuard.message);
+      return null;
+    }
     if (cartLines.length === 0) {
       showToast('Le panier est vide. Veuillez ajouter au moins un vêtement ou linge.');
       return null;
@@ -1368,6 +1382,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createStorageLocation = (
     data: StorageLocationFormData
   ): ActionResult & { location?: StorageLocation } => {
+    const guard = guardStorageLocationCount(storageLocations.length, 1, subscription.plan);
+    if (!guard.allowed) return { ok: false, error: guard.message };
     const { normalized, error } = validateStorageLocationData(data);
     if (!normalized || error) return { ok: false, error: error ?? 'Emplacement invalide.' };
     const now = nowISODateTime();
@@ -1389,6 +1405,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (error || drafts.length === 0) {
       return { ok: false, error: error ?? 'Aucun emplacement à créer.' };
     }
+
+    const guard = guardStorageLocationCount(storageLocations.length, drafts.length, subscription.plan);
+    if (!guard.allowed) return { ok: false, error: guard.message };
 
     const now = nowISODateTime();
     const locations: StorageLocation[] = drafts.map((draft, index) => ({
@@ -2220,12 +2239,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   /* ================= Module Personnel ================= */
 
-  const addEmployee = (data: EmployeeFormData): Employee => {
+  const addEmployee = (
+    data: EmployeeFormData
+  ): ActionResult & { employee?: Employee } => {
+    const guard = guardEmployeeCount(employees.length, subscription.plan);
+    if (!guard.allowed) return { ok: false, error: guard.message };
     const now = nowISODateTime();
     const employee: Employee = { ...data, id: genId('emp'), createdAt: now, updatedAt: now };
     setEmployees((prev) => [employee, ...prev]);
     showToast(`✓ Employé ajouté : ${employee.fullName}`);
-    return employee;
+    return { ok: true, employee };
   };
 
   const updateEmployee = (id: string, data: EmployeeFormData): boolean => {

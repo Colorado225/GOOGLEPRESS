@@ -14,6 +14,8 @@ import { orderReceivedISO } from '../../lib/reports';
 import { printDocument } from '../../lib/print';
 import { resolveShopDisplayName } from '../../lib/shopIdentity';
 import { Activity, Wallet, Users, Boxes, ArrowLeft, Printer, ChevronRight } from 'lucide-react';
+import { PlanLockPanel } from '../subscription/PlanLockPanel';
+import { isFeatureIncluded } from '../../lib/planAccess';
 
 type ReportId = 'activity' | 'financial' | 'employees' | 'inventory';
 
@@ -40,7 +42,9 @@ export const ReportsPage: React.FC = () => {
     products,
     shopSettings,
     workspace,
+    subscription,
   } = useApp();
+  const canUseDetailedReports = isFeatureIncluded(subscription.plan, 'detailedReports');
   const [activeReport, setActiveReport] = useState<ReportId | null>(null);
   const [preset, setPreset] = useState<PeriodPreset>('month');
   const [customStart, setCustomStart] = useState('');
@@ -100,6 +104,21 @@ export const ReportsPage: React.FC = () => {
       preview: previews.inventory,
     },
   ];
+
+  if (!canUseDetailedReports) {
+    return (
+      <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
+        <PageHeader
+          title="Rapports"
+          subtitle="Rapports détaillés et exports"
+          onBack={() => setActiveScreen('dashboard')}
+        />
+        <div className="mt-4 max-w-2xl">
+          <PlanLockPanel feature="detailedReports" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-3 sm:p-5 pl-2 sm:pl-4 max-w-[1366px]">
