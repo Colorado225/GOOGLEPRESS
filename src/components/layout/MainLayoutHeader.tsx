@@ -21,6 +21,7 @@ import {
 import { formatFCFA } from '../../data/demoData';
 import { formatShortDate } from '../../lib/dates';
 import { PressingAlertsButton } from './PressingAlertsButton';
+import { SignOutButton } from './SignOutButton';
 import { getUserDisplayName, getUserInitials, getUserRoleLabel } from '../../lib/workspaceScope';
 import { getBrandInitials, resolveShopDisplayName } from '../../lib/shopIdentity';
 
@@ -426,6 +427,7 @@ export const MainLayoutHeader: React.FC = () => {
 
           {/* User profile identifier */}
           <div className="flex items-center gap-2 pl-1 border-l border-zinc-200 dark:border-zinc-700">
+            <SignOutButton />
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500 text-zinc-950 dark:text-zinc-50 flex items-center justify-center font-bold text-xs shadow-xs">
               {getUserInitials(workspace)}
             </div>

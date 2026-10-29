@@ -236,6 +236,15 @@ test.describe('PressingPro — parcours critiques', () => {
     await expect(page.getByRole('button', { name: 'Télécharger la sauvegarde chiffrée' })).toBeVisible();
   });
 
+  test('aucune déconnexion n’est proposée en démonstration locale', async ({ page }) => {
+    // Sans Supabase, il n’y a aucun compte : proposer « Se déconnecter »
+    // laisserait croire à une session qui n’existe pas.
+    await expect(page.getByRole('button', { name: 'Se déconnecter' })).toHaveCount(0);
+    await page.getByRole('button', { name: /Paramètres/ }).click();
+    await expect(page).toHaveURL(/\/parametres$/);
+    await expect(page.getByRole('button', { name: 'Se déconnecter' })).toHaveCount(0);
+  });
+
   test('l’onglet Backend affiche l’état non configuré sans variables VITE', async ({ page }) => {
     await page.getByRole('button', { name: /Paramètres/ }).click();
     await page.getByRole('tab', { name: /Backend Supabase/ }).click();

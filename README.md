@@ -38,6 +38,9 @@ clôture journalière Z.
   responsable, caisse, atelier ou coursier). Il n’y a ni inscription libre du
   personnel ni compte par défaut. La démonstration locale reste réservée au
   développement ou au mode explicite `VITE_ALLOW_LOCAL_DEMO=true`.
+  Une fois connecté, le bouton **Déconnexion** de l’en-tête ferme la session
+  (avec confirmation) sans rien effacer des données du pressing ; il n’apparaît
+  pas en démonstration locale, où aucun compte n’existe.
 - **Espace client distant** — pages séparées `/client/connexion`,
   `/client/inscription`, `/client/nouveau-mot-de-passe` et `/client`, reliées
   à Supabase Auth. Après liaison vérifiée par le pressing, la cliente voit ses

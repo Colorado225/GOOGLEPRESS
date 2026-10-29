@@ -32,6 +32,29 @@ de démonstration du poste.
                                     + action « Créer mon pressing »
 ```
 
+## Déconnexion
+
+Un bouton **Déconnexion** est présent dans l'en-tête de l'ERP, à côté du nom
+de la personne connectée (`src/components/layout/SignOutButton.tsx`). Il est
+visible sur tous les écrans — tableau de bord, atelier, écran coursier
+`/tournee` — et sur téléphone comme sur bureau.
+
+- **Confirmation obligatoire** : une fenêtre « Se déconnecter ? » rappelle le
+  nom du compte et laisse « Rester connecté » à portée de pouce. Une
+  déconnexion accidentelle sur un poste de comptoir coûte une ressaisie de mot
+  de passe.
+- **Aucune donnée effacée** : la session Supabase est fermée, pas le pressing.
+  Les commandes, tournées et réglages restent dans le navigateur, préfixés par
+  l'organisation.
+- **Redirection automatique** : la perte de session est détectée par
+  `StaffAccessGate`, qui renvoie vers `/connexion` en conservant la destination
+  visée (paramètre `retour`).
+- **Aucun bouton en démonstration locale** : sans session, « Se déconnecter »
+  laisserait croire à un compte qui n'existe pas. Un test Playwright le
+  vérifie.
+- **Erreur de déconnexion** : le message est affiché dans la fenêtre, sans
+  fermer celle-ci ni faire croire que la session est terminée.
+
 ## Sécurité côté serveur
 
 Migration `supabase/migrations/20261028160000_owner_onboarding.sql` :
