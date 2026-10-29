@@ -178,6 +178,24 @@ export const getBaseGarment = (id: string): ClothingItem | undefined =>
   INITIAL_CLOTHING_ITEMS.find((item) => item.id === id);
 
 /**
+ * Un vêtement par son identifiant, avec son nom et sa photo effectifs :
+ * vêtements créés par le pressing d'abord, puis catalogue fourni retouché.
+ * Contrairement à `getGarmentCatalog`, les vêtements masqués sont résolus eux
+ * aussi (les Paramètres affichent leurs lignes de tarif avec un badge
+ * « masqué », au lieu de perdre le prix réglé).
+ */
+export const getGarmentById = (
+  shopSettings: Pick<ShopSettings, 'customGarments' | 'catalogOverrides'>,
+  id: string
+): ClothingItem | undefined => {
+  const custom = shopSettings.customGarments.find((garment) => garment.id === id);
+  if (custom) return customGarmentToClothingItem(custom);
+  const base = getBaseGarment(id);
+  if (!base) return undefined;
+  return applyGarmentOverride(base, shopSettings.catalogOverrides?.[id]);
+};
+
+/**
  * Nettoie les retouches enregistrées : seules les valeurs exploitables sont
  * conservées. Une retouche devenue vide est simplement oubliée, ce qui remet
  * le vêtement fourni dans son état d'origine.

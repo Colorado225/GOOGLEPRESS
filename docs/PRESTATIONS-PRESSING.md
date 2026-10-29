@@ -94,3 +94,12 @@ et 350 de remise), au lieu de 1 750 auparavant.
 
 Non vérifié ici : la saisie réelle dans un navigateur (pas de Chromium dans
 l'environnement de travail) ; les tests Playwright tournent en CI.
+
+## Alignement serveur (29/10/2026)
+
+La RPC `create_order` appliquait encore +50 % alors que le comptoir était
+passé à ×2. La migration `20261029150000_align_express_surcharge.sql`
+reprend sa formule (`service_fees = sous-total` en express), vérifiée par
+Phase 0 (« create_order facture l'express au double », tickets ×2 : 1 000
+de prestations → 2 000 au total, hors remise et courses). Le POS n'écrivant
+pas encore dans Supabase, aucun ticket réel n'était concerné.

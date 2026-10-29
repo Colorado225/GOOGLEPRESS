@@ -17,6 +17,7 @@ export const Step1ClientAndDates: React.FC = () => {
     orderFulfillmentMethod,
     deliveryAddress,
     deliveryDateISO,
+    promisedDateISO,
   } = useApp();
 
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -24,6 +25,10 @@ export const Step1ClientAndDates: React.FC = () => {
   const handleContinue = () => {
     if (!selectedCustomer) {
       setValidationError('Veuillez sélectionner un client pour continuer.');
+      return;
+    }
+    if (promisedDateISO !== null && (!isValidISODate(promisedDateISO) || promisedDateISO < todayISO())) {
+      setValidationError('Choisissez une date de retrait libre valide, aujourd’hui ou plus tard.');
       return;
     }
     if (orderFulfillmentMethod === 'home_delivery') {

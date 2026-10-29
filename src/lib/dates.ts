@@ -181,6 +181,31 @@ export function getPickupLabel(option: PickupOption): string {
   }
 }
 
+/**
+ * Date de retrait promise en tenant compte d'une éventuelle date libre
+ * choisie au POS. Une surcharge valide (jour calendaire lisible) prime sur
+ * l'option, à l'heure de retrait standard (17h) ; sinon, l'option s'applique.
+ * Le refus d'une date libre passée se fait à la validation, pas ici.
+ */
+export function resolvePromisedDate(
+  option: PickupOption,
+  promisedDateISO?: string | null,
+  from: Date = new Date()
+): Date {
+  const custom = parseISODate(promisedDateISO);
+  if (custom) {
+    custom.setHours(17, 0, 0, 0);
+    return custom;
+  }
+  return getPromisedDate(option, from);
+}
+
+/** Libellé de l'option tenant compte d'une éventuelle date libre. */
+export function resolvePickupLabel(option: PickupOption, promisedDateISO?: string | null): string {
+  if (parseISODate(promisedDateISO)) return 'Date libre';
+  return getPickupLabel(option);
+}
+
 /* ============================================================================
  * Dates ISO (YYYY-MM-DD) — utilisées par les modules Personnel, Stocks et
  * Dépenses pour des comparaisons et des regroupements fiables.

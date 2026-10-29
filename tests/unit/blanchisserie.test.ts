@@ -5,7 +5,10 @@ import {
   EMPTY_BLANCHISSERIE_SETTINGS,
   MAX_TIER_GARMENTS,
   buildBlanchisserieCatalogEntries,
+  buildBlanchisserieItem,
   calculateBlanchisserieQuote,
+  calculateIroningQuote,
+  countPricedIronGarments,
   describeBlanchisserieQuote,
   formatGarments,
   getBlanchisserieMode,
@@ -13,7 +16,7 @@ import {
   normalizeBlanchisserieSettings,
   validateBlanchisserieSettings,
 } from '../../src/lib/blanchisserie';
-import type { BlanchisserieSettings } from '../../src/types';
+import type { BlanchisserieSettings, ClothingItem } from '../../src/types';
 
 const grid = (): BlanchisserieSettings => ({
   tiers: [
@@ -23,6 +26,18 @@ const grid = (): BlanchisserieSettings => ({
   ],
   unitPrices: { wash_only: 300, wash_iron: 500, iron_only: 250 },
   perGarment: { wash_only: false, wash_iron: false, iron_only: true },
+  ironPrices: { c1: 500, c2: 600 },
+});
+
+const garment = (id: string, name: string, emoji = '👕'): ClothingItem => ({
+  id,
+  name,
+  category: 'all',
+  serviceCategory: 'pressing',
+  unitPrice: 1500,
+  pricingType: 'unit',
+  unitLabel: 'pièce',
+  emoji,
 });
 
 describe('normalizeBlanchisserieSettings', () => {
@@ -60,6 +75,28 @@ describe('normalizeBlanchisserieSettings', () => {
     });
     expect(normalized.tiers).toEqual([]);
     expect(normalized.unitPrices).toEqual({ wash_only: 0, wash_iron: 0, iron_only: 0 });
+    expect(normalized.ironPrices).toEqual({});
+  });
+
+  it('nettoie les prix de repassage et élague les vêtements inconnus', () => {
+    const normalized = normalizeBlanchisserieSettings(
+      {
+        ironPrices: {
+          c1: 500,
+          '  ': 300,
+          c2: 'six cents',
+          c3: -50,
+          c9: 250,
+        },
+      },
+      ['c1', 'c2', 'c3']
+    );
+    expect(normalized.ironPrices).toEqual({ c1: 500 });
+  });
+
+  it('conserve les lignes de repassage sans catalogue connu', () => {
+    const normalized = normalizeBlanchisserieSettings({ ironPrices: { 'cg:robe-lin': 800 } });
+    expect(normalized.ironPrices).toEqual({ 'cg:robe-lin': 800 });
   });
 
   it('ne casse pas sur une sauvegarde corrompue', () => {
@@ -82,6 +119,31 @@ describe('isBlanchisserieConfigured / validateBlanchisserieSettings', () => {
   it('la grille de démonstration est valide', () => {
     expect(isBlanchisserieConfigured(DEMO_BLANCHISSERIE_SETTINGS)).toBe(true);
     expect(validateBlanchisserieSettings(DEMO_BLANCHISSERIE_SETTINGS)).toBeNull();
+  });
+
+  it('un seul vêtement tarifé en repassage suffit à configurer', () => {
+    // Boutique « repassage seul » : les lavages sont basculés au vêtement (à
+    // zéro, donc inutilisés) pour ne pas exiger de paliers de forfait.
+    const settings: BlanchisserieSettings = {
+      tiers: [],
+      unitPrices: { wash_only: 0, wash_iron: 0, iron_only: 0 },
+      perGarment: { wash_only: true, wash_iron: true, iron_only: true },
+      ironPrices: { c3: 800 },
+    };
+    expect(countPricedIronGarments(settings)).toBe(1);
+    expect(isBlanchisserieConfigured(settings)).toBe(true);
+    expect(validateBlanchisserieSettings(settings)).toBeNull();
+  });
+
+  it('une ligne de repassage à zéro ne configure pas', () => {
+    const settings: BlanchisserieSettings = {
+      tiers: [],
+      unitPrices: { wash_only: 0, wash_iron: 0, iron_only: 0 },
+      perGarment: { wash_only: false, wash_iron: false, iron_only: true },
+      ironPrices: { c3: 0 },
+    };
+    expect(isBlanchisserieConfigured(settings)).toBe(false);
+    expect(validateBlanchisserieSettings(settings)).toMatch(/prix de repassage/);
   });
 
   it('signale une prestation au forfait sans palier', () => {
@@ -163,31 +225,74 @@ describe('calculateBlanchisserieQuote — forfaits au nombre de vêtements', () 
   });
 });
 
-describe('calculateBlanchisserieQuote — repassage à l’unité', () => {
-  it('facture chaque vêtement au prix réglé', () => {
-    const quote = calculateBlanchisserieQuote(grid(), 'iron_only', 7)!;
+describe('calculateIroningQuote — repassage au prix de chaque vêtement', () => {
+  it('facture chaque vêtement à son prix réglé', () => {
+    const quote = calculateIroningQuote(grid(), [
+      { item: garment('c1', 'Chemise', '👔'), quantity: 2 },
+      { item: garment('c2', 'Pantalon', '👖'), quantity: 1 },
+    ])!;
     expect(getBlanchisserieMode(grid(), 'iron_only')).toBe('per_garment');
-    expect(quote.subtotal).toBe(1750);
-    expect(quote.blocks).toHaveLength(1);
+    expect(quote.subtotal).toBe(1600);
+    expect(quote.garments).toBe(3);
+    expect(quote.blocks).toHaveLength(2);
     expect(quote.blocks[0]).toMatchObject({
       kind: 'per_garment',
-      quantity: 7,
-      unitPrice: 250,
-      unitLabel: 'vêtement',
+      quantity: 2,
+      unitPrice: 500,
+      subtotal: 1000,
+      unitLabel: 'pièce',
+      itemId: 'bf:iron_only:c1',
+      emoji: '👔',
     });
-    expect(quote.averagePerGarment).toBe(250);
+    expect(quote.blocks[0].name).toBe('Repassage — Chemise');
+    expect(quote.blocks[1].name).toBe('Repassage — Pantalon');
+    expect(quote.averagePerGarment).toBe(533);
+    expect(describeBlanchisserieQuote(quote)).toBe(
+      '2 × Repassage — Chemise + 1 × Repassage — Pantalon'
+    );
   });
 
-  it('retourne null sans prix à l’unité', () => {
-    const settings = grid();
-    settings.unitPrices.iron_only = 0;
-    expect(calculateBlanchisserieQuote(settings, 'iron_only', 3)).toBeNull();
+  it('bloque dès qu’un vêtement n’a pas de prix', () => {
+    expect(
+      calculateIroningQuote(grid(), [
+        { item: garment('c1', 'Chemise'), quantity: 1 },
+        { item: garment('c3', 'Robe'), quantity: 1 },
+      ])
+    ).toBeNull();
+  });
+
+  it('bloque un dépôt vide ou une quantité invalide', () => {
+    expect(calculateIroningQuote(grid(), [])).toBeNull();
+    expect(
+      calculateIroningQuote(grid(), [{ item: garment('c1', 'Chemise'), quantity: 0 }])
+    ).toBeNull();
+  });
+
+  it('le devis au simple nombre ne tarife plus le repassage', () => {
+    expect(calculateBlanchisserieQuote(grid(), 'iron_only', 7)).toBeNull();
+  });
+
+  it('l’article de panier garde la vignette du vêtement', () => {
+    const quote = calculateIroningQuote(grid(), [
+      { item: { ...garment('c1', 'Chemise', '👔'), image: 'data:image/png,chemise' }, quantity: 1 },
+    ])!;
+    expect(buildBlanchisserieItem(quote.blocks[0])).toMatchObject({
+      id: 'bf:iron_only:c1',
+      name: 'Repassage — Chemise',
+      serviceCategory: 'blanchisserie',
+      unitPrice: 500,
+      emoji: '👔',
+      image: 'data:image/png,chemise',
+    });
   });
 });
 
 describe('catalogue Supabase de la blanchisserie', () => {
-  it('génère un article par forfait et par prestation à l’unité', () => {
-    const entries = buildBlanchisserieCatalogEntries(grid());
+  it('génère un article par forfait, par lavage à l’unité et par vêtement repassé', () => {
+    const entries = buildBlanchisserieCatalogEntries(grid(), (garmentId) => ({
+      name: garmentId === 'c1' ? 'Chemise' : 'Pantalon',
+      unitLabel: 'pièce',
+    }));
     expect(entries.map((entry) => entry.legacyKey)).toEqual([
       'bf:wash_only:10',
       'bf:wash_only:20',
@@ -197,13 +302,22 @@ describe('catalogue Supabase de la blanchisserie', () => {
       'bf:wash_iron:20',
       'bf:wash_iron:30',
       'bf:wash_iron:unit',
-      'bf:iron_only:unit',
+      'bf:iron_only:c1',
+      'bf:iron_only:c2',
     ]);
     const forfait = entries.find((entry) => entry.legacyKey === 'bf:wash_iron:20')!;
     expect(forfait).toMatchObject({
       name: 'Forfait 20 vêtements — Lavage + repassage',
       unitPrice: 5000,
       unitLabel: 'forfait',
+      pricingType: 'unit',
+      serviceCategory: 'blanchisserie',
+    });
+    const chemise = entries.find((entry) => entry.legacyKey === 'bf:iron_only:c1')!;
+    expect(chemise).toMatchObject({
+      name: 'Repassage — Chemise',
+      unitPrice: 500,
+      unitLabel: 'pièce',
       pricingType: 'unit',
       serviceCategory: 'blanchisserie',
     });
